@@ -621,15 +621,24 @@ function showRes(r,live){
   </div>`;
   $('resBox').scrollIntoView({behavior:'smooth',block:'start'});
 }
+function goTab(name){
+  document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x.dataset.t===name));
+  ['calc','hist','comp','set'].forEach(t=>$('tab-'+t).classList.toggle('hide',t!==name));
+  if(name==='hist')renderHist();
+  if(name==='comp')fillCmp();
+  window.scrollTo(0,0);
+  document.documentElement.scrollTop=0;
+  document.body.scrollTop=0;
+}
+
 function saveRec(){
   if(!LAST)return;
   putMe(u=>{u.recs=(u.recs||[]).filter(x=>x.key!==LAST.key);u.recs.push(LAST);
     u.recs.sort((a,b)=>a.payDate<b.payDate?1:-1)});
+  fillCmp();
   toast('💾 บันทึกงวด '+LAST.label+' แล้ว');
-  renderHist();fillCmp();
-  document.querySelector('[data-t="hist"]').click();   // ← เด้งไปหน้าประวัติ
+  goTab('hist');
 }
-
 /* ============ HISTORY ============ */
 function renderHist(){
   const rs=me().recs||[];
