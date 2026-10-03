@@ -625,7 +625,9 @@ function saveRec(){
   if(!LAST)return;
   putMe(u=>{u.recs=(u.recs||[]).filter(x=>x.key!==LAST.key);u.recs.push(LAST);
     u.recs.sort((a,b)=>a.payDate<b.payDate?1:-1)});
-  toast('💾 บันทึกงวด '+LAST.label+' แล้ว');renderHist();fillCmp();
+  toast('💾 บันทึกงวด '+LAST.label+' แล้ว');
+  renderHist();fillCmp();
+  document.querySelector('[data-t="hist"]').click();   // ← เด้งไปหน้าประวัติ
 }
 
 /* ============ HISTORY ============ */
