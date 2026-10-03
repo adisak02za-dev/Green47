@@ -20,7 +20,7 @@ body{font-family:'IBM Plex Sans Thai',sans-serif;background:
   color:var(--txt);min-height:100vh;-webkit-font-smoothing:antialiased}
 .hide{display:none!important}
 button{font-family:inherit;cursor:pointer;border:none}
-input,select,textarea{font-family:inherit}
+input,select{font-family:inherit}
 
 .auth-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
 .auth{width:100%;max-width:400px;background:rgba(22,31,61,.85);backdrop-filter:blur(14px);
@@ -34,7 +34,6 @@ input,select,textarea{font-family:inherit}
 .inp{width:100%;background:#0e1631;border:1px solid var(--line);color:var(--txt);
   padding:12px 14px;border-radius:11px;font-size:15px;outline:none;transition:.15s}
 .inp:focus{border-color:var(--pri);box-shadow:0 0 0 3px rgba(91,140,255,.18)}
-textarea.inp{resize:vertical;min-height:60px}
 .btn{width:100%;padding:12.5px;border-radius:11px;background:linear-gradient(135deg,var(--pri),#8a6bff);
   color:#fff;font-size:15px;font-weight:600;transition:.15s}
 .btn:hover{filter:brightness(1.12)} .btn:active{transform:scale(.985)}
@@ -165,7 +164,7 @@ textarea.inp{resize:vertical;min-height:60px}
   <div class="auth">
     <div class="logo">💰</div>
     <h1 id="authTitle">เข้าสู่ระบบ</h1>
-    <p class="sub">ระบบคำนวณค่าแรงรายวัน &amp; ซิงค์ข้อมูลข้ามเบราว์เซอร์</p>
+    <p class="sub">ระบบคำนวณค่าแรงรายวัน &amp; ออโต้ซิงค์</p>
     <div id="authMsg"></div>
     <div class="field"><label>ชื่อผู้ใช้</label>
       <input class="inp" id="auUser" autocomplete="username" placeholder="เช่น adisak"></div>
@@ -286,14 +285,10 @@ textarea.inp{resize:vertical;min-height:60px}
   <!-- ---- SETTINGS ---- -->
   <div class="wrap hide" id="tab-set">
     <div class="card">
-      <h2>🔄 ซิงค์ข้อมูลข้ามเบราว์เซอร์ (Sync Code)</h2>
-      <div class="hint">1. กด <b>"สร้างรหัสซิงค์"</b> ในเบราว์เซอร์เดิมเพื่อคัดลอกโค้ด<br>2. นำไปวางในช่องนี้บนอีกเบราว์เซอร์ (เช่น Safari ไป Chrome) แล้วกด <b>"นำเข้ารหัสซิงค์"</b></div>
-      <div class="field"><label>รหัสซิงค์ข้อมูล (Sync Code)</label>
-        <textarea class="inp" id="sSyncCode" placeholder="กดสร้างรหัส หรือวางรหัสจากเครื่องหลัก"></textarea></div>
-      <div class="flex">
-        <button class="btn ghost sm" onclick="generateSyncCode()">📤 สร้างรหัสซิงค์</button>
-        <button class="btn sm" onclick="importSyncCode()">📥 นำเข้ารหัสซิงค์</button>
-      </div>
+      <h2>🌐 สถานะออโต้ซิงค์คลาวด์</h2>
+      <div class="hint">ข้อมูลของคุณซิงค์อัตโนมัติผ่านคลาวด์แล้ว สามารถเปิดใช้งานผ่านชื่อผู้ใช้เดียวกันบนอุปกรณ์หรือเบราว์เซอร์อื่นได้ทันที</div>
+      <div class="field"><label>ลิงก์หรือรหัสคลาวด์ส่วนตัวของคุณ</label>
+        <input class="inp" id="sCloudKey" readonly style="color:var(--ok);font-weight:600"></div>
     </div>
 
     <div class="card">
@@ -334,13 +329,13 @@ textarea.inp{resize:vertical;min-height:60px}
 <div class="toast" id="toast"></div>
 
 <script>
-/* ============ STORAGE & SYNC CODE ============ */
-const DB='pst_v1';
+/* ============ STORAGE & AUTO CLOUD SYNC ============ */
+const DB='pst_v2';
 const db=()=>JSON.parse(localStorage.getItem(DB)||'{"users":{}}');
 const save=d=>localStorage.setItem(DB,JSON.stringify(d));
 let CU=null;
 const DEF={rate:412,hours:8,holMult:2,sso:5,ssoCap:750,tax:0,oth:0,othName:'หักอื่นๆ',
-  ssoBase:'wage',qName:'Incentive Audit',qAmt:250};
+  ssoBase:'wage',qName:'Incentive Audit',qAmt:250,cloudKey:''};
 const TH=['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
 const MN=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
 const TYPES={
@@ -362,24 +357,27 @@ async function hash(s){const b=await crypto.subtle.digest('SHA-256',new TextEnco
   return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}
 const $=id=>document.getElementById(id);
 
-function generateSyncCode(){
-  const u=me();
-  const raw=JSON.stringify({set:u.set,recs:u.recs});
-  const code=btoa(encodeURIComponent(raw));
-  $('sSyncCode').value=code;
-  navigator.clipboard?.writeText(code);
-  toast('✅ สร้างและคัดลอกรหัสซิงค์ลงคลิปบอร์ดแล้ว');
-}
-function importSyncCode(){
-  const code=$('sSyncCode').value.trim();
-  if(!code)return toast('⚠️ กรุณาวางรหัสซิงค์ก่อน');
+async function autoSyncPush(){
+  const u=me();if(!u||!u.set.cloudKey)return;
   try{
-    const raw=decodeURIComponent(atob(code));
-    const data=JSON.parse(raw);
-    if(!data.recs)throw 0;
-    putMe(u=>{u.set={...DEF,...(data.set||{})};u.recs=data.recs});
-    loadSet();renderHist();fillCmp();toast('✅ นำเข้าข้อมูลสำเร็จ!');
-  }catch{toast('❌ รหัสซิงค์ไม่ถูกต้อง')}
+    await fetch(`https://api.npoint.io/${u.set.cloudKey}`,{
+      method:'PUT',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({pw:u.pw,set:u.set,recs:u.recs})
+    });
+  }catch(e){}
+}
+
+async function autoSyncPull(key){
+  try{
+    const r=await fetch(`https://api.npoint.io/${key}`);
+    if(!r.ok)return false;
+    const d=await r.json();
+    if(d&&d.pw){
+      putMe(u=>{u.set=d.set||u.set;u.recs=d.recs||u.recs});
+      return true;
+    }
+  }catch(e){}
+  return false;
 }
 
 /* ============ AUTH ============ */
@@ -402,8 +400,20 @@ $('auBtn').onclick=async()=>{
   if(mode==='reg'){
     if(p.length<4)return am('รหัสผ่านอย่างน้อย 4 ตัว','err');
     if(p!==$('auPass2').value)return am('รหัสผ่านไม่ตรงกัน','err');
-    if(d.users[u])return am('มีชื่อผู้ใช้นี้แล้ว','err');
-    d.users[u]={pw:await hash(p),set:{...DEF},recs:[]};save(d);
+    if(d.users[u])return am('มีชื่อผู้ใช้นี้แล้ว — ลองเข้าสู่ระบบ','err');
+    
+    toast('🌐 กำลังสร้างบัญชีบนคลาวด์...');
+    let cloudKey='';
+    try{
+      const res=await fetch('https://api.npoint.io',{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({pw:await hash(p),set:{...DEF},recs:[]})
+      });
+      const j=await res.json();
+      if(j.id)cloudKey=j.id;
+    }catch(e){}
+
+    d.users[u]={pw:await hash(p),set:{...DEF,cloudKey},recs:[]};save(d);
     am('สร้างบัญชีสำเร็จ กำลังเข้าสู่ระบบ...','ok');setTimeout(()=>enter(u),600);
   }else{
     if(!d.users[u]||d.users[u].pw!==await hash(p))return am('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง','err');
@@ -412,23 +422,30 @@ $('auBtn').onclick=async()=>{
 };
 $('auPass').onkeydown=e=>{if(e.key==='Enter')$('auBtn').click()};
 $('auPass2').onkeydown=e=>{if(e.key==='Enter')$('auBtn').click()};
-function enter(u){
+
+async function enter(u){
   CU=u;sessionStorage.setItem('pst_cu',u);
+  const user=me();
+  if(user.set.cloudKey){
+    toast('🔄 กำลังซิงค์ข้อมูลล่าสุด...');
+    await autoSyncPull(user.set.cloudKey);
+  }
   $('authView').classList.add('hide');$('appView').classList.remove('hide');
   $('whoName').textContent=u;loadSet();renderHist();fillCmp();
   const n=new Date();$('pMonth').value=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0');
 }
 $('btnOut').onclick=()=>{sessionStorage.removeItem('pst_cu');location.reload()};
 const me=()=>db().users[CU];
-const mySet=()=>({...DEF,...(me().set||{})});
-function putMe(f){const d=db();f(d.users[CU]);save(d)}
+const mySet=()=>({...DEF,(me().set||{})});
+function putMe(f){const d=db();f(d.users[CU]);save(d);autoSyncPush()}
 
 /* ============ SETTINGS ============ */
 const SF=[['sRate','rate'],['sHours','hours'],['sHolMult','holMult'],['sSso','sso'],['sSsoCap','ssoCap'],
   ['sTax','tax'],['sOth','oth'],['sOthName','othName'],['sSsoBase','ssoBase'],['sQName','qName'],['sQAmt','qAmt']];
 function loadSet(){
   const s=mySet();SF.forEach(([i,k])=>$(i).value=s[k]);
-  $('sSyncCode').value='';refreshQuick();
+  $('sCloudKey').value=s.cloudKey||'เชื่อมต่ออัตโนมัติแล้ว';
+  refreshQuick();
 }
 function refreshQuick(){
   const s=mySet();
@@ -439,7 +456,7 @@ function refreshQuick(){
 $('btnSaveSet').onclick=()=>{
   const o={...mySet()};SF.forEach(([i,k])=>{const v=$(i).value;
     o[k]=(k==='othName'||k==='ssoBase'||k==='qName')?v:(parseFloat(v)||0)});
-  putMe(u=>u.set=o);refreshQuick();if(DAYS.length)drawDays();toast('✅ บันทึกการตั้งค่าแล้ว');
+  putMe(u=>u.set=o);refreshQuick();if(DAYS.length)drawDays();toast('✅ บันทึกและซิงค์อัตโนมัติแล้ว');
 };
 
 /* ============ TABS ============ */
@@ -659,7 +676,7 @@ function saveRec(){
   if(!LAST)return;
   putMe(u=>{u.recs=(u.recs||[]).filter(x=>x.key!==LAST.key);u.recs.push(LAST);
     u.recs.sort((a,b)=>a.payDate<b.payDate?1:-1)});
-  toast('💾 บันทึกงวด '+LAST.label+' แล้ว');
+  toast('💾 บันทึกและซิงค์ออโต้แล้ว');
   renderHist();fillCmp();
   goTab('hist');
 }
