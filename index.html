@@ -9,9 +9,9 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
-  --bg:#0b1020; --bg2:#121a33; --card:#161f3d; --card2:#1d2950;
+  --bg:#0b1020; --card:#161f3d; --card2:#1d2950;
   --line:#2a3766; --txt:#e8edff; --mut:#8e9cc9;
-  --pri:#5b8cff; --pri2:#7aa2ff; --ok:#2fd4a0; --warn:#ffc24b; --bad:#ff6b7a;
+  --pri:#5b8cff; --pri2:#7aa2ff; --ok:#2fd4a0; --warn:#ffc24b; --bad:#ff6b7a; --gold:#ffcf5c;
   --r:16px;
 }
 body{font-family:'IBM Plex Sans Thai',sans-serif;background:
@@ -22,7 +22,6 @@ body{font-family:'IBM Plex Sans Thai',sans-serif;background:
 button{font-family:inherit;cursor:pointer;border:none}
 input,select{font-family:inherit}
 
-/* LOGIN */
 .auth-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
 .auth{width:100%;max-width:400px;background:rgba(22,31,61,.85);backdrop-filter:blur(14px);
   border:1px solid var(--line);border-radius:22px;padding:34px 28px;box-shadow:0 30px 70px rgba(0,0,0,.5)}
@@ -33,7 +32,7 @@ input,select{font-family:inherit}
 .field{margin-bottom:14px}
 .field label{display:block;font-size:12.5px;color:var(--mut);margin-bottom:6px;font-weight:500}
 .inp{width:100%;background:#0e1631;border:1px solid var(--line);color:var(--txt);
-  padding:12px 14px;border-radius:11px;font-size:14.5px;outline:none;transition:.15s}
+  padding:12px 14px;border-radius:11px;font-size:15px;outline:none;transition:.15s}
 .inp:focus{border-color:var(--pri);box-shadow:0 0 0 3px rgba(91,140,255,.18)}
 .btn{width:100%;padding:12.5px;border-radius:11px;background:linear-gradient(135deg,var(--pri),#8a6bff);
   color:#fff;font-size:15px;font-weight:600;transition:.15s}
@@ -47,101 +46,114 @@ input,select{font-family:inherit}
 .msg.err{background:rgba(255,107,122,.13);color:#ffa7b1;border:1px solid rgba(255,107,122,.3)}
 .msg.ok{background:rgba(47,212,160,.13);color:#7ff0cd;border:1px solid rgba(47,212,160,.3)}
 
-/* APP */
-.top{position:sticky;top:0;z-index:50;background:rgba(11,16,32,.9);backdrop-filter:blur(12px);
-  border-bottom:1px solid var(--line);padding:11px 18px;display:flex;align-items:center;gap:12px}
-.top .brand{display:flex;align-items:center;gap:9px;font-weight:700;font-size:15.5px}
+.top{position:sticky;top:0;z-index:50;background:rgba(11,16,32,.92);backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--line);padding:11px 16px;display:flex;align-items:center;gap:10px}
+.top .brand{display:flex;align-items:center;gap:9px;font-weight:700;font-size:15px}
 .top .brand i{width:31px;height:31px;border-radius:9px;background:linear-gradient(135deg,var(--pri),#9a6bff);
   display:flex;align-items:center;justify-content:center;font-style:normal;font-size:16px}
 .spacer{flex:1}
 .who{font-size:13px;color:var(--mut)}
 .who b{color:var(--txt)}
-.tabs{display:flex;gap:6px;padding:12px 18px 0;overflow-x:auto;max-width:1180px;margin:0 auto}
-.tab{padding:9px 16px;border-radius:11px;background:transparent;color:var(--mut);font-size:14px;
+@media(max-width:560px){.top .brand span{display:none}.who{font-size:12px}}
+.tabs{display:flex;gap:6px;padding:12px 16px 0;overflow-x:auto;max-width:1180px;margin:0 auto}
+.tab{padding:9px 15px;border-radius:11px;background:transparent;color:var(--mut);font-size:14px;
   font-weight:500;white-space:nowrap;transition:.15s}
-.tab:hover{background:var(--card)}
 .tab.on{background:var(--card2);color:var(--txt);box-shadow:inset 0 0 0 1px var(--line)}
-.wrap{max-width:1180px;margin:0 auto;padding:18px}
+.wrap{max-width:1180px;margin:0 auto;padding:16px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:20px;margin-bottom:16px}
-.card h2{font-size:16px;margin-bottom:4px;display:flex;align-items:center;gap:8px}
-.card .hint{font-size:12.5px;color:var(--mut);margin-bottom:16px;line-height:1.6}
+@media(max-width:560px){.card{padding:16px}}
+.card h2{font-size:16px;margin-bottom:4px}
+.card .hint{font-size:12.5px;color:var(--mut);margin-bottom:16px;line-height:1.65}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
 @media(max-width:760px){.grid2,.grid3{grid-template-columns:1fr}}
 
-/* dropzone */
-.drop{border:2px dashed var(--line);border-radius:14px;padding:26px;text-align:center;cursor:pointer;transition:.15s}
+.drop{border:2px dashed var(--line);border-radius:14px;padding:24px;text-align:center;cursor:pointer;transition:.15s}
 .drop:hover{border-color:var(--pri);background:rgba(91,140,255,.05)}
 .drop .ic{font-size:32px;margin-bottom:8px}
 .drop small{color:var(--mut);font-size:12px}
 .thumb{margin-top:12px;position:relative;border-radius:12px;overflow:hidden;border:1px solid var(--line)}
 .thumb img{width:100%;display:block}
 .thumb .x{position:absolute;top:8px;right:8px;background:rgba(0,0,0,.72);color:#fff;
-  width:30px;height:30px;border-radius:50%;font-size:16px}
+  width:32px;height:32px;border-radius:50%;font-size:16px}
 
-/* day table */
 .dtbl{width:100%;border-collapse:collapse;font-size:13.5px}
 .dtbl th{text-align:left;color:var(--mut);font-weight:500;font-size:12px;padding:8px 9px;border-bottom:1px solid var(--line)}
-.dtbl td{padding:6px 9px;border-bottom:1px solid rgba(42,55,102,.5)}
-.dtbl tr.wknd td{background:rgba(255,194,75,.05)}
-.dtbl select,.dtbl input{background:#0e1631;border:1px solid var(--line);color:var(--txt);
-  padding:7px 9px;border-radius:8px;font-size:13px;outline:none;width:100%}
+.dtbl td{padding:7px 9px;border-bottom:1px solid rgba(42,55,102,.5);vertical-align:middle}
+.dtbl tr.hl td{background:rgba(255,207,92,.06)}
+.dtbl select,.dtbl input[type=number]{background:#0e1631;border:1px solid var(--line);color:var(--txt);
+  padding:9px 10px;border-radius:9px;font-size:14px;outline:none;width:100%}
 .dtbl select:focus,.dtbl input:focus{border-color:var(--pri)}
 .dnum{color:var(--mut);font-size:12px}
-.pill{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11.5px;font-weight:600}
+.pill{display:inline-block;padding:4px 10px;border-radius:20px;font-size:11.5px;font-weight:600}
 .p-ok{background:rgba(47,212,160,.15);color:#6ef0c6}
 .p-bad{background:rgba(255,107,122,.15);color:#ff9aa5}
 .p-warn{background:rgba(255,194,75,.15);color:#ffd27d}
 .p-info{background:rgba(91,140,255,.15);color:#a6c0ff}
+.p-gold{background:rgba(255,207,92,.18);color:var(--gold)}
+.chk{font-size:13px;color:var(--mut);cursor:pointer;display:inline-flex;align-items:center;gap:7px}
+.chk input{width:18px;height:18px}
 
-/* result */
+@media(max-width:700px){
+  .dtbl thead{display:none}
+  .dtbl,.dtbl tbody,.dtbl tr,.dtbl td{display:block;width:100%}
+  .dtbl tr{border:1px solid var(--line);border-radius:13px;padding:13px;margin-bottom:11px;background:var(--card2)}
+  .dtbl tr.hl{border-color:rgba(255,207,92,.45);background:rgba(255,207,92,.07)}
+  .dtbl td{border:none;padding:0;margin-bottom:11px}
+  .dtbl td:last-child{margin-bottom:0}
+  .dtbl td[data-l]::before{content:attr(data-l);display:block;font-size:11.5px;color:var(--mut);margin-bottom:5px}
+  .dtbl td.dh{font-size:16px;font-weight:600}
+}
+
 .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
 @media(max-width:860px){.kpi{grid-template-columns:repeat(2,1fr)}}
 .k{background:linear-gradient(160deg,var(--card2),var(--card));border:1px solid var(--line);
   border-radius:14px;padding:15px}
 .k .lb{font-size:11.5px;color:var(--mut);margin-bottom:6px}
-.k .vl{font-size:23px;font-weight:700;letter-spacing:-.4px}
+.k .vl{font-size:22px;font-weight:700;letter-spacing:-.4px}
 .k .vl small{font-size:12px;color:var(--mut);font-weight:500}
 .k.net .vl{color:var(--ok)}
 .k.ded .vl{color:var(--bad)}
 .rows{border:1px solid var(--line);border-radius:12px;overflow:hidden}
-.row{display:flex;justify-content:space-between;align-items:center;padding:11px 15px;font-size:14px;
+.row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:11px 15px;font-size:14px;
   border-bottom:1px solid rgba(42,55,102,.55)}
 .row:last-child{border:none}
 .row.head{background:var(--card2);font-weight:600;font-size:12.5px;color:var(--mut)}
 .row.tot{background:var(--card2);font-weight:700}
-.row .ds{font-size:11.5px;color:var(--mut);display:block;margin-top:2px}
-.mono{font-variant-numeric:tabular-nums;font-weight:600}
-.neg{color:var(--bad)} .pos{color:var(--ok)}
+.row .ds{font-size:11.5px;color:var(--mut);display:block;margin-top:2px;line-height:1.5}
+.mono{font-variant-numeric:tabular-nums;font-weight:600;white-space:nowrap}
+.neg{color:var(--bad)} .pos{color:var(--ok)} .gold{color:var(--gold)}
 
-/* history */
-.hitem{background:var(--card2);border:1px solid var(--line);border-radius:13px;padding:14px 16px;
-  margin-bottom:10px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.exrow{display:grid;grid-template-columns:1fr 130px 44px;gap:9px;margin-bottom:9px}
+@media(max-width:520px){.exrow{grid-template-columns:1fr 110px 44px}}
+.exrow .del{background:rgba(255,107,122,.12);color:#ff9aa5;border-radius:10px;font-size:16px}
+
+.hitem{background:var(--card2);border:1px solid var(--line);border-radius:13px;padding:14px;
+  margin-bottom:10px;display:flex;align-items:center;gap:13px;flex-wrap:wrap}
 .hitem .t{font-weight:600;font-size:14.5px}
-.hitem .s{font-size:12px;color:var(--mut);margin-top:3px}
+.hitem .s{font-size:12px;color:var(--mut);margin-top:3px;line-height:1.5}
 .hitem .amt{font-size:19px;font-weight:700;color:var(--ok);font-variant-numeric:tabular-nums}
 .mgroup{margin-bottom:22px}
-.mgroup>.mh{display:flex;align-items:baseline;gap:10px;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+.mgroup>.mh{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--line)}
 .mgroup .mh b{font-size:16px}
-.mgroup .mh span{font-size:13px;color:var(--mut)}
+.mgroup .mh span{font-size:12.5px;color:var(--mut)}
 .mgroup .mh i{margin-left:auto;font-style:normal;font-size:15px;font-weight:700;color:var(--pri2)}
 
-/* compare */
 .bar{height:9px;background:#0e1631;border-radius:6px;overflow:hidden;margin-top:7px}
 .bar>div{height:100%;border-radius:6px;background:linear-gradient(90deg,var(--pri),#9a6bff)}
 .ctbl{width:100%;border-collapse:collapse;font-size:14px}
-.ctbl th,.ctbl td{padding:11px 13px;border-bottom:1px solid var(--line);text-align:right}
+.ctbl th,.ctbl td{padding:11px 12px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
 .ctbl th:first-child,.ctbl td:first-child{text-align:left}
 .ctbl th{color:var(--mut);font-size:12.5px;font-weight:500}
-.ctbl tr:last-child td{border:none}
 .empty{text-align:center;padding:46px 20px;color:var(--mut)}
 .empty .ic{font-size:44px;margin-bottom:10px;opacity:.55}
 .note{background:rgba(91,140,255,.08);border:1px solid rgba(91,140,255,.25);border-radius:11px;
   padding:12px 14px;font-size:12.5px;color:#b9c9ff;line-height:1.7;margin-top:14px}
-.flex{display:flex;gap:10px;flex-wrap:wrap}
+.note.gold{background:rgba(255,207,92,.07);border-color:rgba(255,207,92,.3);color:#ffe3a3}
+.flex{display:flex;gap:9px;flex-wrap:wrap}
 .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(90px);
   background:var(--card2);border:1px solid var(--line);padding:13px 22px;border-radius:12px;
-  font-size:14px;box-shadow:0 14px 40px rgba(0,0,0,.5);transition:.3s;z-index:99;opacity:0}
+  font-size:14px;box-shadow:0 14px 40px rgba(0,0,0,.5);transition:.3s;z-index:99;opacity:0;max-width:90vw;text-align:center}
 .toast.show{transform:translateX(-50%) translateY(0);opacity:1}
 </style>
 </head>
@@ -155,7 +167,7 @@ input,select{font-family:inherit}
     <p class="sub">ระบบคำนวณค่าแรงรายวัน &amp; เก็บประวัติรายงวด</p>
     <div id="authMsg"></div>
     <div class="field"><label>ชื่อผู้ใช้</label>
-      <input class="inp" id="auUser" autocomplete="username" placeholder="เช่น atisak"></div>
+      <input class="inp" id="auUser" autocomplete="username" placeholder="เช่น adisak"></div>
     <div class="field"><label>รหัสผ่าน</label>
       <input class="inp" id="auPass" type="password" autocomplete="current-password" placeholder="••••••••"></div>
     <div class="field hide" id="auPass2Box"><label>ยืนยันรหัสผ่าน</label>
@@ -168,7 +180,7 @@ input,select{font-family:inherit}
 <!-- ============ APP ============ -->
 <div id="appView" class="hide">
   <div class="top">
-    <div class="brand"><i>💰</i> PaySlip Tracker</div>
+    <div class="brand"><i>💰</i><span>PaySlip Tracker</span></div>
     <div class="spacer"></div>
     <div class="who">สวัสดี <b id="whoName"></b></div>
     <button class="btn ghost sm" id="btnOut">ออกจากระบบ</button>
@@ -186,14 +198,14 @@ input,select{font-family:inherit}
     <div class="card">
       <h2>1️⃣ เลือกงวดจ่าย</h2>
       <div class="hint">เงินออก <b>ทุกวันที่ 5 และ 20</b> · ตัดยอดล่วงหน้า 5 วันก่อนวันจ่าย<br>
-        → งวดวันที่ <b>1–15</b> จ่าย <b>20</b> ของเดือนเดียวกัน · งวดวันที่ <b>16–สิ้นเดือน</b> จ่าย <b>5</b> ของเดือนถัดไป</div>
+        → งวด <b>1–15</b> จ่ายวันที่ <b>20</b> เดือนเดียวกัน · งวด <b>16–สิ้นเดือน</b> จ่ายวันที่ <b>5</b> เดือนถัดไป</div>
       <div class="grid3">
         <div class="field"><label>เดือน / ปี (ค.ศ.)</label>
           <input class="inp" type="month" id="pMonth"></div>
         <div class="field"><label>งวด</label>
           <select class="inp" id="pHalf">
-            <option value="1">งวดแรก (1–15) → จ่ายวันที่ 20</option>
-            <option value="2">งวดหลัง (16–สิ้นเดือน) → จ่ายวันที่ 5 เดือนถัดไป</option>
+            <option value="1">งวดแรก (1–15) → จ่าย 20</option>
+            <option value="2">งวดหลัง (16–สิ้นเดือน) → จ่าย 5</option>
           </select></div>
         <div class="field"><label>&nbsp;</label>
           <button class="btn" id="btnGen">สร้างตารางวัน →</button></div>
@@ -202,11 +214,11 @@ input,select{font-family:inherit}
 
     <div class="card">
       <h2>2️⃣ แนบรูปตารางเวลา <span class="pill p-info">ไม่บังคับ</span></h2>
-      <div class="hint">เก็บไว้เป็นหลักฐานคู่กับงวดนี้ · ระบบจะย่อรูปอัตโนมัติก่อนบันทึก</div>
+      <div class="hint">เก็บไว้เป็นหลักฐานคู่กับงวดนี้ · ระบบย่อรูปให้อัตโนมัติ</div>
       <div class="drop" id="drop">
         <div class="ic">🖼️</div>
         <div>คลิกเพื่อเลือกรูป หรือลากไฟล์มาวาง</div>
-        <small>JPG / PNG — แนะนำถ่ายให้อ่านคอลัมน์ "ขาดงาน / ลาป่วย / ลากิจ" ชัด</small>
+        <small>JPG / PNG — ถ่ายให้เห็นคอลัมน์ "ขาดงาน / ลาป่วย / ลากิจ" ชัดๆ</small>
         <input type="file" id="fileIn" accept="image/*" class="hide">
       </div>
       <div id="thumbBox"></div>
@@ -216,20 +228,32 @@ input,select{font-family:inherit}
       <h2>3️⃣ กรอกผลการทำงานรายวัน</h2>
       <div class="hint">ดูจากรูปแล้วเลือกประเภทให้ตรง · ช่อง <b>ชม.ไม่ได้ค่าจ้าง</b> ใส่เฉพาะกรณีลากิจเกินสิทธิ์ หรือทำไม่ครบกะ</div>
       <div class="flex" style="margin-bottom:14px">
-        <button class="btn ghost sm" data-fill="work">ตั้งทั้งหมด = วันทำงาน</button>
-        <button class="btn ghost sm" data-fill="tue">ตั้งวันอังคาร = วันหยุด</button>
-        <button class="btn ghost sm" data-fill="sun">ตั้งวันอาทิตย์ = วันหยุด</button>
+        <button class="btn ghost sm" data-fill="work">ทั้งหมด = วันทำงาน</button>
+        <button class="btn ghost sm" data-fill="tue">อังคาร = วันหยุด</button>
+        <button class="btn ghost sm" data-fill="sun">อาทิตย์ = วันหยุด</button>
       </div>
       <div style="overflow-x:auto">
         <table class="dtbl"><thead><tr>
-          <th style="width:130px">วันที่</th><th style="width:220px">ประเภท</th>
-          <th style="width:140px">ชม.ไม่ได้ค่าจ้าง</th><th style="width:150px">ค่าจ้างวันหยุด</th><th>ผล</th>
+          <th style="width:130px">วันที่</th><th style="width:250px">ประเภท</th>
+          <th style="width:130px">ชม.ไม่ได้ค่าจ้าง</th><th style="width:150px">ค่าจ้างวันหยุด</th><th>ผล</th>
         </tr></thead><tbody id="dayBody"></tbody></table>
       </div>
-      <div class="note">📌 <b>กฎค่าจ้างวันหยุด:</b> ลูกจ้างรายวันจะได้ค่าจ้างวันหยุดประจำสัปดาห์
+      <div class="note">📌 <b>กฎค่าจ้างวันหยุดประจำสัปดาห์:</b> ลูกจ้างรายวันจะได้ค่าจ้างวันหยุด
         ก็ต่อเมื่อ <b>ไม่ขาดงานใน 6 วันก่อนหน้า</b> — ระบบคิดให้อัตโนมัติ (ติ๊กแก้เองได้)<br>
         <b>ลาป่วย / ลากิจในสิทธิ์</b> ไม่ตัดสิทธิ์วันหยุด แต่ <b>ขาดงาน</b> ตัด</div>
-      <button class="btn" style="margin-top:16px" id="btnCalc">💸 คำนวณเงินงวดนี้</button>
+      <div class="note gold">🎌 <b>วันหยุดนักขัตฤกษ์:</b> คิดให้ <b id="multShow">2</b> เท่าของค่าแรงรายวันอัตโนมัติ
+        (เปลี่ยนตัวคูณได้ที่แท็บตั้งค่า) · ถ้าเป็นนักขัตฤกษ์ที่ <b>หยุดอยู่บ้าน</b> ให้เลือก "นักขัตฤกษ์ (หยุด)" ซึ่งได้ 1 เท่า</div>
+    </div>
+
+    <div class="card hide" id="extraCard">
+      <h2>4️⃣ รายได้เพิ่มเติม <span class="pill p-info">ใส่เฉพาะงวดที่ได้</span></h2>
+      <div class="hint">เช่น Incentive Audit, เบี้ยขยัน, ค่าเดินทาง — งวดไหนไม่ได้ก็ปล่อยว่างไว้</div>
+      <div id="extraRows"></div>
+      <div class="flex" style="margin-top:6px">
+        <button class="btn ghost sm" id="btnAddExtra">➕ เพิ่มรายการ</button>
+        <button class="btn ghost sm" id="btnQuick"></button>
+      </div>
+      <button class="btn" style="margin-top:18px" id="btnCalc">💸 คำนวณเงินงวดนี้</button>
     </div>
 
     <div id="resBox"></div>
@@ -239,7 +263,7 @@ input,select{font-family:inherit}
   <div class="wrap hide" id="tab-hist">
     <div class="card">
       <h2>📚 ประวัติที่บันทึกไว้</h2>
-      <div class="hint">จัดกลุ่มตามเดือนที่ <b>เงินออก</b> · คลิกการ์ดเพื่อดูรายละเอียดเต็ม</div>
+      <div class="hint">จัดกลุ่มตามเดือนที่ <b>เงินออก</b> · กด "ดู" เพื่อเปิดรายละเอียดเต็ม</div>
       <div id="histBox"></div>
     </div>
   </div>
@@ -266,7 +290,7 @@ input,select{font-family:inherit}
       <div class="grid3">
         <div class="field"><label>ค่าแรงต่อวัน (บาท)</label><input class="inp" type="number" id="sRate" step="0.01"></div>
         <div class="field"><label>ชั่วโมงทำงานต่อวัน</label><input class="inp" type="number" id="sHours" step="0.25"></div>
-        <div class="field"><label>Incentive ต่องวด (บาท)</label><input class="inp" type="number" id="sInc" step="0.01"></div>
+        <div class="field"><label>🎌 ตัวคูณนักขัตฤกษ์ (ทำงาน)</label><input class="inp" type="number" id="sHolMult" step="0.5"></div>
         <div class="field"><label>ประกันสังคม (%)</label><input class="inp" type="number" id="sSso" step="0.1"></div>
         <div class="field"><label>เพดาน ปกส. ต่องวด (บาท)</label><input class="inp" type="number" id="sSsoCap" step="1"></div>
         <div class="field"><label>ภาษีหัก ณ ที่จ่าย (บาท/งวด)</label><input class="inp" type="number" id="sTax" step="0.01"></div>
@@ -275,8 +299,10 @@ input,select{font-family:inherit}
         <div class="field"><label>ปกส. คิดจาก</label>
           <select class="inp" id="sSsoBase">
             <option value="wage">ค่าแรงรายวันเท่านั้น</option>
-            <option value="all">ค่าแรง + Incentive</option>
+            <option value="all">ค่าแรง + รายได้เพิ่มเติม</option>
           </select></div>
+        <div class="field"><label>ปุ่มลัดรายได้ — ชื่อ</label><input class="inp" id="sQName" placeholder="Incentive Audit"></div>
+        <div class="field"><label>ปุ่มลัดรายได้ — จำนวนเงิน</label><input class="inp" type="number" id="sQAmt" step="0.01"></div>
       </div>
       <button class="btn sm" id="btnSaveSet">บันทึกการตั้งค่า</button>
     </div>
@@ -300,38 +326,44 @@ input,select{font-family:inherit}
 const DB='pst_v1';
 const db=()=>JSON.parse(localStorage.getItem(DB)||'{"users":{}}');
 const save=d=>localStorage.setItem(DB,JSON.stringify(d));
-let CU=null; // current user
-const DEF={rate:412,hours:8,inc:250,sso:5,ssoCap:750,tax:0,oth:0,othName:'หักอื่นๆ',ssoBase:'wage'};
+let CU=null;
+const DEF={rate:412,hours:8,holMult:2,sso:5,ssoCap:750,tax:0,oth:0,othName:'หักอื่นๆ',
+  ssoBase:'wage',qName:'Incentive Audit',qAmt:250};
 const TH=['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
 const MN=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+/* mult: null = ใช้ตัวคูณนักขัตฤกษ์จากตั้งค่า */
 const TYPES={
-  work:{n:'✅ วันทำงาน',pay:1},
-  holiday:{n:'🏖️ วันหยุดประจำสัปดาห์',pay:0},
-  sick:{n:'🤒 ลาป่วย (ได้เงิน)',pay:1},
-  personal:{n:'📄 ลากิจ (ได้เงิน)',pay:1},
-  annual:{n:'🌴 ลาพักร้อน',pay:1},
-  absent:{n:'❌ ขาดงาน',pay:0},
-  unpaid:{n:'⛔ ลาไม่รับค่าจ้าง',pay:0},
-  none:{n:'— ไม่มีข้อมูล',pay:0}
+  work:     {n:'✅ วันทำงาน',                 pay:1, mult:1},
+  pubwork:  {n:'🎌 นักขัตฤกษ์ (มาทำงาน)',     pay:1, mult:null},
+  puboff:   {n:'🎏 นักขัตฤกษ์ (หยุด)',        pay:1, mult:1},
+  holiday:  {n:'🏖️ วันหยุดประจำสัปดาห์',      pay:0, mult:1},
+  sick:     {n:'🤒 ลาป่วย (ได้เงิน)',         pay:1, mult:1},
+  personal: {n:'📄 ลากิจ (ได้เงิน)',          pay:1, mult:1},
+  annual:   {n:'🌴 ลาพักร้อน',                pay:1, mult:1},
+  absent:   {n:'❌ ขาดงาน',                   pay:0, mult:0},
+  unpaid:   {n:'⛔ ลาไม่รับค่าจ้าง',           pay:0, mult:0},
+  none:     {n:'— ไม่มีข้อมูล',               pay:0, mult:0}
 };
-const money=n=>n.toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2});
+const money=n=>(+n||0).toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2});
 const toast=m=>{const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');
   setTimeout(()=>t.classList.remove('show'),2400)};
 async function hash(s){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s+'|pst'));
   return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}
+const $=id=>document.getElementById(id);
 
 /* ============ AUTH ============ */
 let mode='login';
-const $=id=>document.getElementById(id);
 function am(t,k){$('authMsg').innerHTML=`<div class="msg ${k}">${t}</div>`}
-$('auSwap').onclick=()=>{
+function bindSwap(){$('auSwap').querySelector('span').onclick=doSwap}
+function doSwap(){
   mode=mode==='login'?'reg':'login';
   $('authTitle').textContent=mode==='login'?'เข้าสู่ระบบ':'สมัครสมาชิก';
   $('auBtn').textContent=mode==='login'?'เข้าสู่ระบบ':'สร้างบัญชี';
   $('auPass2Box').classList.toggle('hide',mode==='login');
   $('auSwap').innerHTML=mode==='login'?'ยังไม่มีบัญชี? <span>สมัครสมาชิก</span>':'มีบัญชีแล้ว? <span>เข้าสู่ระบบ</span>';
-  $('auSwap').querySelector('span').onclick=$('auSwap').onclick;$('authMsg').innerHTML='';
-};
+  bindSwap();$('authMsg').innerHTML='';
+}
+bindSwap();
 $('auBtn').onclick=async()=>{
   const u=$('auUser').value.trim().toLowerCase(),p=$('auPass').value;
   if(!u||!p)return am('กรอกชื่อผู้ใช้และรหัสผ่านให้ครบ','err');
@@ -348,6 +380,7 @@ $('auBtn').onclick=async()=>{
   }
 };
 $('auPass').onkeydown=e=>{if(e.key==='Enter')$('auBtn').click()};
+$('auPass2').onkeydown=e=>{if(e.key==='Enter')$('auBtn').click()};
 function enter(u){
   CU=u;sessionStorage.setItem('pst_cu',u);
   $('authView').classList.add('hide');$('appView').classList.remove('hide');
@@ -356,15 +389,23 @@ function enter(u){
 }
 $('btnOut').onclick=()=>{sessionStorage.removeItem('pst_cu');location.reload()};
 const me=()=>db().users[CU];
+const mySet=()=>({...DEF,...(me().set||{})});
 function putMe(f){const d=db();f(d.users[CU]);save(d)}
 
 /* ============ SETTINGS ============ */
-const SF=[['sRate','rate'],['sHours','hours'],['sInc','inc'],['sSso','sso'],['sSsoCap','ssoCap'],
-  ['sTax','tax'],['sOth','oth'],['sOthName','othName'],['sSsoBase','ssoBase']];
-function loadSet(){const s={...DEF,...me().set};SF.forEach(([i,k])=>$(i).value=s[k])}
+const SF=[['sRate','rate'],['sHours','hours'],['sHolMult','holMult'],['sSso','sso'],['sSsoCap','ssoCap'],
+  ['sTax','tax'],['sOth','oth'],['sOthName','othName'],['sSsoBase','ssoBase'],['sQName','qName'],['sQAmt','qAmt']];
+function loadSet(){const s=mySet();SF.forEach(([i,k])=>$(i).value=s[k]);refreshQuick()}
+function refreshQuick(){
+  const s=mySet();
+  $('btnQuick').textContent=`⚡ ${s.qName||'รายการลัด'} +${money(s.qAmt)}`;
+  $('btnQuick').classList.toggle('hide',!(s.qAmt>0));
+  $('multShow').textContent=s.holMult;
+}
 $('btnSaveSet').onclick=()=>{
-  const o={};SF.forEach(([i,k])=>{const v=$(i).value;o[k]=(k==='othName'||k==='ssoBase')?v:(parseFloat(v)||0)});
-  putMe(u=>u.set=o);toast('✅ บันทึกการตั้งค่าแล้ว');
+  const o={};SF.forEach(([i,k])=>{const v=$(i).value;
+    o[k]=(k==='othName'||k==='ssoBase'||k==='qName')?v:(parseFloat(v)||0)});
+  putMe(u=>u.set=o);refreshQuick();if(DAYS.length)drawDays();toast('✅ บันทึกการตั้งค่าแล้ว');
 };
 
 /* ============ TABS ============ */
@@ -372,6 +413,7 @@ document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));b.classList.add('on');
   ['calc','hist','comp','set'].forEach(t=>$('tab-'+t).classList.toggle('hide',t!==b.dataset.t));
   if(b.dataset.t==='hist')renderHist();if(b.dataset.t==='comp')fillCmp();
+  window.scrollTo({top:0,behavior:'smooth'});
 });
 
 /* ============ IMAGE ============ */
@@ -396,7 +438,8 @@ function pic(f){
 function rmImg(){IMG=null;$('thumbBox').innerHTML=''}
 
 /* ============ DAY TABLE ============ */
-let DAYS=[],PINFO=null;
+let DAYS=[],PINFO=null,EXTRAS=[];
+function dayMult(t){const s=mySet();const m=TYPES[t].mult;return m===null?s.holMult:m}
 $('btnGen').onclick=()=>{
   const mv=$('pMonth').value;if(!mv)return toast('⚠️ เลือกเดือนก่อน');
   const [y,m]=mv.split('-').map(Number),half=+$('pHalf').value;
@@ -411,27 +454,33 @@ $('btnGen').onclick=()=>{
     payMonthKey:`${payD.getFullYear()}-${String(payD.getMonth()+1).padStart(2,'0')}`};
   DAYS=[];for(let d=s;d<=e;d++){const dt=new Date(y,m-1,d);
     DAYS.push({d,dow:dt.getDay(),type:'work',un:0,hpOv:null})}
-  drawDays();$('daysCard').classList.remove('hide');$('resBox').innerHTML='';
+  EXTRAS=[];drawExtras();
+  drawDays();$('daysCard').classList.remove('hide');$('extraCard').classList.remove('hide');
+  $('resBox').innerHTML='';
   $('daysCard').scrollIntoView({behavior:'smooth',block:'start'});
 };
 function drawDays(){
+  const s=mySet();
   $('dayBody').innerHTML=DAYS.map((x,i)=>{
     const hp=holidayPaid(i);
-    const st=x.type==='holiday'
-      ? (hp?'<span class="pill p-ok">ได้ค่าจ้างวันหยุด</span>':'<span class="pill p-bad">ไม่ได้ค่าจ้าง</span>')
-      : x.type==='absent'?'<span class="pill p-bad">ตัดค่าจ้าง + ตัดวันหยุดสัปดาห์นี้</span>'
-      : TYPES[x.type].pay? (x.un>0?`<span class="pill p-warn">หัก ${x.un} ชม.</span>`:'<span class="pill p-ok">ได้ค่าจ้างเต็ม</span>')
-      :'<span class="pill p-bad">ไม่ได้ค่าจ้าง</span>';
-    return `<tr class="${x.dow===0||x.dow===2?'wknd':''}">
-      <td><b>${x.d}</b> <span class="dnum">${TH[x.dow]}</span></td>
-      <td><select onchange="setD(${i},'type',this.value)">${Object.entries(TYPES)
+    let st;
+    if(x.type==='pubwork')st=`<span class="pill p-gold">🎌 ได้ ${s.holMult} เท่า = ${money(s.rate*s.holMult)} ฿</span>`;
+    else if(x.type==='puboff')st='<span class="pill p-gold">🎏 ได้ค่าจ้าง 1 เท่า</span>';
+    else if(x.type==='holiday')st=hp?'<span class="pill p-ok">ได้ค่าจ้างวันหยุด</span>':'<span class="pill p-bad">ไม่ได้ค่าจ้าง</span>';
+    else if(x.type==='absent')st='<span class="pill p-bad">ตัดค่าจ้าง + ตัดวันหยุดสัปดาห์นี้</span>';
+    else if(TYPES[x.type].pay)st=x.un>0?`<span class="pill p-warn">หัก ${x.un} ชม.</span>`:'<span class="pill p-ok">ได้ค่าจ้างเต็ม</span>';
+    else st='<span class="pill p-bad">ไม่ได้ค่าจ้าง</span>';
+    const gold=(x.type==='pubwork'||x.type==='puboff');
+    return `<tr class="${gold?'hl':''}">
+      <td class="dh"><b>${x.d}</b> <span class="dnum">${TH[x.dow]}</span></td>
+      <td data-l="ประเภทของวัน"><select onchange="setD(${i},'type',this.value)">${Object.entries(TYPES)
         .map(([k,v])=>`<option value="${k}" ${x.type===k?'selected':''}>${v.n}</option>`).join('')}</select></td>
-      <td><input type="number" min="0" step="0.25" value="${x.un}" ${TYPES[x.type].pay?'':'disabled'}
+      <td data-l="ชั่วโมงที่ไม่ได้ค่าจ้าง"><input type="number" min="0" step="0.25" value="${x.un}" ${TYPES[x.type].pay?'':'disabled'}
         onchange="setD(${i},'un',parseFloat(this.value)||0)"></td>
-      <td>${x.type==='holiday'?`<label style="font-size:12.5px;color:var(--mut);cursor:pointer">
-        <input type="checkbox" style="width:auto;margin-right:6px" ${hp?'checked':''}
-        onchange="setD(${i},'hpOv',this.checked)"> จ่าย</label>`:'<span class="dnum">—</span>'}</td>
-      <td>${st}</td></tr>`}).join('');
+      <td data-l="ค่าจ้างวันหยุด">${x.type==='holiday'?`<label class="chk">
+        <input type="checkbox" ${hp?'checked':''} onchange="setD(${i},'hpOv',this.checked)"> จ่ายค่าจ้างวันหยุดนี้</label>`
+        :'<span class="dnum">—</span>'}</td>
+      <td data-l="ผลลัพธ์">${st}</td></tr>`}).join('');
 }
 function setD(i,k,v){DAYS[i][k]=v;if(k==='type')DAYS[i].hpOv=null;drawDays()}
 function holidayPaid(i){
@@ -448,41 +497,63 @@ document.querySelectorAll('[data-fill]').forEach(b=>b.onclick=()=>{
   drawDays();
 });
 
+/* ============ EXTRA INCOME ============ */
+function drawExtras(){
+  $('extraRows').innerHTML=EXTRAS.length?EXTRAS.map((e,i)=>`
+    <div class="exrow">
+      <input class="inp" placeholder="ชื่อรายการ เช่น Incentive Audit" value="${(e.name||'').replace(/"/g,'&quot;')}"
+        onchange="EXTRAS[${i}].name=this.value">
+      <input class="inp" type="number" step="0.01" placeholder="0.00" value="${e.amt||''}"
+        onchange="EXTRAS[${i}].amt=parseFloat(this.value)||0">
+      <button class="del" onclick="EXTRAS.splice(${i},1);drawExtras()">✕</button>
+    </div>`).join('')
+    :'<div class="dnum" style="padding:6px 2px 10px">— งวดนี้ยังไม่มีรายได้เพิ่มเติม —</div>';
+}
+$('btnAddExtra').onclick=()=>{EXTRAS.push({name:'',amt:0});drawExtras()};
+$('btnQuick').onclick=()=>{const s=mySet();EXTRAS.push({name:s.qName,amt:s.qAmt});drawExtras()};
+
 /* ============ CALCULATE ============ */
 let LAST=null;
 $('btnCalc').onclick=()=>{
-  const s={...DEF,...me().set};
-  let work=0,sick=0,per=0,ann=0,abs=0,unp=0,hol=0,holPaid=0,unHr=0;
+  const s=mySet();
+  let work=0,pubW=0,pubO=0,sick=0,per=0,ann=0,abs=0,unp=0,hol=0,holPaid=0,unHr=0,units=0;
   DAYS.forEach((x,i)=>{
-    if(x.type==='work')work++;
-    else if(x.type==='sick')sick++;
-    else if(x.type==='personal')per++;
-    else if(x.type==='annual')ann++;
-    else if(x.type==='absent')abs++;
-    else if(x.type==='unpaid')unp++;
-    else if(x.type==='holiday'){hol++;if(holidayPaid(i))holPaid++}
-    if(TYPES[x.type].pay)unHr+=x.un||0;
+    const t=x.type;
+    if(t==='work'){work++;units+=1}
+    else if(t==='pubwork'){pubW++;units+=s.holMult}
+    else if(t==='puboff'){pubO++;units+=1}
+    else if(t==='sick'){sick++;units+=1}
+    else if(t==='personal'){per++;units+=1}
+    else if(t==='annual'){ann++;units+=1}
+    else if(t==='absent')abs++;
+    else if(t==='unpaid')unp++;
+    else if(t==='holiday'){hol++;if(holidayPaid(i)){holPaid++;units+=1}}
+    if(TYPES[t].pay)unHr+=x.un||0;
   });
-  const paidDays=work+sick+per+ann+holPaid;
+  const paidDays=work+pubW+pubO+sick+per+ann+holPaid;
   const hourRate=s.rate/s.hours;
   const unpaidCut=+(unHr*hourRate).toFixed(2);
-  const wage=+(paidDays*s.rate-unpaidCut).toFixed(2);
-  const inc=s.inc;
-  const gross=+(wage+inc).toFixed(2);
+  const wage=+(units*s.rate-unpaidCut).toFixed(2);
+  const extras=EXTRAS.filter(e=>(+e.amt)>0).map(e=>({name:e.name||'รายได้เพิ่มเติม',amt:+e.amt}));
+  const extraSum=+extras.reduce((a,b)=>a+b.amt,0).toFixed(2);
+  const gross=+(wage+extraSum).toFixed(2);
   const base=s.ssoBase==='all'?gross:wage;
   let sso=Math.round(base*s.sso/100);
   if(s.ssoCap>0)sso=Math.min(sso,s.ssoCap);
   const ded=+(sso+s.tax+s.oth).toFixed(2);
   const net=+(gross-ded).toFixed(2);
   const lostAbs=+((abs+(hol-holPaid))*s.rate).toFixed(2);
+  const pubBonus=+(pubW*(s.holMult-1)*s.rate).toFixed(2);
   LAST={...PINFO,img:IMG,days:JSON.parse(JSON.stringify(DAYS)),set:s,
-    st:{work,sick,per,ann,abs,unp,hol,holPaid,paidDays,unHr},
-    wage,inc,gross,sso,tax:s.tax,oth:s.oth,othName:s.othName,unpaidCut,ded,net,lostAbs,
-    savedAt:new Date().toISOString()};
+    st:{work,pubW,pubO,sick,per,ann,abs,unp,hol,holPaid,paidDays,unHr,units},
+    wage,extras,extraSum,gross,sso,tax:s.tax,oth:s.oth,othName:s.othName,
+    unpaidCut,ded,net,lostAbs,pubBonus,savedAt:new Date().toISOString()};
   showRes(LAST,true);
 };
 function showRes(r,live){
-  const s=r.set,st=r.st;
+  const s={...DEF,...r.set},st=r.st;
+  const extras=r.extras||(r.inc>0?[{name:'Incentive',amt:r.inc}]:[]);
+  const extraSum=r.extraSum!=null?r.extraSum:(r.inc||0);
   $('resBox').innerHTML=`
   <div class="card">
     <h2>💸 ผลคำนวณ — งวด ${r.label}</h2>
@@ -497,10 +568,13 @@ function showRes(r,live){
     <div class="rows" style="margin-bottom:16px">
       <div class="row head"><span>🟢 เงินได้ (Income)</span><span>บาท</span></div>
       <div class="row"><span>ค่าแรงรายวัน
-        <span class="ds">${st.paidDays} วัน × ${money(s.rate)}${r.unpaidCut>0?` − หัก ${st.unHr} ชม. (${money(r.unpaidCut)})`:''}</span></span>
+        <span class="ds">คิดเป็น ${st.units} หน่วยวัน × ${money(s.rate)}${
+          st.pubW?` (รวมนักขัตฤกษ์ ${st.pubW} วัน × ${s.holMult} เท่า)`:''}${
+          r.unpaidCut>0?` − หัก ${st.unHr} ชม. (${money(r.unpaidCut)})`:''}</span></span>
         <span class="mono">${money(r.wage)}</span></div>
-      ${r.inc>0?`<div class="row"><span>Incentive<span class="ds">เหมาจ่ายต่องวด</span></span>
-        <span class="mono">${money(r.inc)}</span></div>`:''}
+      ${extras.map(e=>`<div class="row"><span>${e.name}<span class="ds">รายได้เพิ่มเติมงวดนี้</span></span>
+        <span class="mono">${money(e.amt)}</span></div>`).join('')}
+      ${extras.length?'':'<div class="row"><span class="dnum">— งวดนี้ไม่มีรายได้เพิ่มเติม —</span><span class="mono dnum">0.00</span></div>'}
       <div class="row tot"><span>รวมรายได้</span><span class="mono">${money(r.gross)}</span></div>
     </div>
 
@@ -518,13 +592,21 @@ function showRes(r,live){
     <div class="rows">
       <div class="row head"><span>📋 สรุปวันทำงาน</span><span>จำนวน</span></div>
       <div class="row"><span>✅ วันทำงานจริง</span><span class="mono">${st.work} วัน</span></div>
+      ${st.pubW?`<div class="row"><span>🎌 นักขัตฤกษ์ (มาทำงาน)<span class="ds">คิด ${s.holMult} เท่า = ${money(s.rate*s.holMult)} ฿/วัน</span></span>
+        <span class="mono gold">${st.pubW} วัน</span></div>`:''}
+      ${st.pubO?`<div class="row"><span>🎏 นักขัตฤกษ์ (หยุด)</span><span class="mono gold">${st.pubO} วัน</span></div>`:''}
       ${st.sick?`<div class="row"><span>🤒 ลาป่วย (ได้เงิน)</span><span class="mono">${st.sick} วัน</span></div>`:''}
       ${st.per?`<div class="row"><span>📄 ลากิจ (ได้เงิน)</span><span class="mono">${st.per} วัน</span></div>`:''}
       ${st.ann?`<div class="row"><span>🌴 ลาพักร้อน</span><span class="mono">${st.ann} วัน</span></div>`:''}
       <div class="row"><span>🏖️ วันหยุดที่<b>ได้</b>ค่าจ้าง</span><span class="mono pos">${st.holPaid} / ${st.hol} วัน</span></div>
       ${st.abs?`<div class="row"><span>❌ ขาดงาน</span><span class="mono neg">${st.abs} วัน</span></div>`:''}
       ${st.unp?`<div class="row"><span>⛔ ลาไม่รับค่าจ้าง</span><span class="mono neg">${st.unp} วัน</span></div>`:''}
+      <div class="row tot"><span>รวมหน่วยวันที่ได้ค่าจ้าง</span><span class="mono">${st.units} หน่วย</span></div>
     </div>
+
+    ${r.pubBonus>0?`<div class="note gold">🎌 <b>โบนัสวันนักขัตฤกษ์: +${money(r.pubBonus)} บาท</b><br>
+      ทำงานวันนักขัตฤกษ์ ${st.pubW} วัน ได้ ${s.holMult} เท่า → ส่วนที่เพิ่มจากปกติ
+      = ${st.pubW} × ${s.holMult-1} × ${money(s.rate)}</div>`:''}
 
     ${r.lostAbs>0?`<div class="note" style="border-color:rgba(255,107,122,.3);background:rgba(255,107,122,.07);color:#ffb3bb">
       ⚠️ <b>เงินที่หายไปจากการขาดงาน: ${money(r.lostAbs)} บาท</b><br>
@@ -561,9 +643,10 @@ function renderHist(){
       <div class="hitem">
         ${r.img?`<img src="${r.img}" style="width:62px;height:46px;object-fit:cover;border-radius:8px;border:1px solid var(--line)">`:
           '<div style="width:62px;height:46px;border-radius:8px;background:#0e1631;display:flex;align-items:center;justify-content:center;border:1px solid var(--line)">📄</div>'}
-        <div style="flex:1;min-width:160px">
+        <div style="flex:1;min-width:150px">
           <div class="t">งวด ${r.label}</div>
           <div class="s">จ่าย ${r.payLabel} · ได้ค่าจ้าง ${r.st.paidDays} วัน
+            ${r.st.pubW?`· <span class="gold">🎌 นักขัตฤกษ์ ${r.st.pubW} วัน</span>`:''}
             ${r.st.abs?`· <span style="color:var(--bad)">ขาด ${r.st.abs} วัน</span>`:''}</div>
         </div>
         <div style="text-align:right"><div class="amt">${money(r.net)}</div>
@@ -597,11 +680,11 @@ $('btnCmp').onclick=()=>{
   const A=rs.find(x=>x.key===$('cmpA').value),B=rs.find(x=>x.key===$('cmpB').value);
   if(!A||!B)return toast('⚠️ ต้องมีอย่างน้อย 2 งวด');
   if(A.key===B.key)return toast('⚠️ เลือกคนละงวด');
+  const ex=r=>r.extraSum!=null?r.extraSum:(r.inc||0);
   const mx=Math.max(A.net,B.net)||1;
-  const d=(a,b,inv)=>{const x=b-a;if(Math.abs(x)<.01)return '<span class="dnum">เท่าเดิม</span>';
-    const good=inv?x<0:x>0;
-    return `<span class="${good?'pos':'neg'}">${x>0?'▲ +':'▼ '}${money(Math.abs(x))}</span>`};
-  const dn=(a,b,inv)=>{const x=b-a;if(!x)return '<span class="dnum">เท่าเดิม</span>';
+  const d=(a,b,inv)=>{const x=(b||0)-(a||0);if(Math.abs(x)<.01)return '<span class="dnum">เท่าเดิม</span>';
+    const good=inv?x<0:x>0;return `<span class="${good?'pos':'neg'}">${x>0?'▲ +':'▼ '}${money(Math.abs(x))}</span>`};
+  const dn=(a,b,inv)=>{const x=(b||0)-(a||0);if(!x)return '<span class="dnum">เท่าเดิม</span>';
     const good=inv?x<0:x>0;return `<span class="${good?'pos':'neg'}">${x>0?'+':'−'}${Math.abs(x)}</span>`};
   $('cmpBox').innerHTML=`
   <div class="grid2" style="margin-bottom:18px">
@@ -613,12 +696,13 @@ $('btnCmp').onclick=()=>{
   <div style="overflow-x:auto"><table class="ctbl">
     <thead><tr><th>รายการ</th><th>งวด A</th><th>งวด B</th><th>ต่างกัน</th></tr></thead><tbody>
     <tr><td>วันทำงานจริง</td><td>${A.st.work}</td><td>${B.st.work}</td><td>${dn(A.st.work,B.st.work)}</td></tr>
+    <tr><td>🎌 นักขัตฤกษ์ (ทำงาน)</td><td>${A.st.pubW||0}</td><td>${B.st.pubW||0}</td><td>${dn(A.st.pubW,B.st.pubW)}</td></tr>
     <tr><td>วันหยุดที่ได้ค่าจ้าง</td><td>${A.st.holPaid}/${A.st.hol}</td><td>${B.st.holPaid}/${B.st.hol}</td><td>${dn(A.st.holPaid,B.st.holPaid)}</td></tr>
     <tr><td>วันลา (ได้เงิน)</td><td>${A.st.sick+A.st.per+A.st.ann}</td><td>${B.st.sick+B.st.per+B.st.ann}</td><td>${dn(A.st.sick+A.st.per+A.st.ann,B.st.sick+B.st.per+B.st.ann)}</td></tr>
     <tr><td>ขาดงาน</td><td>${A.st.abs}</td><td>${B.st.abs}</td><td>${dn(A.st.abs,B.st.abs,1)}</td></tr>
-    <tr><td><b>รวมวันที่ได้ค่าจ้าง</b></td><td><b>${A.st.paidDays}</b></td><td><b>${B.st.paidDays}</b></td><td>${dn(A.st.paidDays,B.st.paidDays)}</td></tr>
+    <tr><td><b>หน่วยวันที่ได้ค่าจ้าง</b></td><td><b>${A.st.units??A.st.paidDays}</b></td><td><b>${B.st.units??B.st.paidDays}</b></td><td>${dn(A.st.units??A.st.paidDays,B.st.units??B.st.paidDays)}</td></tr>
     <tr><td>ค่าแรงรายวัน</td><td>${money(A.wage)}</td><td>${money(B.wage)}</td><td>${d(A.wage,B.wage)}</td></tr>
-    <tr><td>Incentive</td><td>${money(A.inc)}</td><td>${money(B.inc)}</td><td>${d(A.inc,B.inc)}</td></tr>
+    <tr><td>รายได้เพิ่มเติม</td><td>${money(ex(A))}</td><td>${money(ex(B))}</td><td>${d(ex(A),ex(B))}</td></tr>
     <tr><td>รวมรายได้</td><td>${money(A.gross)}</td><td>${money(B.gross)}</td><td>${d(A.gross,B.gross)}</td></tr>
     <tr><td>ประกันสังคม</td><td>−${money(A.sso)}</td><td>−${money(B.sso)}</td><td>${d(A.sso,B.sso,1)}</td></tr>
     <tr><td>รวมเงินหัก</td><td>−${money(A.ded)}</td><td>−${money(B.ded)}</td><td>${d(A.ded,B.ded,1)}</td></tr>
@@ -626,7 +710,7 @@ $('btnCmp').onclick=()=>{
       <td><b>${money(B.net)}</b></td><td><b>${d(A.net,B.net)}</b></td></tr>
   </tbody></table></div>
   <div class="note">${B.net>A.net
-    ? `📈 งวด B ได้มากกว่า <b>${money(B.net-A.net)} บาท</b> — หลักๆ มาจากวันที่ได้ค่าจ้างต่างกัน ${B.st.paidDays-A.st.paidDays} วัน`
+    ? `📈 งวด B ได้มากกว่า <b>${money(B.net-A.net)} บาท</b>${(B.st.pubW||0)>(A.st.pubW||0)?` — ส่วนหนึ่งมาจากทำงานวันนักขัตฤกษ์เพิ่ม ${(B.st.pubW||0)-(A.st.pubW||0)} วัน`:''}`
     : B.net<A.net
     ? `📉 งวด B ได้น้อยกว่า <b>${money(A.net-B.net)} บาท</b>${B.st.abs>A.st.abs?` — สาเหตุหลักคือขาดงานเพิ่ม ${B.st.abs-A.st.abs} วัน ซึ่งตัดค่าจ้างวันหยุดไปด้วย`:''}`
     : '➖ ทั้งสองงวดได้เท่ากันพอดี'}</div>`;
@@ -645,7 +729,7 @@ $('impFile').onchange=e=>{
   r.onload=ev=>{try{const j=JSON.parse(ev.target.result);
     if(!j.data||!j.data.recs)throw 0;
     if(!confirm('กู้คืนข้อมูลทับของเดิม?'))return;
-    putMe(u=>{u.set=j.data.set||DEF;u.recs=j.data.recs});
+    putMe(u=>{u.set={...DEF,...(j.data.set||{})};u.recs=j.data.recs});
     loadSet();renderHist();fillCmp();toast('✅ กู้คืนข้อมูลสำเร็จ');
   }catch{toast('❌ ไฟล์ไม่ถูกต้อง')}};
   r.readAsText(f);e.target.value='';
