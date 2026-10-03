@@ -164,7 +164,7 @@ input,select{font-family:inherit}
   <div class="auth">
     <div class="logo">💰</div>
     <h1 id="authTitle">เข้าสู่ระบบ</h1>
-    <p class="sub">ระบบคำนวณค่าแรงรายวัน &amp; เก็บประวัติรายงวด</p>
+    <p class="sub">ระบบคำนวณค่าแรงรายวัน &amp; ซิงค์ข้อมูลคลาวด์</p>
     <div id="authMsg"></div>
     <div class="field"><label>ชื่อผู้ใช้</label>
       <input class="inp" id="auUser" autocomplete="username" placeholder="เช่น adisak"></div>
@@ -285,6 +285,20 @@ input,select{font-family:inherit}
   <!-- ---- SETTINGS ---- -->
   <div class="wrap hide" id="tab-set">
     <div class="card">
+      <h2>☁️ ซิงค์ข้อมูลข้ามเบราว์เซอร์ (Cloud Sync)</h2>
+      <div class="hint">ใช้รหัสนี้เพื่อเปิดดูและซิงค์ข้อมูลเดียวกันบนเบราว์เซอร์อื่น (เช่น จาก Safari ไป Chrome)</div>
+      <div class="grid2">
+        <div class="field"><label>รหัส Cloud Sync ID</label>
+          <input class="inp" id="sCloudId" placeholder="กดสร้างรหัส หรือใส่รหัสจากเครื่องหลัก"></div>
+        <div class="field"><label>&nbsp;</label>
+          <div class="flex">
+            <button class="btn ghost sm" id="btnGenSync">🌐 สร้างรหัสใหม่</button>
+            <button class="btn sm" id="btnPullSync">📥 ดึงข้อมูลจากคลาวด์</button>
+          </div></div>
+      </div>
+    </div>
+
+    <div class="card">
       <h2>⚙️ ตั้งค่าการคำนวณ</h2>
       <div class="hint">ค่าเหล่านี้ผูกกับบัญชีของคุณ · แก้แล้วกดบันทึก</div>
       <div class="grid3">
@@ -307,8 +321,8 @@ input,select{font-family:inherit}
       <button class="btn sm" id="btnSaveSet">บันทึกการตั้งค่า</button>
     </div>
     <div class="card">
-      <h2>🔐 ข้อมูลและความปลอดภัย</h2>
-      <div class="hint">ข้อมูลทั้งหมดเก็บในเบราว์เซอร์เครื่องนี้เท่านั้น ไม่ส่งออกไปไหน — ควรสำรองไฟล์ไว้เป็นระยะ</div>
+      <h2>🔐 สำรองข้อมูลและล้างข้อมูล</h2>
+      <div class="hint">ดาวน์โหลดไฟล์เก็บไว้เป็นสำรอง หรือล้างประวัติทั้งหมด</div>
       <div class="flex">
         <button class="btn ghost sm" id="btnExport">⬇️ สำรองข้อมูล (.json)</button>
         <button class="btn ghost sm" id="btnImport">⬆️ กู้คืนข้อมูล</button>
@@ -322,16 +336,15 @@ input,select{font-family:inherit}
 <div class="toast" id="toast"></div>
 
 <script>
-/* ============ STORAGE ============ */
+/* ============ STORAGE & CLOUD ============ */
 const DB='pst_v1';
 const db=()=>JSON.parse(localStorage.getItem(DB)||'{"users":{}}');
 const save=d=>localStorage.setItem(DB,JSON.stringify(d));
 let CU=null;
 const DEF={rate:412,hours:8,holMult:2,sso:5,ssoCap:750,tax:0,oth:0,othName:'หักอื่นๆ',
-  ssoBase:'wage',qName:'Incentive Audit',qAmt:250};
+  ssoBase:'wage',qName:'Incentive Audit',qAmt:250,cloudId:''};
 const TH=['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
 const MN=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
-/* mult: null = ใช้ตัวคูณนักขัตฤกษ์จากตั้งค่า */
 const TYPES={
   work:     {n:'✅ วันทำงาน',                 pay:1, mult:1},
   pubwork:  {n:'🎌 นักขัตฤกษ์ (มาทำงาน)',     pay:1, mult:null},
@@ -350,6 +363,18 @@ const toast=m=>{const t=document.getElementById('toast');t.textContent=m;t.class
 async function hash(s){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s+'|pst'));
   return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}
 const $=id=>document.getElementById(id);
+
+async function cloudPush(){
+  const u=me();if(!u||!u.set.cloudId)return;
+  try{await fetch(`https://api.npoint.io/${u.set.cloudId}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(u)});}catch(e){}
+}
+async function cloudPull(id){
+  try{const r=await fetch(`https://api.npoint.io/${id}`);if(!r.ok)throw 0;
+    const d=await r.json();if(!d.pw)throw 0;
+    putMe(u=>{u.set=d.set||DEF;u.recs=d.recs||[];u.set.cloudId=id});
+    loadSet();renderHist();fillCmp();toast('✅ ดึงข้อมูลจากคลาวด์สำเร็จ');
+  }catch{toast('❌ ไม่พบรหัส Cloud ID นี้')}
+}
 
 /* ============ AUTH ============ */
 let mode='login';
@@ -386,16 +411,20 @@ function enter(u){
   $('authView').classList.add('hide');$('appView').classList.remove('hide');
   $('whoName').textContent=u;loadSet();renderHist();fillCmp();
   const n=new Date();$('pMonth').value=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0');
+  if(me().set.cloudId)cloudPull(me().set.cloudId);
 }
 $('btnOut').onclick=()=>{sessionStorage.removeItem('pst_cu');location.reload()};
 const me=()=>db().users[CU];
 const mySet=()=>({...DEF,...(me().set||{})});
-function putMe(f){const d=db();f(d.users[CU]);save(d)}
+function putMe(f){const d=db();f(d.users[CU]);save(d);cloudPush()}
 
-/* ============ SETTINGS ============ */
+/* ============ SETTINGS & CLOUD UI ============ */
 const SF=[['sRate','rate'],['sHours','hours'],['sHolMult','holMult'],['sSso','sso'],['sSsoCap','ssoCap'],
   ['sTax','tax'],['sOth','oth'],['sOthName','othName'],['sSsoBase','ssoBase'],['sQName','qName'],['sQAmt','qAmt']];
-function loadSet(){const s=mySet();SF.forEach(([i,k])=>$(i).value=s[k]);refreshQuick()}
+function loadSet(){
+  const s=mySet();SF.forEach(([i,k])=>$(i).value=s[k]);
+  $('sCloudId').value=s.cloudId||'';refreshQuick();
+}
 function refreshQuick(){
   const s=mySet();
   $('btnQuick').textContent=`⚡ ${s.qName||'รายการลัด'} +${money(s.qAmt)}`;
@@ -403,18 +432,36 @@ function refreshQuick(){
   $('multShow').textContent=s.holMult;
 }
 $('btnSaveSet').onclick=()=>{
-  const o={};SF.forEach(([i,k])=>{const v=$(i).value;
+  const o={...mySet()};SF.forEach(([i,k])=>{const v=$(i).value;
     o[k]=(k==='othName'||k==='ssoBase'||k==='qName')?v:(parseFloat(v)||0)});
-  putMe(u=>u.set=o);refreshQuick();if(DAYS.length)drawDays();toast('✅ บันทึกการตั้งค่าแล้ว');
+  o.cloudId=$('sCloudId').value.trim();
+  putMe(u=>u.set=o);refreshQuick();if(DAYS.length)drawDays();toast('✅ บันทึกการตั้งค่าและซิงค์แล้ว');
+};
+$('btnGenSync').onclick=async()=>{
+  toast('🌐 กำลังสร้างรหัสคลาวด์...');
+  try{
+    const r=await fetch('https://api.npoint.io',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(me())});
+    const j=await r.json();if(j.id){
+      $('sCloudId').value=j.id;
+      putMe(u=>u.set.cloudId=j.id);
+      toast('✅ สร้างรหัส Cloud ID สำเร็จ!');
+    }
+  }catch{toast('❌ เกิดข้อผิดพลาดในการเชื่อมต่อ')}
+};
+$('btnPullSync').onclick=()=>{
+  const id=$('sCloudId').value.trim();
+  if(!id)return toast('⚠️ กรุณากรอกรหัส Cloud ID ก่อน');
+  cloudPull(id);
 };
 
 /* ============ TABS ============ */
-document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{
-  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));b.classList.add('on');
-  ['calc','hist','comp','set'].forEach(t=>$('tab-'+t).classList.toggle('hide',t!==b.dataset.t));
-  if(b.dataset.t==='hist')renderHist();if(b.dataset.t==='comp')fillCmp();
-  window.scrollTo({top:0,behavior:'smooth'});
-});
+function goTab(name){
+  document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x.dataset.t===name));
+  ['calc','hist','comp','set'].forEach(t=>$('tab-'+t).classList.toggle('hide',t!==name));
+  if(name==='hist')renderHist();if(name==='comp')fillCmp();
+  window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body.scrollTop=0;
+}
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>goTab(b.dataset.t));
 
 /* ============ IMAGE ============ */
 let IMG=null;
@@ -553,7 +600,6 @@ $('btnCalc').onclick=()=>{
 function showRes(r,live){
   const s={...DEF,...r.set},st=r.st;
   const extras=r.extras||(r.inc>0?[{name:'Incentive',amt:r.inc}]:[]);
-  const extraSum=r.extraSum!=null?r.extraSum:(r.inc||0);
   $('resBox').innerHTML=`
   <div class="card">
     <h2>💸 ผลคำนวณ — งวด ${r.label}</h2>
@@ -621,24 +667,15 @@ function showRes(r,live){
   </div>`;
   $('resBox').scrollIntoView({behavior:'smooth',block:'start'});
 }
-function goTab(name){
-  document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x.dataset.t===name));
-  ['calc','hist','comp','set'].forEach(t=>$('tab-'+t).classList.toggle('hide',t!==name));
-  if(name==='hist')renderHist();
-  if(name==='comp')fillCmp();
-  window.scrollTo(0,0);
-  document.documentElement.scrollTop=0;
-  document.body.scrollTop=0;
-}
-
 function saveRec(){
   if(!LAST)return;
   putMe(u=>{u.recs=(u.recs||[]).filter(x=>x.key!==LAST.key);u.recs.push(LAST);
     u.recs.sort((a,b)=>a.payDate<b.payDate?1:-1)});
-  fillCmp();
   toast('💾 บันทึกงวด '+LAST.label+' แล้ว');
+  renderHist();fillCmp();
   goTab('hist');
 }
+
 /* ============ HISTORY ============ */
 function renderHist(){
   const rs=me().recs||[];
@@ -669,13 +706,13 @@ function renderHist(){
 }
 function openRec(k){
   const r=(me().recs||[]).find(x=>x.key===k);if(!r)return;
-  document.querySelector('[data-t="calc"]').click();
+  goTab('calc');
   showRes(r,false);
   if(r.img)$('resBox').insertAdjacentHTML('beforeend',
     `<div class="card"><h2>🖼️ รูปตารางเวลาแนบของงวดนี้</h2><div class="thumb"><img src="${r.img}"></div></div>`);
 }
 function delRec(k){
-  if(!confirm('ลบงวดนี้ออกจากประวัติ?'))return;
+  if(!confirm('ลบงวดนี้ออกจากประวัติข้ามคลาวด์?'))return;
   putMe(u=>u.recs=u.recs.filter(x=>x.key!==k));renderHist();fillCmp();toast('🗑️ ลบแล้ว');
 }
 
