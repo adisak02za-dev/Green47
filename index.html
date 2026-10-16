@@ -177,6 +177,11 @@ textarea.inp{resize:vertical;min-height:60px}
       เข้าสู่ระบบด้วย Microsoft (Outlook)
     </button>
     <div class="or">— หรือใช้บัญชีในเครื่อง —</div>
+    <button class="btn fb" id="fbBtn" style="background:#1877f2;color:#fff;display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:10px">
+  <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+  เข้าสู่ระบบด้วย Facebook
+</button>
+<div class="or">— หรือใช้บัญชีในเครื่อง —</div>
 
     <div class="field"><label>ชื่อผู้ใช้</label>
       <input class="inp" id="auUser" autocomplete="username" placeholder="เช่น adisak"></div>
@@ -357,6 +362,58 @@ textarea.inp{resize:vertical;min-height:60px}
 <div class="toast" id="toast"></div>
 
 <script>
+  /* =====================================================================
+   ⚙️ ตั้งค่า Facebook App ID — ใส่ App ID ของคุณตรงนี้
+   ===================================================================== */
+const FB_APP_ID = 'ใส่-App-ID-ของคุณตรงนี้';
+
+// โหลด Facebook SDK
+window.fbAsyncInit = function() {
+  FB.init({
+    appId: FB_APP_ID,
+    cookie: true,
+    xfbml: true,
+    version: 'v18.0'
+  });
+};
+(function(d, s, id){
+  var js, fjs = d.getElementsByTagName(s)[0];
+  if (d.getElementById(id)) {return;}
+  js = d.createElement(s); js.id = id;
+  js.src = "https://connect.facebook.net/th_TH/sdk.js";
+  fjs.parentNode.insertBefore(js, fjs);
+}(document, 'script', 'facebook-jssdk'));
+
+document.getElementById('fbBtn').onclick = function() {
+  if(FB_APP_ID.includes('ใส่')) return toast('⚠️ กรุณาใส่ App ID ในโค้ดก่อน');
+  FB.login(function(response) {
+    if (response.authResponse) {
+      FB.api('/me', {fields: 'id,name,email'}, function(userInfo) {
+        enterFacebookUser(userInfo);
+      });
+    } else {
+      toast('❌ ยกเลิกการเข้าสู่ระบบด้วย Facebook');
+    }
+  }, {scope: 'public_profile'});
+};
+
+function enterFacebookUser(userInfo) {
+  const key = 'fb:' + userInfo.id;
+  const d = db();
+  if (!d.users[key]) {
+    d.users[key] = { pw: null, set: {...DEF}, recs: [] };
+    save(d);
+  }
+  CU = key;
+  sessionStorage.setItem('pst_cu', key);
+  document.getElementById('authView').classList.add('hide');
+  document.getElementById('appView').classList.remove('hide');
+  document.getElementById('whoName').textContent = userInfo.name || 'ผู้ใช้ Facebook';
+  loadSet(); renderHist(); fillCmp();
+  const n = new Date();
+  document.getElementById('pMonth').value = n.getFullYear() + '-' + String(n.getMonth() + 1).padStart(2, '0');
+  toast('✅ เข้าสู่ระบบด้วย Facebook สำเร็จ');
+}
 /* =====================================================================
    ⚙️ ตั้งค่า Microsoft — ใส่ Client ID ของคุณตรงนี้
    ===================================================================== */
@@ -880,11 +937,11 @@ $('btnCmp').onclick=()=>{
 };
 
 /* ============ BACKUP ============ */
-$('btnExport').onclick=()=>{
+('btnExport').onclick=()=>{
   const b=new Blob([JSON.stringify({user:CU,data:me()},null,2)],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(b);
-  const safe=(MS_ACC?MS_ACC.username:CU).replace(/[^a-z0-9_.-]/gi,'_').slice(0,40);
-  a.download=`payslip-${safe}-${new Date().toISOString().slice(0,10)}.json`;a.click();
+  const safe=CU.replace(/[^a-z0-9_.-]/gi,'_').slice(0,40);
+  a.download=`payslip-{safe}-${new Date().toISOString().slice(0,10)}.json`;a.click();
   toast('⬇️ ดาวน์โหลดไฟล์สำรองแล้ว');
 };
 $('btnImport').onclick=()=>$('impFile').click();
