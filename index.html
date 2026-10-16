@@ -6,6 +6,7 @@
 <title>PaySlip Tracker — คำนวณค่าแรงรายวัน</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
@@ -41,6 +42,8 @@ textarea.inp{resize:vertical;min-height:60px}
 .btn.ghost{background:transparent;border:1px solid var(--line);color:var(--mut)}
 .btn.sm{width:auto;padding:9px 16px;font-size:13.5px}
 .btn.danger{background:linear-gradient(135deg,#ff5a6e,#c0392b)}
+.btn.ms{background:#fff;color:#1b1b1b;display:flex;align-items:center;justify-content:center;gap:10px}
+.or{text-align:center;color:var(--mut);font-size:12px;margin:14px 0 10px}
 .swap{text-align:center;margin-top:16px;font-size:13px;color:var(--mut)}
 .swap span{color:var(--pri2);cursor:pointer;font-weight:600}
 .msg{font-size:12.5px;padding:9px 12px;border-radius:9px;margin-bottom:12px}
@@ -55,7 +58,8 @@ textarea.inp{resize:vertical;min-height:60px}
 .spacer{flex:1}
 .who{font-size:13px;color:var(--mut)}
 .who b{color:var(--txt)}
-@media(max-width:560px){.top .brand span{display:none}.who{font-size:12px}}
+.cloudDot{font-size:12px;padding:4px 9px;border-radius:20px;background:rgba(47,212,160,.13);color:#7ff0cd}
+@media(max-width:560px){.top .brand span{display:none}.who{font-size:12px}.cloudDot{display:none}}
 .tabs{display:flex;gap:6px;padding:12px 16px 0;overflow-x:auto;max-width:1180px;margin:0 auto}
 .tab{padding:9px 15px;border-radius:11px;background:transparent;color:var(--mut);font-size:14px;
   font-weight:500;white-space:nowrap;transition:.15s}
@@ -165,8 +169,15 @@ textarea.inp{resize:vertical;min-height:60px}
   <div class="auth">
     <div class="logo">💰</div>
     <h1 id="authTitle">เข้าสู่ระบบ</h1>
-    <p class="sub">ระบบคำนวณค่าแรงรายวัน &amp; ซิงค์ข้อมูลข้ามเบราว์เซอร์</p>
+    <p class="sub">ระบบคำนวณค่าแรงรายวัน &amp; ซิงค์ข้อมูลผ่าน OneDrive</p>
     <div id="authMsg"></div>
+
+    <button class="btn ms" id="msBtn">
+      <svg width="18" height="18" viewBox="0 0 21 21"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/></svg>
+      เข้าสู่ระบบด้วย Microsoft (Outlook)
+    </button>
+    <div class="or">— หรือใช้บัญชีในเครื่อง —</div>
+
     <div class="field"><label>ชื่อผู้ใช้</label>
       <input class="inp" id="auUser" autocomplete="username" placeholder="เช่น adisak"></div>
     <div class="field"><label>รหัสผ่าน</label>
@@ -183,6 +194,7 @@ textarea.inp{resize:vertical;min-height:60px}
   <div class="top">
     <div class="brand"><i>💰</i><span>PaySlip Tracker</span></div>
     <div class="spacer"></div>
+    <span class="cloudDot hide" id="cloudDot">☁️ OneDrive</span>
     <div class="who">สวัสดี <b id="whoName"></b></div>
     <button class="btn ghost sm" id="btnOut">ออกจากระบบ</button>
   </div>
@@ -285,9 +297,20 @@ textarea.inp{resize:vertical;min-height:60px}
 
   <!-- ---- SETTINGS ---- -->
   <div class="wrap hide" id="tab-set">
+    <div class="card hide" id="cloudCard">
+      <h2>☁️ ซิงค์ OneDrive อัตโนมัติ</h2>
+      <div class="hint">เชื่อมกับบัญชี <b id="cloudWho"></b> · ระบบบันทึกขึ้น OneDrive ให้อัตโนมัติทุกครั้งที่แก้ไข<br>
+        สถานะ: <b id="cloudStat">—</b></div>
+      <div class="flex">
+        <button class="btn sm" id="btnPush">⬆️ อัปโหลดขึ้น OneDrive ตอนนี้</button>
+        <button class="btn ghost sm" id="btnPull">⬇️ โหลดข้อมูลจาก OneDrive</button>
+      </div>
+    </div>
+
     <div class="card">
-      <h2>🔄 ซิงค์ข้อมูลข้ามเบราว์เซอร์ (Sync Code)</h2>
-      <div class="hint">1. กด <b>"สร้างรหัสซิงค์"</b> ในเบราว์เซอร์เดิมเพื่อคัดลอกโค้ด<br>2. นำไปวางในช่องนี้บนอีกเบราว์เซอร์ (เช่น Safari ไป Chrome) แล้วกด <b>"นำเข้ารหัสซิงค์"</b></div>
+      <h2>🔄 ซิงค์ข้อมูลด้วยรหัส (Sync Code)</h2>
+      <div class="hint">ใช้ย้ายข้อมูลจากบัญชีในเครื่องไปบัญชี Microsoft หรือข้ามเบราว์เซอร์แบบไม่ใช้คลาวด์<br>
+        1. กด <b>"สร้างรหัสซิงค์"</b> ในบัญชีเดิมเพื่อคัดลอกโค้ด<br>2. ล็อกอินบัญชีปลายทาง วางโค้ดในช่องนี้ แล้วกด <b>"นำเข้ารหัสซิงค์"</b></div>
       <div class="field"><label>รหัสซิงค์ข้อมูล (Sync Code)</label>
         <textarea class="inp" id="sSyncCode" placeholder="กดสร้างรหัส หรือวางรหัสจากเครื่องหลัก"></textarea></div>
       <div class="flex">
@@ -334,6 +357,14 @@ textarea.inp{resize:vertical;min-height:60px}
 <div class="toast" id="toast"></div>
 
 <script>
+/* =====================================================================
+   ⚙️ ตั้งค่า Microsoft — แก้แค่บรรทัด MS_CLIENT_ID
+   ===================================================================== */
+const MS_CLIENT_ID='ใส่-Client-ID-ของคุณตรงนี้';   // เช่น 'a1b2c3d4-1234-5678-9abc-def012345678'
+const MS_AUTHORITY='https://login.microsoftonline.com/consumers'; // 'common' = รับบัญชีบริษัทด้วย
+const SCOPES=['User.Read','Files.ReadWrite.AppFolder'];
+const CLOUD_URL='https://graph.microsoft.com/v1.0/me/drive/special/approot:/payslip-data.json:/content';
+
 /* ============ STORAGE & SYNC CODE ============ */
 const DB='pst_v1';
 const db=()=>JSON.parse(localStorage.getItem(DB)||'{"users":{}}');
@@ -382,7 +413,7 @@ function importSyncCode(){
   }catch{toast('❌ รหัสซิงค์ไม่ถูกต้อง')}
 }
 
-/* ============ AUTH ============ */
+/* ============ AUTH (บัญชีในเครื่อง) ============ */
 let mode='login';
 function am(t,k){$('authMsg').innerHTML=`<div class="msg ${k}">${t}</div>`}
 function bindSwap(){$('auSwap').querySelector('span').onclick=doSwap}
@@ -398,6 +429,7 @@ bindSwap();
 $('auBtn').onclick=async()=>{
   const u=$('auUser').value.trim().toLowerCase(),p=$('auPass').value;
   if(!u||!p)return am('กรอกชื่อผู้ใช้และรหัสผ่านให้ครบ','err');
+  if(u.startsWith('ms:'))return am('ชื่อผู้ใช้นี้ใช้ไม่ได้','err');
   const d=db();
   if(mode==='reg'){
     if(p.length<4)return am('รหัสผ่านอย่างน้อย 4 ตัว','err');
@@ -406,7 +438,7 @@ $('auBtn').onclick=async()=>{
     d.users[u]={pw:await hash(p),set:{...DEF},recs:[]};save(d);
     am('สร้างบัญชีสำเร็จ กำลังเข้าสู่ระบบ...','ok');setTimeout(()=>enter(u),600);
   }else{
-    if(!d.users[u]||d.users[u].pw!==await hash(p))return am('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง','err');
+    if(!d.users[u]||!d.users[u].pw||d.users[u].pw!==await hash(p))return am('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง','err');
     enter(u);
   }
 };
@@ -418,10 +450,104 @@ function enter(u){
   $('whoName').textContent=u;loadSet();renderHist();fillCmp();
   const n=new Date();$('pMonth').value=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0');
 }
-$('btnOut').onclick=()=>{sessionStorage.removeItem('pst_cu');location.reload()};
+$('btnOut').onclick=()=>{
+  sessionStorage.removeItem('pst_cu');
+  if(MS_ACC&&msalApp)msalApp.logoutRedirect({account:MS_ACC});
+  else location.reload();
+};
 const me=()=>db().users[CU];
 const mySet=()=>({...DEF,...(me().set||{})});
-function putMe(f){const d=db();f(d.users[CU]);save(d)}
+function putMe(f,noSync){
+  const d=db();const u=d.users[CU];f(u);
+  if(!noSync)u.updatedAt=new Date().toISOString();
+  save(d);
+  if(!noSync)cloudPushSoon();
+}
+
+/* ============ MICROSOFT LOGIN + ONEDRIVE SYNC ============ */
+let msalApp=null,MS_ACC=null,pushTimer=null,MS_ERR='';
+(()=>{
+  if(typeof msal==='undefined'){MS_ERR='โหลดระบบล็อกอิน Microsoft ไม่สำเร็จ (ตรวจสอบอินเทอร์เน็ต)';return}
+  if(!/^[0-9a-f-]{36}$/i.test(MS_CLIENT_ID)){MS_ERR='ผู้ดูแลยังไม่ได้ใส่ Client ID ในโค้ด (ตัวแปร MS_CLIENT_ID)';return}
+  if(location.protocol!=='https:'&&!['localhost','127.0.0.1'].includes(location.hostname)){
+    MS_ERR='ต้องเปิดเว็บผ่าน https:// เท่านั้น (เปิดไฟล์จากเครื่องโดยตรงไม่ได้)';return}
+  try{
+    const here=location.origin+location.pathname;
+    msalApp=new msal.PublicClientApplication({
+      auth:{clientId:MS_CLIENT_ID,authority:MS_AUTHORITY,redirectUri:here,postLogoutRedirectUri:here},
+      cache:{cacheLocation:'localStorage'}
+    });
+  }catch(e){MS_ERR='ตั้งค่า Microsoft ผิดพลาด: '+e.message}
+})();
+
+$('msBtn').onclick=()=>{
+  if(!msalApp)return am(MS_ERR,'err');
+  msalApp.loginRedirect({scopes:SCOPES,prompt:'select_account'});
+};
+const cs=t=>{$('cloudStat').textContent=t};
+
+async function getToken(){
+  try{return (await msalApp.acquireTokenSilent({scopes:SCOPES,account:MS_ACC})).accessToken}
+  catch(e){await msalApp.acquireTokenRedirect({scopes:SCOPES,account:MS_ACC});return null}
+}
+async function cloudPull(){
+  const t=await getToken();if(!t)return null;
+  const r=await fetch(CLOUD_URL,{headers:{Authorization:'Bearer '+t}});
+  if(r.status===404)return null;
+  if(!r.ok)throw new Error('HTTP '+r.status);
+  return r.json();
+}
+async function cloudPush(silent){
+  if(!MS_ACC)return;
+  try{
+    cs('กำลังอัปโหลด...');
+    const t=await getToken();if(!t)return;
+    const u=me();
+    const body=JSON.stringify({set:u.set,recs:u.recs||[],updatedAt:u.updatedAt||new Date().toISOString()});
+    const r=await fetch(CLOUD_URL,{method:'PUT',
+      headers:{Authorization:'Bearer '+t,'Content-Type':'application/json'},body});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    cs('✅ ซิงค์ล่าสุด '+new Date().toLocaleTimeString('th-TH'));
+    if(!silent)toast('☁️ ซิงค์ขึ้น OneDrive แล้ว');
+  }catch(e){cs('❌ ซิงค์ไม่สำเร็จ ('+e.message+')');toast('⚠️ ซิงค์ OneDrive ไม่สำเร็จ')}
+}
+function cloudPushSoon(){if(!MS_ACC)return;clearTimeout(pushTimer);pushTimer=setTimeout(()=>cloudPush(),1500)}
+function applyCloud(c){
+  putMe(u=>{u.set={...DEF,...(c.set||{})};u.recs=c.recs||[];u.updatedAt=c.updatedAt||null},true);
+  loadSet();renderHist();fillCmp();
+  cs('✅ ซิงค์ล่าสุด '+new Date().toLocaleTimeString('th-TH'));
+}
+async function syncOnLogin(){
+  cs('กำลังตรวจสอบข้อมูลบน OneDrive...');
+  try{
+    const c=await cloudPull(),local=me();
+    if(c&&c.recs){
+      if(local.updatedAt&&c.updatedAt&&local.updatedAt>c.updatedAt){
+        await cloudPush(true);toast('☁️ ส่งข้อมูลล่าสุดในเครื่องขึ้น OneDrive แล้ว');
+      }else{applyCloud(c);toast('☁️ โหลดข้อมูลจาก OneDrive แล้ว')}
+    }else{await cloudPush(true)}
+  }catch(e){cs('❌ เชื่อม OneDrive ไม่ได้ ('+e.message+')');toast('⚠️ เชื่อม OneDrive ไม่ได้ ใช้ข้อมูลในเครื่องไปก่อน')}
+}
+async function enterMs(acc){
+  MS_ACC=acc;msalApp.setActiveAccount(acc);
+  const key='ms:'+acc.homeAccountId;
+  const d=db();
+  if(!d.users[key]){d.users[key]={pw:null,set:{...DEF},recs:[]};save(d)}
+  enter(key);
+  $('whoName').textContent=acc.name||acc.username;
+  $('cloudDot').classList.remove('hide');
+  $('cloudCard').classList.remove('hide');
+  $('cloudWho').textContent=acc.username;
+  await syncOnLogin();
+}
+$('btnPush').onclick=()=>cloudPush();
+$('btnPull').onclick=async()=>{
+  if(!confirm('โหลดข้อมูลจาก OneDrive มาทับข้อมูลในเครื่องนี้?'))return;
+  try{const c=await cloudPull();
+    if(!c)return toast('ℹ️ ยังไม่มีข้อมูลบน OneDrive');
+    applyCloud(c);toast('☁️ โหลดข้อมูลจาก OneDrive แล้ว');
+  }catch(e){toast('❌ โหลดไม่สำเร็จ ('+e.message+')')}
+};
 
 /* ============ SETTINGS ============ */
 const SF=[['sRate','rate'],['sHours','hours'],['sHolMult','holMult'],['sSso','sso'],['sSsoCap','ssoCap'],
@@ -481,12 +607,13 @@ $('btnGen').onclick=()=>{
   const last=new Date(y,m,0).getDate();
   const s=half===1?1:16,e=half===1?15:last;
   const payD=half===1?new Date(y,m-1,20):new Date(y,m,5);
+  const pad=n=>String(n).padStart(2,'0');
   PINFO={y,m,half,s,e,
-    key:`${y}-${String(m).padStart(2,'0')}-H${half}`,
+    key:`${y}-${pad(m)}-H${half}`,
     label:`${s}–${e} ${MN[m-1]} ${y+543}`,
-    payDate:payD.toISOString().slice(0,10),
+    payDate:`${payD.getFullYear()}-${pad(payD.getMonth()+1)}-${pad(payD.getDate())}`,
     payLabel:`${payD.getDate()} ${MN[payD.getMonth()]} ${payD.getFullYear()+543}`,
-    payMonthKey:`${payD.getFullYear()}-${String(payD.getMonth()+1).padStart(2,'0')}`};
+    payMonthKey:`${payD.getFullYear()}-${pad(payD.getMonth()+1)}`};
   DAYS=[];for(let d=s;d<=e;d++){const dt=new Date(y,m-1,d);
     DAYS.push({d,dow:dt.getDay(),type:'work',un:0,hpOv:null})}
   EXTRAS=[];drawExtras();
@@ -756,7 +883,8 @@ $('btnCmp').onclick=()=>{
 $('btnExport').onclick=()=>{
   const b=new Blob([JSON.stringify({user:CU,data:me()},null,2)],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(b);
-  a.download=`payslip-${CU}-${new Date().toISOString().slice(0,10)}.json`;a.click();
+  const safe=(MS_ACC?MS_ACC.username:CU).replace(/[^a-z0-9_.-]/gi,'_').slice(0,40);
+  a.download=`payslip-${safe}-${new Date().toISOString().slice(0,10)}.json`;a.click();
   toast('⬇️ ดาวน์โหลดไฟล์สำรองแล้ว');
 };
 $('btnImport').onclick=()=>$('impFile').click();
@@ -776,7 +904,17 @@ $('btnWipe').onclick=()=>{
 };
 
 /* ============ BOOT ============ */
-(()=>{const u=sessionStorage.getItem('pst_cu');if(u&&db().users[u])enter(u)})();
+(async()=>{
+  if(msalApp){
+    try{
+      const res=await msalApp.handleRedirectPromise();
+      const acc=res?.account||msalApp.getActiveAccount()||msalApp.getAllAccounts()[0];
+      if(acc)return enterMs(acc);
+    }catch(e){am('เข้าสู่ระบบ Microsoft ไม่สำเร็จ: '+e.message,'err')}
+  }
+  const u=sessionStorage.getItem('pst_cu');
+  if(u&&db().users[u]&&!u.startsWith('ms:'))enter(u);
+})();
 </script>
 </body>
 </html>
