@@ -6,7 +6,7 @@
 <title>PaySlip Tracker — คำนวณค่าแรงรายวัน</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
@@ -358,10 +358,10 @@ textarea.inp{resize:vertical;min-height:60px}
 
 <script>
 /* =====================================================================
-   ⚙️ ตั้งค่า Microsoft — แก้แค่บรรทัด MS_CLIENT_ID
+   ⚙️ ตั้งค่า Microsoft — ใส่ Client ID ของคุณตรงนี้
    ===================================================================== */
-const MS_CLIENT_ID='a4f88a9d-29ac-43c5-820e-65cf57d6b976';   // เช่น 'a1b2c3d4-1234-5678-9abc-def012345678'
-const MS_AUTHORITY='https://login.microsoftonline.com/consumers'; // 'common' = รับบัญชีบริษัทด้วย
+const MS_CLIENT_ID='a4f88a9d-29ac-43c5-820e-65cf57d6b976';
+const MS_AUTHORITY='https://login.microsoftonline.com/consumers';
 const SCOPES=['User.Read','Files.ReadWrite.AppFolder'];
 const CLOUD_URL='https://graph.microsoft.com/v1.0/me/drive/special/approot:/payslip-data.json:/content';
 
@@ -468,9 +468,9 @@ function putMe(f,noSync){
 let msalApp=null,MS_ACC=null,pushTimer=null,MS_ERR='';
 (()=>{
   if(typeof msal==='undefined'){MS_ERR='โหลดระบบล็อกอิน Microsoft ไม่สำเร็จ (ตรวจสอบอินเทอร์เน็ต)';return}
-  if(!/^[0-9a-f-]{36}$/i.test(MS_CLIENT_ID)){MS_ERR='ผู้ดูแลยังไม่ได้ใส่ Client ID ในโค้ด (ตัวแปร MS_CLIENT_ID)';return}
+  if(!/^[0-9a-f-]{36}$/i.test(MS_CLIENT_ID)){MS_ERR='ผู้ดูแลยังไม่ได้ใส่ Client ID ในโค้ด';return}
   if(location.protocol!=='https:'&&!['localhost','127.0.0.1'].includes(location.hostname)){
-    MS_ERR='ต้องเปิดเว็บผ่าน https:// เท่านั้น (เปิดไฟล์จากเครื่องโดยตรงไม่ได้)';return}
+    MS_ERR='ต้องเปิดเว็บผ่าน https:// เท่านั้น';return}
   try{
     const here=location.origin+location.pathname;
     msalApp=new msal.PublicClientApplication({
