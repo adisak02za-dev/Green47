@@ -8,6 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
@@ -368,6 +369,43 @@ textarea.inp{resize:vertical;min-height:60px}
 <div class="toast" id="toast"></div>
 
 <script>
+  const SUPABASE_URL = 'https://duennufxfutxhaceerkq.supabase.co/rest/v1/';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR1ZW5udWZ4ZnV0eGhhY2VlcmtxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc5MjE4NzcxNywiZXhwIjoyMTA3NzYzNzE3fQ.4uyiHyrXLFSJApYs6G8XJlJdV3AyV38ecx6-RNbQVDc';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let CU = null;        // supabase user object
+let STATE = { settings: {...DEF}, records: [] };
+let saveTimer = null;
+
+async function loadUserData(uid){
+  const { data, error } = await sb.from('user_data')
+    .select('*').eq('user_id', uid).maybeSingle();
+  if (error) { toast('❌ โหลดข้อมูลไม่สำเร็จ'); return; }
+  if (!data) {
+    await sb.from('user_data').insert({ user_id: uid, settings: DEF, records: [] });
+    STATE = { settings: {...DEF}, records: [] };
+  } else {
+    STATE = { settings: { ...DEF, ...(data.settings||{}) }, records: data.records || [] };
+  }
+}
+
+function queueSave(){
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async () => {
+    const { error } = await sb.from('user_data').upsert({
+      user_id: CU.id,
+      settings: STATE.settings,
+      records: STATE.records,
+      updated_at: new Date().toISOString()
+    });
+    if (error) toast('⚠️ ซิงค์ไม่สำเร็จ'); else toast('☁️ ซิงค์ขึ้น Cloud แล้ว');
+  }, 1200);
+}
+
+// ตัวช่วยแทนของเดิมที่โค้ดส่วนอื่นเรียกใช้ (me(), mySet(), putMe())
+const me    = () => STATE;
+const mySet = () => STATE.settings;
+function putMe(fn){ fn(STATE); queueSave(); }
 /* ============ STORAGE & SYNC CODE ============ */
 const DB='pst_v1';
 const db=()=>JSON.parse(localStorage.getItem(DB)||'{"users":{}}');
