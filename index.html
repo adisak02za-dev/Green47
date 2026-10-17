@@ -6,7 +6,8 @@
 <title>PaySlip Tracker — คำนวณค่าแรงรายวัน</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
@@ -169,23 +170,29 @@ textarea.inp{resize:vertical;min-height:60px}
   <div class="auth">
     <div class="logo">💰</div>
     <h1 id="authTitle">เข้าสู่ระบบ</h1>
-    <p class="sub">ระบบคำนวณค่าแรงรายวัน &amp; ซิงค์ข้อมูลผ่าน Cloud (Supabase) — ล็อกอินที่ไหนก็เห็นข้อมูลเดิม</p>
+    <p class="sub">ระบบคำนวณค่าแรงรายวัน &amp; ซิงค์ข้อมูลผ่าน Google Drive / OneDrive</p>
     <div id="authMsg"></div>
-
-    <button class="btn fb" id="fbBtn" style="background:#1877f2;color:#fff;display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:10px">
-      <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
-      เข้าสู่ระบบด้วย Facebook
+    
+    <button class="btn" id="googleBtn" style="background:#fff;color:#333;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:10px;font-weight:500">
+      <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.13 0-5.78-2.11-6.73-4.96H1.19v3.15C3.18 21.32 7.23 24 12 24z"/><path fill="#FBBC05" d="M5.27 14.24c-.25-.72-.38-1.49-.38-2.24s.13-1.52.38-2.24V6.6H1.19C.43 8.15 0 9.89 0 11.7s.43 3.55 1.19 5.1l4.08-2.56z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.23 0 3.18 2.68 1.19 6.6l4.08 3.15c.95-2.85 3.6-4.96 6.73-4.96z"/></svg>
+      เข้าสู่ระบบด้วย Google
     </button>
+    <div class="or">— หรือใช้บัญชีอื่น —</div>
     <button class="btn ms" id="msBtn">
       <svg width="18" height="18" viewBox="0 0 21 21"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/></svg>
       เข้าสู่ระบบด้วย Microsoft (Outlook)
     </button>
-    <div class="or">— หรือใช้อีเมล —</div>
+    <div class="or">— หรือใช้บัญชีอื่น —</div>
+    <button class="btn fb" id="fbBtn" style="background:#1877f2;color:#fff;display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:10px">
+      <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+      เข้าสู่ระบบด้วย Facebook
+    </button>
+    <div class="or">— หรือใช้บัญชีในเครื่อง —</div>
 
-    <div class="field"><label>อีเมล</label>
-      <input class="inp" id="auUser" type="email" autocomplete="username" placeholder="เช่น name@email.com"></div>
+    <div class="field"><label>ชื่อผู้ใช้</label>
+      <input class="inp" id="auUser" autocomplete="username" placeholder="เช่น adisak"></div>
     <div class="field"><label>รหัสผ่าน</label>
-      <input class="inp" id="auPass" type="password" autocomplete="current-password" placeholder="อย่างน้อย 6 ตัวอักษร"></div>
+      <input class="inp" id="auPass" type="password" autocomplete="current-password" placeholder="••••••••"></div>
     <div class="field hide" id="auPass2Box"><label>ยืนยันรหัสผ่าน</label>
       <input class="inp" id="auPass2" type="password" placeholder="••••••••"></div>
     <button class="btn" id="auBtn">เข้าสู่ระบบ</button>
@@ -301,14 +308,25 @@ textarea.inp{resize:vertical;min-height:60px}
 
   <!-- ---- SETTINGS ---- -->
   <div class="wrap hide" id="tab-set">
-    <div class="card" id="cloudCard">
-      <h2>☁️ ซิงค์ Cloud อัตโนมัติ (Supabase)</h2>
-      <div class="hint">บัญชี: <b id="cloudWho"></b> · ข้อมูลของคุณซิงค์ขึ้น Cloud อัตโนมัติทุกครั้งที่แก้ไข
-        ไม่ว่าจะล็อกอินด้วยอีเมล Facebook หรือ Microsoft — ล็อกอินเครื่องไหนก็เห็นข้อมูลเดิม<br>
+    <div class="card hide" id="cloudCard">
+      <h2>☁️ ซิงค์ Cloud อัตโนมัติ</h2>
+      <div class="hint">เชื่อมกับบัญชี <b id="cloudWho"></b> · ระบบบันทึกขึ้น Cloud ให้อัตโนมัติทุกครั้งที่แก้ไข<br>
         สถานะ: <b id="cloudStat">—</b></div>
       <div class="flex">
-        <button class="btn sm" id="btnPush">⬆️ บันทึกขึ้น Cloud ตอนนี้</button>
-        <button class="btn ghost sm" id="btnPull">⬇️ โหลดข้อมูลล่าสุดจาก Cloud</button>
+        <button class="btn sm" id="btnPush">⬆️ อัปโหลดขึ้น Cloud ตอนนี้</button>
+        <button class="btn ghost sm" id="btnPull">⬇️ โหลดข้อมูลจาก Cloud</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>🔄 ซิงค์ข้อมูลด้วยรหัส (Sync Code)</h2>
+      <div class="hint">ใช้ย้ายข้อมูลจากบัญชีในเครื่องไปบัญชีอื่น หรือข้ามเบราว์เซอร์แบบไม่ใช้คลาวด์<br>
+        1. กด <b>"สร้างรหัสซิงค์"</b> ในบัญชีเดิมเพื่อคัดลอกโค้ด<br>2. ล็อกอินบัญชีปลายทาง วางโค้ดในช่องนี้ แล้วกด <b>"นำเข้ารหัสซิงค์"</b></div>
+      <div class="field"><label>รหัสซิงค์ข้อมูล (Sync Code)</label>
+        <textarea class="inp" id="sSyncCode" placeholder="กดสร้างรหัส หรือวางรหัสจากเครื่องหลัก"></textarea></div>
+      <div class="flex">
+        <button class="btn ghost sm" onclick="generateSyncCode()">📤 สร้างรหัสซิงค์</button>
+        <button class="btn sm" onclick="importSyncCode()">📥 นำเข้ารหัสซิงค์</button>
       </div>
     </div>
 
@@ -350,21 +368,11 @@ textarea.inp{resize:vertical;min-height:60px}
 <div class="toast" id="toast"></div>
 
 <script>
-/* ============ SUPABASE INIT ============ */
-/* 🔧 ใส่ค่าจริงจากโปรเจกต์ Supabase ของคุณ (Settings → API) */
-const SUPABASE_URL = 'https://YOUR-PROJECT-REF.supabase.co';
-const SUPABASE_ANON_KEY = 'YOUR-ANON-PUBLIC-KEY';
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-let CU = null;           // supabase auth user object
-let STATE = { set: null, recs: [] };
-let saveTimer = null;
-
-const $=id=>document.getElementById(id);
-const toast=m=>{const t=$('toast');t.textContent=m;t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'),2400)};
-function cs(t){ const el=$('cloudStat'); if(el) el.textContent=t; }
-
+/* ============ STORAGE & SYNC CODE ============ */
+const DB='pst_v1';
+const db=()=>JSON.parse(localStorage.getItem(DB)||'{"users":{}}');
+const save=d=>localStorage.setItem(DB,JSON.stringify(d));
+let CU=null;
 const DEF={rate:412,hours:8,holMult:2,sso:5,ssoCap:750,tax:0,oth:0,othName:'หักอื่นๆ',
   ssoBase:'wage',qName:'Incentive Audit',qAmt:250};
 const TH=['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
@@ -382,42 +390,33 @@ const TYPES={
   none:     {n:'— ไม่มีข้อมูล',               pay:0, mult:0}
 };
 const money=n=>(+n||0).toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2});
+const toast=m=>{const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2400)};
+async function hash(s){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s+'|pst'));
+  return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}
+const $=id=>document.getElementById(id);
 
-/* ============ DATA LAYER (Supabase) ============ */
-const me=()=>STATE;
-const mySet=()=>({...DEF,...(STATE.set||{})});
-function putMe(f,noSync){
-  f(STATE);
-  if(!noSync) queueSave();
+function generateSyncCode(){
+  const u=me();
+  const raw=JSON.stringify({set:u.set,recs:u.recs});
+  const code=btoa(encodeURIComponent(raw));
+  $('sSyncCode').value=code;
+  navigator.clipboard?.writeText(code);
+  toast('✅ สร้างและคัดลอกรหัสซิงค์ลงคลิปบอร์ดแล้ว');
 }
-function queueSave(){
-  clearTimeout(saveTimer);
-  cs('กำลังบันทึก...');
-  saveTimer=setTimeout(doSave,900);
-}
-async function doSave(){
-  if(!CU) return;
-  const { error } = await sb.from('user_data').upsert({
-    user_id: CU.id,
-    settings: STATE.set,
-    records: STATE.recs,
-    updated_at: new Date().toISOString()
-  });
-  if(error){ cs('❌ บันทึกไม่สำเร็จ'); toast('⚠️ บันทึกขึ้น Cloud ไม่สำเร็จ'); console.error(error); }
-  else cs('✅ ซิงค์ล่าสุด '+new Date().toLocaleTimeString('th-TH'));
-}
-async function loadUserData(uid){
-  const { data, error } = await sb.from('user_data').select('*').eq('user_id', uid).maybeSingle();
-  if(error){ toast('❌ โหลดข้อมูลจาก Cloud ไม่สำเร็จ'); STATE={set:{...DEF},recs:[]}; console.error(error); return; }
-  if(!data){
-    STATE={set:{...DEF},recs:[]};
-    await sb.from('user_data').insert({ user_id: uid, settings: STATE.set, records: STATE.recs });
-  }else{
-    STATE={set:{...DEF,...(data.settings||{})}, recs:data.records||[]};
-  }
+function importSyncCode(){
+  const code=$('sSyncCode').value.trim();
+  if(!code)return toast('⚠️ กรุณาวางรหัสซิงค์ก่อน');
+  try{
+    const raw=decodeURIComponent(atob(code));
+    const data=JSON.parse(raw);
+    if(!data.recs)throw 0;
+    putMe(u=>{u.set={...DEF,...(data.set||{})};u.recs=data.recs});
+    loadSet();renderHist();fillCmp();toast('✅ นำเข้าข้อมูลสำเร็จ!');
+  }catch{toast('❌ รหัสซิงค์ไม่ถูกต้อง')}
 }
 
-/* ============ AUTH ============ */
+/* ============ AUTH (บัญชีในเครื่อง) ============ */
 let mode='login';
 function am(t,k){$('authMsg').innerHTML=`<div class="msg ${k}">${t}</div>`}
 function bindSwap(){$('auSwap').querySelector('span').onclick=doSwap}
@@ -430,58 +429,298 @@ function doSwap(){
   bindSwap();$('authMsg').innerHTML='';
 }
 bindSwap();
-
 $('auBtn').onclick=async()=>{
-  const email=$('auUser').value.trim();
-  const pw=$('auPass').value;
-  if(!email||!pw)return am('กรอกอีเมลและรหัสผ่านให้ครบ','err');
-  if(!/^\S+@\S+\.\S+$/.test(email))return am('รูปแบบอีเมลไม่ถูกต้อง','err');
+  const u=$('auUser').value.trim().toLowerCase(),p=$('auPass').value;
+  if(!u||!p)return am('กรอกชื่อผู้ใช้และรหัสผ่านให้ครบ','err');
+  if(u.startsWith('ms:')||u.startsWith('fb:')||u.startsWith('google:'))return am('ชื่อผู้ใช้นี้ใช้ไม่ได้','err');
+  const d=db();
   if(mode==='reg'){
-    if(pw.length<6)return am('รหัสผ่านอย่างน้อย 6 ตัว','err');
-    if(pw!==$('auPass2').value)return am('รหัสผ่านไม่ตรงกัน','err');
-    const {data,error}=await sb.auth.signUp({email,password:pw});
-    if(error)return am(error.message,'err');
-    if(data.session){ await afterLogin(data.user); }
-    else am('สมัครสำเร็จ! กรุณายืนยันอีเมลตามลิงก์ที่ส่งไปให้ก่อนเข้าสู่ระบบ','ok');
+    if(p.length<4)return am('รหัสผ่านอย่างน้อย 4 ตัว','err');
+    if(p!==$('auPass2').value)return am('รหัสผ่านไม่ตรงกัน','err');
+    if(d.users[u])return am('มีชื่อผู้ใช้นี้แล้ว','err');
+    d.users[u]={pw:await hash(p),set:{...DEF},recs:[]};save(d);
+    am('สร้างบัญชีสำเร็จ กำลังเข้าสู่ระบบ...','ok');setTimeout(()=>enter(u),600);
   }else{
-    const {data,error}=await sb.auth.signInWithPassword({email,password:pw});
-    if(error)return am('อีเมลหรือรหัสผ่านไม่ถูกต้อง','err');
-    await afterLogin(data.user);
+    if(!d.users[u]||!d.users[u].pw||d.users[u].pw!==await hash(p))return am('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง','err');
+    enter(u);
   }
 };
 $('auPass').onkeydown=e=>{if(e.key==='Enter')$('auBtn').click()};
 $('auPass2').onkeydown=e=>{if(e.key==='Enter')$('auBtn').click()};
-
-function loginFacebook(){
-  sb.auth.signInWithOAuth({provider:'facebook',options:{redirectTo:location.origin+location.pathname}});
+function enter(u){
+  CU=u;sessionStorage.setItem('pst_cu',u);
+  $('authView').classList.add('hide');$('appView').classList.remove('hide');
+  $('whoName').textContent=u;loadSet();renderHist();fillCmp();
+  const n=new Date();$('pMonth').value=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0');
 }
-function loginMicrosoft(){
-  sb.auth.signInWithOAuth({provider:'azure',options:{redirectTo:location.origin+location.pathname,scopes:'email'}});
+$('btnOut').onclick=()=>{
+  sessionStorage.removeItem('pst_cu');
+  if(MS_ACC&&msalApp)msalApp.logoutRedirect({account:MS_ACC});
+  else location.reload();
+};
+const me=()=>db().users[CU];
+const mySet=()=>({...DEF,...(me().set||{})});
+function putMe(f,noSync){
+  const d=db();const u=d.users[CU];f(u);
+  if(!noSync)u.updatedAt=new Date().toISOString();
+  save(d);
+  if(!noSync)cloudPushSoon();
 }
-$('fbBtn').onclick=loginFacebook;
-$('msBtn').onclick=loginMicrosoft;
 
-async function afterLogin(user){
-  CU=user;
-  await loadUserData(user.id);
+/* ============ FACEBOOK LOGIN ============ */
+const FB_APP_ID = '*************848';
+window.fbAsyncInit = function() {
+  FB.init({ appId: FB_APP_ID, cookie: true, xfbml: true, version: 'v18.0' });
+};
+(function(d, s, id){
+  var js, fjs = d.getElementsByTagName(s)[0];
+  if (d.getElementById(id)) return;
+  js = d.createElement(s); js.id = id;
+  js.src = "https://connect.facebook.net/th_TH/sdk.js";
+  fjs.parentNode.insertBefore(js, fjs);
+}(document, 'script', 'facebook-jssdk'));
+
+$('fbBtn').onclick = function() {
+  if(FB_APP_ID.includes('ใส่')) return toast('⚠️ กรุณาใส่ App ID Facebook ในโค้ดก่อน');
+  FB.login(function(response) {
+    if (response.authResponse) {
+      FB.api('/me', {fields: 'id,name,email'}, function(userInfo) {
+        enterFacebookUser(userInfo);
+      });
+    } else {
+      toast('❌ ยกเลิกการเข้าสู่ระบบด้วย Facebook');
+    }
+  }, {scope: 'public_profile'});
+};
+
+function enterFacebookUser(userInfo) {
+  const key = 'fb:' + userInfo.id;
+  const d = db();
+  if (!d.users[key]) {
+    d.users[key] = { pw: null, set: {...DEF}, recs: [] };
+    save(d);
+  }
+  CU = key;
+  sessionStorage.setItem('pst_cu', key);
   $('authView').classList.add('hide');
   $('appView').classList.remove('hide');
+  $('whoName').textContent = userInfo.name || 'ผู้ใช้ Facebook';
+  loadSet(); renderHist(); fillCmp();
+  const n = new Date();
+  $('pMonth').value = n.getFullYear() + '-' + String(n.getMonth() + 1).padStart(2, '0');
+  toast('✅ เข้าสู่ระบบด้วย Facebook สำเร็จ');
+}
+
+/* ============ GOOGLE LOGIN + GOOGLE DRIVE SYNC ============ */
+const GOOGLE_CLIENT_ID = '73675866356-j3gtr6kjrcjhfeo9rr6u7ulkfs4sbvbh.apps.googleusercontent.com';
+let accessToken = null;
+let tokenClient = null;
+
+window.addEventListener('load', () => {
+  const checkGoogle = setInterval(() => {
+    if (typeof google !== 'undefined' && google.accounts) {
+      clearInterval(checkGoogle);
+      tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: GOOGLE_CLIENT_ID,
+        scope: 'https://www.googleapis.com/auth/drive.file',
+        callback: (response) => {
+          if (response.error) return toast('❌ เข้าสู่ระบบ Google ไม่สำเร็จ');
+          accessToken = response.access_token;
+          fetchGoogleUserInfo();
+        }
+      });
+    }
+  }, 500);
+});
+
+$('googleBtn').onclick = () => {
+  if (GOOGLE_CLIENT_ID.includes('ใส่')) return toast('⚠️ กรุณาใส่ Google Client ID ก่อน');
+  if (!tokenClient) return toast('⏳ กำลังโหลดระบบ Google กรุณารอสักครู่');
+  tokenClient.requestAccessToken({prompt: 'consent'});
+};
+
+async function fetchGoogleUserInfo() {
+  try {
+    const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+      headers: { Authorization: `Bearer ${accessToken}` }
+    });
+    const user = await res.json();
+    enterGoogleUser(user);
+  } catch (e) {
+    toast('❌ ไม่สามารถดึงข้อมูลผู้ใช้ Google ได้');
+  }
+}
+
+async function enterGoogleUser(userInfo) {
+  const key = 'google:' + userInfo.sub;
+  const d = db();
+  if (!d.users[key]) {
+    d.users[key] = { pw: null, set:{...DEF}, recs:[] };
+    save(d);
+  }
+  CU = key;
+  sessionStorage.setItem('pst_cu', key);
+  
+  toast('⏳ กำลังดึงข้อมูลจาก Google Drive...');
+  await loadFromGoogleDrive();
+
+  $('authView').classList.add('hide');
+  $('appView').classList.remove('hide');
+  $('whoName').textContent = userInfo.name || userInfo.email;
   $('cloudDot').classList.remove('hide');
-  const label=user.user_metadata?.full_name||user.user_metadata?.name||user.email||'ผู้ใช้';
-  $('whoName').textContent=label;
-  $('cloudWho').textContent=user.email||label;
+  $('cloudCard').classList.remove('hide');
+  $('cloudWho').textContent = userInfo.email;
+  
+  loadSet(); renderHist(); fillCmp();
+  const n = new Date();
+  $('pMonth').value = n.getFullYear() + '-' + String(n.getMonth() + 1).padStart(2, '0');
+  toast('✅ เข้าสู่ระบบและซิงค์ Google Drive สำเร็จ');
+}
+
+async function saveToGoogleDrive() {
+  if (!accessToken) return;
+  const data = JSON.stringify(me());
+  try {
+    const searchRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=name='payslip_data.json' and trashed=false`, {
+      headers: { Authorization: `Bearer ${accessToken}` }
+    });
+    const searchJson = await searchRes.json();
+    
+    if (searchJson.files && searchJson.files.length > 0) {
+      const fileId = searchJson.files[0].id;
+      await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+        body: data
+      });
+    } else {
+      const metadata = { name: 'payslip_data.json', mimeType: 'application/json' };
+      const form = new FormData();
+      form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+      form.append('file', new Blob([data], { type: 'application/json' }));
+      
+      await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${accessToken}` },
+        body: form
+      });
+    }
+  } catch (e) {
+    console.error('Drive sync error', e);
+  }
+}
+
+async function loadFromGoogleDrive() {
+  if (!accessToken) return;
+  try {
+    const searchRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=name='payslip_data.json' and trashed=false`, {
+      headers: { Authorization: `Bearer ${accessToken}` }
+    });
+    const searchJson = await searchRes.json();
+    if (searchJson.files && searchJson.files.length > 0) {
+      const fileId = searchJson.files[0].id;
+      const fileRes = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      const cloudData = await fileRes.json();
+      const d = db();
+      d.users[CU] = cloudData;
+      save(d);
+    }
+  } catch (e) {
+    console.error('Drive load error', e);
+  }
+}
+
+/* ============ MICROSOFT LOGIN + ONEDRIVE SYNC ============ */
+const MS_CLIENT_ID='a4f88a9d-29ac-43c5-820e-65cf57d6b976';
+const MS_AUTHORITY='https://login.microsoftonline.com/consumers';
+const SCOPES=['User.Read','Files.ReadWrite.AppFolder'];
+const CLOUD_URL='https://graph.microsoft.com/v1.0/me/drive/special/approot:/payslip-data.json:/content';
+
+let msalApp=null,MS_ACC=null,pushTimer=null,MS_ERR='';
+(()=>{
+  if(typeof msal==='undefined'){MS_ERR='โหลดระบบ Microsoft ไม่สำเร็จ';return}
+  try{
+    const here=location.origin+location.pathname;
+    msalApp=new msal.PublicClientApplication({
+      auth:{clientId:MS_CLIENT_ID,authority:MS_AUTHORITY,redirectUri:here,postLogoutRedirectUri:here},
+      cache:{cacheLocation:'localStorage'}
+    });
+  }catch(e){MS_ERR='ตั้งค่า Microsoft ผิดพลาด'}
+})();
+
+$('msBtn').onclick=()=>{
+  if(!msalApp)return am(MS_ERR,'err');
+  msalApp.loginRedirect({scopes:SCOPES,prompt:'select_account'});
+};
+const cs=t=>{$('cloudStat').textContent=t};
+
+async function getToken(){
+  try{return (await msalApp.acquireTokenSilent({scopes:SCOPES,account:MS_ACC})).accessToken}
+  catch(e){await msalApp.acquireTokenRedirect({scopes:SCOPES,account:MS_ACC});return null}
+}
+async function cloudPull(){
+  const t=await getToken();if(!t)return null;
+  const r=await fetch(CLOUD_URL,{headers:{Authorization:'Bearer '+t}});
+  if(r.status===404)return null;
+  if(!r.ok)throw new Error('HTTP '+r.status);
+  return r.json();
+}
+async function cloudPush(silent){
+  if(!MS_ACC)return;
+  try{
+    cs('กำลังอัปโหลด...');
+    const t=await getToken();if(!t)return;
+    const u=me();
+    const body=JSON.stringify({set:u.set,recs:u.recs||[],updatedAt:u.updatedAt||new Date().toISOString()});
+    const r=await fetch(CLOUD_URL,{method:'PUT',
+      headers:{Authorization:'Bearer '+t,'Content-Type':'application/json'},body});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    cs('✅ ซิงค์ล่าสุด '+new Date().toLocaleTimeString('th-TH'));
+    if(!silent)toast('☁️ ซิงค์ขึ้น OneDrive แล้ว');
+  }catch(e){cs('❌ ซิงค์ไม่สำเร็จ');toast('⚠️ ซิงค์ OneDrive ไม่สำเร็จ')}
+}
+function cloudPushSoon(){
+  if(accessToken) { saveToGoogleDrive(); return; }
+  if(!MS_ACC)return;
+  clearTimeout(pushTimer);pushTimer=setTimeout(()=>cloudPush(),1500);
+}
+function applyCloud(c){
+  putMe(u=>{u.set={...DEF,...(c.set||{})};u.recs=c.recs||[];u.updatedAt=c.updatedAt||null},true);
   loadSet();renderHist();fillCmp();
-  const n=new Date();$('pMonth').value=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0');
   cs('✅ ซิงค์ล่าสุด '+new Date().toLocaleTimeString('th-TH'));
 }
-$('btnOut').onclick=async()=>{ await sb.auth.signOut(); location.reload(); };
-
-$('btnPush').onclick=()=>doSave();
+async function syncOnLogin(){
+  cs('กำลังตรวจสอบข้อมูลบน OneDrive...');
+  try{
+    const c=await cloudPull(),local=me();
+    if(c&&c.recs){
+      if(local.updatedAt&&c.updatedAt&&local.updatedAt>c.updatedAt){
+        await cloudPush(true);toast('☁️ ส่งข้อมูลล่าสุดในเครื่องขึ้น OneDrive แล้ว');
+      }else{applyCloud(c);toast('☁️ โหลดข้อมูลจาก OneDrive แล้ว')}
+    }else{await cloudPush(true)}
+  }catch(e){cs('❌ เชื่อม OneDrive ไม่ได้');}
+}
+async function enterMs(acc){
+  MS_ACC=acc;msalApp.setActiveAccount(acc);
+  const key='ms:'+acc.homeAccountId;
+  const d=db();
+  if(!d.users[key]){d.users[key]={pw:null,set:{...DEF},recs:[]};save(d)}
+  enter(key);
+  $('whoName').textContent=acc.name||acc.username;
+  $('cloudDot').classList.remove('hide');
+  $('cloudCard').classList.remove('hide');
+  $('cloudWho').textContent=acc.username;
+  await syncOnLogin();
+}
+$('btnPush').onclick=()=>cloudPush();
 $('btnPull').onclick=async()=>{
-  if(!confirm('โหลดข้อมูลล่าสุดจาก Cloud มาทับข้อมูลที่กำลังแก้ไขอยู่ตอนนี้?'))return;
-  await loadUserData(CU.id);
-  loadSet();renderHist();fillCmp();
-  toast('☁️ โหลดข้อมูลล่าสุดจาก Cloud แล้ว');
+  if(!confirm('โหลดข้อมูลจาก OneDrive มาทับข้อมูลในเครื่องนี้?'))return;
+  try{const c=await cloudPull();
+    if(!c)return toast('ℹ️ ยังไม่มีข้อมูลบน OneDrive');
+    applyCloud(c);toast('☁️ โหลดข้อมูลจาก OneDrive แล้ว');
+  }catch(e){toast('❌ โหลดไม่สำเร็จ')}
 };
 
 /* ============ SETTINGS ============ */
@@ -489,7 +728,7 @@ const SF=[['sRate','rate'],['sHours','hours'],['sHolMult','holMult'],['sSso','ss
   ['sTax','tax'],['sOth','oth'],['sOthName','othName'],['sSsoBase','ssoBase'],['sQName','qName'],['sQAmt','qAmt']];
 function loadSet(){
   const s=mySet();SF.forEach(([i,k])=>$(i).value=s[k]);
-  refreshQuick();
+  $('sSyncCode').value='';refreshQuick();
 }
 function refreshQuick(){
   const s=mySet();
@@ -816,9 +1055,9 @@ $('btnCmp').onclick=()=>{
 
 /* ============ BACKUP ============ */
 $('btnExport').onclick=()=>{
-  const b=new Blob([JSON.stringify({user:CU?.email,data:me()},null,2)],{type:'application/json'});
+  const b=new Blob([JSON.stringify({user:CU,data:me()},null,2)],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(b);
-  const safe=(CU?.email||'user').replace(/[^a-z0-9_.-]/gi,'_').slice(0,40);
+  const safe=CU.replace(/[^a-z0-9_.-]/gi,'_').slice(0,40);
   a.download=`payslip-${safe}-${new Date().toISOString().slice(0,10)}.json`;a.click();
   toast('⬇️ ดาวน์โหลดไฟล์สำรองแล้ว');
 };
@@ -840,16 +1079,16 @@ $('btnWipe').onclick=()=>{
 
 /* ============ BOOT ============ */
 (async()=>{
-  const {data:{session}}=await sb.auth.getSession();
-  if(session?.user) await afterLogin(session.user);
-
-  sb.auth.onAuthStateChange(async(event,session)=>{
-    if(event==='SIGNED_IN' && session?.user && (!CU||CU.id!==session.user.id)){
-      await afterLogin(session.user);
-    }
-    if(event==='SIGNED_OUT'){ CU=null; }
-  });
+  if(msalApp){
+    try{
+      const res=await msalApp.handleRedirectPromise();
+      const acc=res?.account||msalApp.getActiveAccount()||msalApp.getAllAccounts()[0];
+      if(acc)return enterMs(acc);
+    }catch(e){am('เข้าสู่ระบบ Microsoft ไม่สำเร็จ','err')}
+  }
+  const u=sessionStorage.getItem('pst_cu');
+  if(u&&db().users[u]&&!u.startsWith('ms:'))enter(u);
 })();
 </script>
 </body>
-</html>
+</html>ฉันอยากให้เว็บของฉัน เชื่อมฐานข้อมูลออนไลน์  Supabase ให้สามารถเมื่อล็อคอินผ่าน เมล หริอ เฟสบุ๊ค หรือ microsoft จะเก็บข้อมูลอยู่ในแต่ล่ะที่ของนั้น มีข้อมูลของตัวเองแยกกัน และข้อมูลติดไปทุกเครื่องเมื่อล็อคอินด้วยเมลนั้น
