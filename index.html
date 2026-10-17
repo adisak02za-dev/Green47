@@ -6,8 +6,6 @@
 <title>PaySlip Tracker — คำนวณค่าแรงรายวัน</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js"></script>
-<script src="https://accounts.google.com/gsi/client" async defer></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -37,15 +35,16 @@ input,select,textarea{font-family:inherit}
 .inp{width:100%;background:#0e1631;border:1px solid var(--line);color:var(--txt);
   padding:12px 14px;border-radius:11px;font-size:15px;outline:none;transition:.15s}
 .inp:focus{border-color:var(--pri);box-shadow:0 0 0 3px rgba(91,140,255,.18)}
-textarea.inp{resize:vertical;min-height:60px}
 .btn{width:100%;padding:12.5px;border-radius:11px;background:linear-gradient(135deg,var(--pri),#8a6bff);
-  color:#fff;font-size:15px;font-weight:600;transition:.15s}
+  color:#fff;font-size:15px;font-weight:600;transition:.15s;margin-bottom:10px}
 .btn:hover{filter:brightness(1.12)} .btn:active{transform:scale(.985)}
 .btn.ghost{background:transparent;border:1px solid var(--line);color:var(--mut)}
 .btn.sm{width:auto;padding:9px 16px;font-size:13.5px}
 .btn.danger{background:linear-gradient(135deg,#ff5a6e,#c0392b)}
+.btn.google{background:#fff;color:#1b1b1b;display:flex;align-items:center;justify-content:center;gap:10px}
 .btn.ms{background:#fff;color:#1b1b1b;display:flex;align-items:center;justify-content:center;gap:10px}
-.or{text-align:center;color:var(--mut);font-size:12px;margin:14px 0 10px}
+.btn.fb{background:#1877f2;color:#fff;display:flex;align-items:center;justify-content:center;gap:10px}
+.or{text-align:center;color:var(--mut);font-size:12px;margin:10px 0}
 .swap{text-align:center;margin-top:16px;font-size:13px;color:var(--mut)}
 .swap span{color:var(--pri2);cursor:pointer;font-weight:600}
 .msg{font-size:12.5px;padding:9px 12px;border-radius:9px;margin-bottom:12px}
@@ -61,14 +60,12 @@ textarea.inp{resize:vertical;min-height:60px}
 .who{font-size:13px;color:var(--mut)}
 .who b{color:var(--txt)}
 .cloudDot{font-size:12px;padding:4px 9px;border-radius:20px;background:rgba(47,212,160,.13);color:#7ff0cd}
-@media(max-width:560px){.top .brand span{display:none}.who{font-size:12px}.cloudDot{display:none}}
 .tabs{display:flex;gap:6px;padding:12px 16px 0;overflow-x:auto;max-width:1180px;margin:0 auto}
 .tab{padding:9px 15px;border-radius:11px;background:transparent;color:var(--mut);font-size:14px;
   font-weight:500;white-space:nowrap;transition:.15s}
 .tab.on{background:var(--card2);color:var(--txt);box-shadow:inset 0 0 0 1px var(--line)}
 .wrap{max-width:1180px;margin:0 auto;padding:16px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:20px;margin-bottom:16px}
-@media(max-width:560px){.card{padding:16px}}
 .card h2{font-size:16px;margin-bottom:4px}
 .card .hint{font-size:12.5px;color:var(--mut);margin-bottom:16px;line-height:1.65}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
@@ -77,21 +74,15 @@ textarea.inp{resize:vertical;min-height:60px}
 
 .drop{border:2px dashed var(--line);border-radius:14px;padding:24px;text-align:center;cursor:pointer;transition:.15s}
 .drop:hover{border-color:var(--pri);background:rgba(91,140,255,.05)}
-.drop .ic{font-size:32px;margin-bottom:8px}
-.drop small{color:var(--mut);font-size:12px}
 .thumb{margin-top:12px;position:relative;border-radius:12px;overflow:hidden;border:1px solid var(--line)}
 .thumb img{width:100%;display:block}
-.thumb .x{position:absolute;top:8px;right:8px;background:rgba(0,0,0,.72);color:#fff;
-  width:32px;height:32px;border-radius:50%;font-size:16px}
+.thumb .x{position:absolute;top:8px;right:8px;background:rgba(0,0,0,.72);color:#fff;width:32px;height:32px;border-radius:50%}
 
 .dtbl{width:100%;border-collapse:collapse;font-size:13.5px}
 .dtbl th{text-align:left;color:var(--mut);font-weight:500;font-size:12px;padding:8px 9px;border-bottom:1px solid var(--line)}
 .dtbl td{padding:7px 9px;border-bottom:1px solid rgba(42,55,102,.5);vertical-align:middle}
-.dtbl tr.hl td{background:rgba(255,207,92,.06)}
 .dtbl select,.dtbl input[type=number]{background:#0e1631;border:1px solid var(--line);color:var(--txt);
   padding:9px 10px;border-radius:9px;font-size:14px;outline:none;width:100%}
-.dtbl select:focus,.dtbl input:focus{border-color:var(--pri)}
-.dnum{color:var(--mut);font-size:12px}
 .pill{display:inline-block;padding:4px 10px;border-radius:20px;font-size:11.5px;font-weight:600}
 .p-ok{background:rgba(47,212,160,.15);color:#6ef0c6}
 .p-bad{background:rgba(255,107,122,.15);color:#ff9aa5}
@@ -101,66 +92,32 @@ textarea.inp{resize:vertical;min-height:60px}
 .chk{font-size:13px;color:var(--mut);cursor:pointer;display:inline-flex;align-items:center;gap:7px}
 .chk input{width:18px;height:18px}
 
-@media(max-width:700px){
-  .dtbl thead{display:none}
-  .dtbl,.dtbl tbody,.dtbl tr,.dtbl td{display:block;width:100%}
-  .dtbl tr{border:1px solid var(--line);border-radius:13px;padding:13px;margin-bottom:11px;background:var(--card2)}
-  .dtbl tr.hl{border-color:rgba(255,207,92,.45);background:rgba(255,207,92,.07)}
-  .dtbl td{border:none;padding:0;margin-bottom:11px}
-  .dtbl td:last-child{margin-bottom:0}
-  .dtbl td[data-l]::before{content:attr(data-l);display:block;font-size:11.5px;color:var(--mut);margin-bottom:5px}
-  .dtbl td.dh{font-size:16px;font-weight:600}
-}
-
 .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
 @media(max-width:860px){.kpi{grid-template-columns:repeat(2,1fr)}}
-.k{background:linear-gradient(160deg,var(--card2),var(--card));border:1px solid var(--line);
-  border-radius:14px;padding:15px}
+.k{background:linear-gradient(160deg,var(--card2),var(--card));border:1px solid var(--line);border-radius:14px;padding:15px}
 .k .lb{font-size:11.5px;color:var(--mut);margin-bottom:6px}
 .k .vl{font-size:22px;font-weight:700;letter-spacing:-.4px}
-.k .vl small{font-size:12px;color:var(--mut);font-weight:500}
-.k.net .vl{color:var(--ok)}
-.k.ded .vl{color:var(--bad)}
+.k.net .vl{color:var(--ok)} .k.ded .vl{color:var(--bad)}
 .rows{border:1px solid var(--line);border-radius:12px;overflow:hidden}
-.row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:11px 15px;font-size:14px;
-  border-bottom:1px solid rgba(42,55,102,.55)}
-.row:last-child{border:none}
+.row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:11px 15px;font-size:14px;border-bottom:1px solid rgba(42,55,102,.55)}
 .row.head{background:var(--card2);font-weight:600;font-size:12.5px;color:var(--mut)}
 .row.tot{background:var(--card2);font-weight:700}
-.row .ds{font-size:11.5px;color:var(--mut);display:block;margin-top:2px;line-height:1.5}
+.row .ds{font-size:11.5px;color:var(--mut);display:block;margin-top:2px}
 .mono{font-variant-numeric:tabular-nums;font-weight:600;white-space:nowrap}
 .neg{color:var(--bad)} .pos{color:var(--ok)} .gold{color:var(--gold)}
-
 .exrow{display:grid;grid-template-columns:1fr 130px 44px;gap:9px;margin-bottom:9px}
-@media(max-width:520px){.exrow{grid-template-columns:1fr 110px 44px}}
-.exrow .del{background:rgba(255,107,122,.12);color:#ff9aa5;border-radius:10px;font-size:16px}
-
-.hitem{background:var(--card2);border:1px solid var(--line);border-radius:13px;padding:14px;
-  margin-bottom:10px;display:flex;align-items:center;gap:13px;flex-wrap:wrap}
-.hitem .t{font-weight:600;font-size:14.5px}
-.hitem .s{font-size:12px;color:var(--mut);margin-top:3px;line-height:1.5}
-.hitem .amt{font-size:19px;font-weight:700;color:var(--ok);font-variant-numeric:tabular-nums}
+.exrow .del{background:rgba(255,107,122,.12);color:#ff9aa5;border-radius:10px}
+.hitem{background:var(--card2);border:1px solid var(--line);border-radius:13px;padding:14px;margin-bottom:10px;display:flex;align-items:center;gap:13px;flex-wrap:wrap}
 .mgroup{margin-bottom:22px}
 .mgroup>.mh{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--line)}
-.mgroup .mh b{font-size:16px}
-.mgroup .mh span{font-size:12.5px;color:var(--mut)}
-.mgroup .mh i{margin-left:auto;font-style:normal;font-size:15px;font-weight:700;color:var(--pri2)}
-
-.bar{height:9px;background:#0e1631;border-radius:6px;overflow:hidden;margin-top:7px}
-.bar>div{height:100%;border-radius:6px;background:linear-gradient(90deg,var(--pri),#9a6bff)}
 .ctbl{width:100%;border-collapse:collapse;font-size:14px}
 .ctbl th,.ctbl td{padding:11px 12px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
 .ctbl th:first-child,.ctbl td:first-child{text-align:left}
-.ctbl th{color:var(--mut);font-size:12.5px;font-weight:500}
 .empty{text-align:center;padding:46px 20px;color:var(--mut)}
-.empty .ic{font-size:44px;margin-bottom:10px;opacity:.55}
-.note{background:rgba(91,140,255,.08);border:1px solid rgba(91,140,255,.25);border-radius:11px;
-  padding:12px 14px;font-size:12.5px;color:#b9c9ff;line-height:1.7;margin-top:14px}
+.note{background:rgba(91,140,255,.08);border:1px solid rgba(91,140,255,.25);border-radius:11px;padding:12px 14px;font-size:12.5px;color:#b9c9ff;margin-top:14px}
 .note.gold{background:rgba(255,207,92,.07);border-color:rgba(255,207,92,.3);color:#ffe3a3}
 .flex{display:flex;gap:9px;flex-wrap:wrap}
-.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(90px);
-  background:var(--card2);border:1px solid var(--line);padding:13px 22px;border-radius:12px;
-  font-size:14px;box-shadow:0 14px 40px rgba(0,0,0,.5);transition:.3s;z-index:99;opacity:0;max-width:90vw;text-align:center}
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(90px);background:var(--card2);border:1px solid var(--line);padding:13px 22px;border-radius:12px;font-size:14px;box-shadow:0 14px 40px rgba(0,0,0,.5);transition:.3s;z-index:99;opacity:0}
 .toast.show{transform:translateX(-50%) translateY(0);opacity:1}
 </style>
 </head>
@@ -171,29 +128,28 @@ textarea.inp{resize:vertical;min-height:60px}
   <div class="auth">
     <div class="logo">💰</div>
     <h1 id="authTitle">เข้าสู่ระบบ</h1>
-    <p class="sub">ระบบคำนวณค่าแรงรายวัน &amp; ซิงค์ข้อมูลผ่าน Google Drive / OneDrive</p>
+    <p class="sub">ระบบคำนวณค่าแรงรายวัน &amp; ซิงค์ข้อมูลผ่าน Cloud (Supabase)</p>
     <div id="authMsg"></div>
-    
-    <button class="btn" id="googleBtn" style="background:#fff;color:#333;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:10px;font-weight:500">
-      <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.13 0-5.78-2.11-6.73-4.96H1.19v3.15C3.18 21.32 7.23 24 12 24z"/><path fill="#FBBC05" d="M5.27 14.24c-.25-.72-.38-1.49-.38-2.24s.13-1.52.38-2.24V6.6H1.19C.43 8.15 0 9.89 0 11.7s.43 3.55 1.19 5.1l4.08-2.56z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.23 0 3.18 2.68 1.19 6.6l4.08 3.15c.95-2.85 3.6-4.96 6.73-4.96z"/></svg>
+
+    <button class="btn google" id="googleBtn">
+      <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.13 0-5.78-2.11-6.73-4.96H1.19v3.15C3.18 21.35 7.27 24 12 24z"/><path fill="#FBBC05" d="M5.27 14.24c-.25-.72-.38-1.49-.38-2.24s.13-1.52.38-2.24V6.6H1.19C.43 8.13 0 9.87 0 12s.43 3.87 1.19 5.4l4.08-3.16z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.27 0 3.18 2.65 1.19 6.6l4.08 3.15c.95-2.85 3.6-4.96 6.73-4.96z"/></svg>
       เข้าสู่ระบบด้วย Google
     </button>
-    <div class="or">— หรือใช้บัญชีอื่น —</div>
     <button class="btn ms" id="msBtn">
       <svg width="18" height="18" viewBox="0 0 21 21"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/></svg>
       เข้าสู่ระบบด้วย Microsoft (Outlook)
     </button>
-    <div class="or">— หรือใช้บัญชีอื่น —</div>
-    <button class="btn fb" id="fbBtn" style="background:#1877f2;color:#fff;display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:10px">
+    <button class="btn fb" id="fbBtn">
       <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
       เข้าสู่ระบบด้วย Facebook
     </button>
-    <div class="or">— หรือใช้บัญชีในเครื่อง —</div>
 
-    <div class="field"><label>ชื่อผู้ใช้</label>
-      <input class="inp" id="auUser" autocomplete="username" placeholder="เช่น adisak"></div>
+    <div class="or">— หรือใช้อีเมล —</div>
+
+    <div class="field"><label>อีเมล</label>
+      <input class="inp" id="auUser" type="email" autocomplete="username" placeholder="เช่น name@email.com"></div>
     <div class="field"><label>รหัสผ่าน</label>
-      <input class="inp" id="auPass" type="password" autocomplete="current-password" placeholder="••••••••"></div>
+      <input class="inp" id="auPass" type="password" autocomplete="current-password" placeholder="อย่างน้อย 6 ตัวอักษร"></div>
     <div class="field hide" id="auPass2Box"><label>ยืนยันรหัสผ่าน</label>
       <input class="inp" id="auPass2" type="password" placeholder="••••••••"></div>
     <button class="btn" id="auBtn">เข้าสู่ระบบ</button>
@@ -218,32 +174,25 @@ textarea.inp{resize:vertical;min-height:60px}
     <button class="tab" data-t="set">⚙️ ตั้งค่า</button>
   </div>
 
-  <!-- ---- CALC ---- -->
   <div class="wrap" id="tab-calc">
     <div class="card">
       <h2>1️⃣ เลือกงวดจ่าย</h2>
-      <div class="hint">เงินออก <b>ทุกวันที่ 5 และ 20</b> · ตัดยอดล่วงหน้า 5 วันก่อนวันจ่าย<br>
-        → งวด <b>1–15</b> จ่ายวันที่ <b>20</b> เดือนเดียวกัน · งวด <b>16–สิ้นเดือน</b> จ่ายวันที่ <b>5</b> เดือนถัดไป</div>
+      <div class="hint">เงินออก <b>ทุกวันที่ 5 และ 20</b></div>
       <div class="grid3">
-        <div class="field"><label>เดือน / ปี (ค.ศ.)</label>
-          <input class="inp" type="month" id="pMonth"></div>
+        <div class="field"><label>เดือน / ปี (ค.ศ.)</label><input class="inp" type="month" id="pMonth"></div>
         <div class="field"><label>งวด</label>
           <select class="inp" id="pHalf">
             <option value="1">งวดแรก (1–15) → จ่าย 20</option>
             <option value="2">งวดหลัง (16–สิ้นเดือน) → จ่าย 5</option>
           </select></div>
-        <div class="field"><label>&nbsp;</label>
-          <button class="btn" id="btnGen">สร้างตารางวัน →</button></div>
+        <div class="field"><label>&nbsp;</label><button class="btn" id="btnGen" style="margin-bottom:0">สร้างตารางวัน →</button></div>
       </div>
     </div>
 
     <div class="card">
       <h2>2️⃣ แนบรูปตารางเวลา <span class="pill p-info">ไม่บังคับ</span></h2>
-      <div class="hint">เก็บไว้เป็นหลักฐานคู่กับงวดนี้ · ระบบย่อรูปให้อัตโนมัติ</div>
       <div class="drop" id="drop">
-        <div class="ic">🖼️</div>
-        <div>คลิกเพื่อเลือกรูป หรือลากไฟล์มาวาง</div>
-        <small>JPG / PNG — ถ่ายให้เห็นคอลัมน์ "ขาดงาน / ลาป่วย / ลากิจ" ชัดๆ</small>
+        <div>🖼️ คลิกเพื่อเลือกรูป หรือลากไฟล์มาวาง</div>
         <input type="file" id="fileIn" accept="image/*" class="hide">
       </div>
       <div id="thumbBox"></div>
@@ -251,28 +200,16 @@ textarea.inp{resize:vertical;min-height:60px}
 
     <div class="card hide" id="daysCard">
       <h2>3️⃣ กรอกผลการทำงานรายวัน</h2>
-      <div class="hint">ดูจากรูปแล้วเลือกประเภทให้ตรง · ช่อง <b>ชม.ไม่ได้ค่าจ้าง</b> ใส่เฉพาะกรณีลากิจเกินสิทธิ์ หรือทำไม่ครบกะ</div>
-      <div class="flex" style="margin-bottom:14px">
-        <button class="btn ghost sm" data-fill="work">ทั้งหมด = วันทำงาน</button>
-        <button class="btn ghost sm" data-fill="tue">อังคาร = วันหยุด</button>
-        <button class="btn ghost sm" data-fill="sun">อาทิตย์ = วันหยุด</button>
-      </div>
       <div style="overflow-x:auto">
         <table class="dtbl"><thead><tr>
           <th style="width:130px">วันที่</th><th style="width:250px">ประเภท</th>
           <th style="width:130px">ชม.ไม่ได้ค่าจ้าง</th><th style="width:150px">ค่าจ้างวันหยุด</th><th>ผล</th>
         </tr></thead><tbody id="dayBody"></tbody></table>
       </div>
-      <div class="note">📌 <b>กฎค่าจ้างวันหยุดประจำสัปดาห์:</b> ลูกจ้างรายวันจะได้ค่าจ้างวันหยุด
-        ก็ต่อเมื่อ <b>ไม่ขาดงานใน 6 วันก่อนหน้า</b> — ระบบคิดให้อัตโนมัติ (ติ๊กแก้เองได้)<br>
-        <b>ลาป่วย / ลากิจในสิทธิ์</b> ไม่ตัดสิทธิ์วันหยุด แต่ <b>ขาดงาน</b> ตัด</div>
-      <div class="note gold">🎌 <b>วันหยุดนักขัตฤกษ์:</b> คิดให้ <b id="multShow">2</b> เท่าของค่าแรงรายวันอัตโนมัติ
-        (เปลี่ยนตัวคูณได้ที่แท็บตั้งค่า) · ถ้าเป็นนักขัตฤกษ์ที่ <b>หยุดอยู่บ้าน</b> ให้เลือก "นักขัตฤกษ์ (หยุด)" ซึ่งได้ 1 เท่า</div>
     </div>
 
     <div class="card hide" id="extraCard">
-      <h2>4️⃣ รายได้เพิ่มเติม <span class="pill p-info">ใส่เฉพาะงวดที่ได้</span></h2>
-      <div class="hint">เช่น Incentive Audit, เบี้ยขยัน, ค่าเดินทาง — งวดไหนไม่ได้ก็ปล่อยว่างไว้</div>
+      <h2>4️⃣ รายได้เพิ่มเติม</h2>
       <div id="extraRows"></div>
       <div class="flex" style="margin-top:6px">
         <button class="btn ghost sm" id="btnAddExtra">➕ เพิ่มรายการ</button>
@@ -280,88 +217,43 @@ textarea.inp{resize:vertical;min-height:60px}
       </div>
       <button class="btn" style="margin-top:18px" id="btnCalc">💸 คำนวณเงินงวดนี้</button>
     </div>
-
     <div id="resBox"></div>
   </div>
 
-  <!-- ---- HISTORY ---- -->
   <div class="wrap hide" id="tab-hist">
-    <div class="card">
-      <h2>📚 ประวัติที่บันทึกไว้</h2>
-      <div class="hint">จัดกลุ่มตามเดือนที่ <b>เงินออก</b> · กด "ดู" เพื่อเปิดรายละเอียดเต็ม</div>
-      <div id="histBox"></div>
-    </div>
+    <div class="card"><h2>📚 ประวัติที่บันทึกไว้</h2><div id="histBox"></div></div>
   </div>
 
-  <!-- ---- COMPARE ---- -->
   <div class="wrap hide" id="tab-comp">
     <div class="card">
       <h2>📊 เปรียบเทียบ 2 งวด</h2>
-      <div class="hint">เลือกงวดที่ต้องการเทียบ เพื่อดูว่าเงินต่างกันเพราะอะไร</div>
       <div class="grid2">
         <div class="field"><label>งวด A</label><select class="inp" id="cmpA"></select></div>
         <div class="field"><label>งวด B</label><select class="inp" id="cmpB"></select></div>
       </div>
-      <button class="btn sm" id="btnCmp">เปรียบเทียบ</button>
+      <button class="btn sm" id="btnCmp" style="margin-top:10px">เปรียบเทียบ</button>
       <div id="cmpBox" style="margin-top:18px"></div>
     </div>
   </div>
 
-  <!-- ---- SETTINGS ---- -->
   <div class="wrap hide" id="tab-set">
-    <div class="card hide" id="cloudCard">
-      <h2>☁️ ซิงค์ Cloud อัตโนมัติ</h2>
-      <div class="hint">เชื่อมกับบัญชี <b id="cloudWho"></b> · ระบบบันทึกขึ้น Cloud ให้อัตโนมัติทุกครั้งที่แก้ไข<br>
-        สถานะ: <b id="cloudStat">—</b></div>
-      <div class="flex">
-        <button class="btn sm" id="btnPush">⬆️ อัปโหลดขึ้น Cloud ตอนนี้</button>
-        <button class="btn ghost sm" id="btnPull">⬇️ โหลดข้อมูลจาก Cloud</button>
-      </div>
-    </div>
-
-    <div class="card">
-      <h2>🔄 ซิงค์ข้อมูลด้วยรหัส (Sync Code)</h2>
-      <div class="hint">ใช้ย้ายข้อมูลจากบัญชีในเครื่องไปบัญชีอื่น หรือข้ามเบราว์เซอร์แบบไม่ใช้คลาวด์<br>
-        1. กด <b>"สร้างรหัสซิงค์"</b> ในบัญชีเดิมเพื่อคัดลอกโค้ด<br>2. ล็อกอินบัญชีปลายทาง วางโค้ดในช่องนี้ แล้วกด <b>"นำเข้ารหัสซิงค์"</b></div>
-      <div class="field"><label>รหัสซิงค์ข้อมูล (Sync Code)</label>
-        <textarea class="inp" id="sSyncCode" placeholder="กดสร้างรหัส หรือวางรหัสจากเครื่องหลัก"></textarea></div>
-      <div class="flex">
-        <button class="btn ghost sm" onclick="generateSyncCode()">📤 สร้างรหัสซิงค์</button>
-        <button class="btn sm" onclick="importSyncCode()">📥 นำเข้ารหัสซิงค์</button>
-      </div>
-    </div>
-
     <div class="card">
       <h2>⚙️ ตั้งค่าการคำนวณ</h2>
-      <div class="hint">ค่าเหล่านี้ผูกกับบัญชีของคุณ · แก้แล้วกดบันทึก</div>
       <div class="grid3">
         <div class="field"><label>ค่าแรงต่อวัน (บาท)</label><input class="inp" type="number" id="sRate" step="0.01"></div>
         <div class="field"><label>ชั่วโมงทำงานต่อวัน</label><input class="inp" type="number" id="sHours" step="0.25"></div>
-        <div class="field"><label>🎌 ตัวคูณนักขัตฤกษ์ (ทำงาน)</label><input class="inp" type="number" id="sHolMult" step="0.5"></div>
+        <div class="field"><label>🎌 ตัวคูณนักขัตฤกษ์</label><input class="inp" type="number" id="sHolMult" step="0.5"></div>
         <div class="field"><label>ประกันสังคม (%)</label><input class="inp" type="number" id="sSso" step="0.1"></div>
-        <div class="field"><label>เพดาน ปกส. ต่องวด (บาท)</label><input class="inp" type="number" id="sSsoCap" step="1"></div>
-        <div class="field"><label>ภาษีหัก ณ ที่จ่าย (บาท/งวด)</label><input class="inp" type="number" id="sTax" step="0.01"></div>
-        <div class="field"><label>หักอื่นๆ ชื่อรายการ</label><input class="inp" id="sOthName" placeholder="เช่น ค่าชุดฟอร์ม"></div>
+        <div class="field"><label>เพดาน ปกส. ต่องวด</label><input class="inp" type="number" id="sSsoCap" step="1"></div>
+        <div class="field"><label>ภาษีหัก ณ ที่จ่าย</label><input class="inp" type="number" id="sTax" step="0.01"></div>
+        <div class="field"><label>หักอื่นๆ ชื่อ</label><input class="inp" id="sOthName"></div>
         <div class="field"><label>หักอื่นๆ (บาท)</label><input class="inp" type="number" id="sOth" step="0.01"></div>
         <div class="field"><label>ปกส. คิดจาก</label>
-          <select class="inp" id="sSsoBase">
-            <option value="wage">ค่าแรงรายวันเท่านั้น</option>
-            <option value="all">ค่าแรง + รายได้เพิ่มเติม</option>
-          </select></div>
-        <div class="field"><label>ปุ่มลัดรายได้ — ชื่อ</label><input class="inp" id="sQName" placeholder="Incentive Audit"></div>
-        <div class="field"><label>ปุ่มลัดรายได้ — จำนวนเงิน</label><input class="inp" type="number" id="sQAmt" step="0.01"></div>
+          <select class="inp" id="sSsoBase"><option value="wage">ค่าแรงรายวัน</option><option value="all">ค่าแรง + เพิ่มเติม</option></select></div>
+        <div class="field"><label>ปุ่มลัดรายได้ ชื่อ</label><input class="inp" id="sQName"></div>
+        <div class="field"><label>ปุ่มลัดรายได้ จำนวน</label><input class="inp" type="number" id="sQAmt" step="0.01"></div>
       </div>
-      <button class="btn sm" id="btnSaveSet">บันทึกการตั้งค่า</button>
-    </div>
-    <div class="card">
-      <h2>🔐 สำรองข้อมูลและล้างข้อมูล</h2>
-      <div class="hint">ดาวน์โหลดไฟล์เก็บไว้เป็นสำรอง หรือล้างประวัติทั้งหมด</div>
-      <div class="flex">
-        <button class="btn ghost sm" id="btnExport">⬇️ สำรองข้อมูล (.json)</button>
-        <button class="btn ghost sm" id="btnImport">⬆️ กู้คืนข้อมูล</button>
-        <button class="btn danger sm" id="btnWipe">🗑️ ล้างประวัติทั้งหมด</button>
-        <input type="file" id="impFile" accept="application/json" class="hide">
-      </div>
+      <button class="btn sm" id="btnSaveSet" style="margin-top:10px">บันทึกการตั้งค่า</button>
     </div>
   </div>
 </div>
@@ -369,92 +261,58 @@ textarea.inp{resize:vertical;min-height:60px}
 <div class="toast" id="toast"></div>
 
 <script>
-  const SUPABASE_URL = 'https://duennufxfutxhaceerkq.supabase.co/rest/v1/';
+/* ============ SUPABASE INIT ============ */
+const SUPABASE_URL = 'https://duennufxfutxhaceerkq.supabase.co/rest/v1/';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR1ZW5udWZ4ZnV0eGhhY2VlcmtxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc5MjE4NzcxNywiZXhwIjoyMTA3NzYzNzE3fQ.4uyiHyrXLFSJApYs6G8XJlJdV3AyV38ecx6-RNbQVDc';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-let CU = null;        // supabase user object
-let STATE = { settings: {...DEF}, records: [] };
+let CU = null;
+let STATE = { set: null, recs: [] };
 let saveTimer = null;
 
-async function loadUserData(uid){
-  const { data, error } = await sb.from('user_data')
-    .select('*').eq('user_id', uid).maybeSingle();
-  if (error) { toast('❌ โหลดข้อมูลไม่สำเร็จ'); return; }
-  if (!data) {
-    await sb.from('user_data').insert({ user_id: uid, settings: DEF, records: [] });
-    STATE = { settings: {...DEF}, records: [] };
-  } else {
-    STATE = { settings: { ...DEF, ...(data.settings||{}) }, records: data.records || [] };
-  }
-}
+const $=id=>document.getElementById(id);
+const toast=m=>{const t=$('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2400)};
 
-function queueSave(){
-  clearTimeout(saveTimer);
-  saveTimer = setTimeout(async () => {
-    const { error } = await sb.from('user_data').upsert({
-      user_id: CU.id,
-      settings: STATE.settings,
-      records: STATE.records,
-      updated_at: new Date().toISOString()
-    });
-    if (error) toast('⚠️ ซิงค์ไม่สำเร็จ'); else toast('☁️ ซิงค์ขึ้น Cloud แล้ว');
-  }, 1200);
-}
-
-// ตัวช่วยแทนของเดิมที่โค้ดส่วนอื่นเรียกใช้ (me(), mySet(), putMe())
-const me    = () => STATE;
-const mySet = () => STATE.settings;
-function putMe(fn){ fn(STATE); queueSave(); }
-/* ============ STORAGE & SYNC CODE ============ */
-const DB='pst_v1';
-const db=()=>JSON.parse(localStorage.getItem(DB)||'{"users":{}}');
-const save=d=>localStorage.setItem(DB,JSON.stringify(d));
-let CU=null;
-const DEF={rate:412,hours:8,holMult:2,sso:5,ssoCap:750,tax:0,oth:0,othName:'หักอื่นๆ',
-  ssoBase:'wage',qName:'Incentive Audit',qAmt:250};
+const DEF={rate:412,hours:8,holMult:2,sso:5,ssoCap:750,tax:0,oth:0,othName:'หักอื่นๆ',ssoBase:'wage',qName:'Incentive Audit',qAmt:250};
 const TH=['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
 const MN=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
 const TYPES={
-  work:     {n:'✅ วันทำงาน',                 pay:1, mult:1},
-  pubwork:  {n:'🎌 นักขัตฤกษ์ (มาทำงาน)',     pay:1, mult:null},
-  puboff:   {n:'🎏 นักขัตฤกษ์ (หยุด)',        pay:1, mult:1},
-  holiday:  {n:'🏖️ วันหยุดประจำสัปดาห์',      pay:0, mult:1},
-  sick:     {n:'🤒 ลาป่วย (ได้เงิน)',         pay:1, mult:1},
-  personal: {n:'📄 ลากิจ (ได้เงิน)',          pay:1, mult:1},
-  annual:   {n:'🌴 ลาพักร้อน',                pay:1, mult:1},
-  absent:   {n:'❌ ขาดงาน',                   pay:0, mult:0},
-  unpaid:   {n:'⛔ ลาไม่รับค่าจ้าง',           pay:0, mult:0},
-  none:     {n:'— ไม่มีข้อมูล',               pay:0, mult:0}
+  work:     {n:'✅ วันทำงาน', pay:1, mult:1},
+  pubwork:  {n:'🎌 นักขัตฤกษ์ (มาทำงาน)', pay:1, mult:null},
+  puboff:   {n:'🎏 นักขัตฤกษ์ (หยุด)', pay:1, mult:1},
+  holiday:  {n:'🏖️ วันหยุดประจำสัปดาห์', pay:0, mult:1},
+  sick:     {n:'🤒 ลาป่วย (ได้เงิน)', pay:1, mult:1},
+  personal: {n:'📄 ลากิจ (ได้เงิน)', pay:1, mult:1},
+  annual:   {n:'🌴 ลาพักร้อน', pay:1, mult:1},
+  absent:   {n:'❌ ขาดงาน', pay:0, mult:0},
+  unpaid:   {n:'⛔ ลาไม่รับค่าจ้าง', pay:0, mult:0},
+  none:     {n:'— ไม่มีข้อมูล', pay:0, mult:0}
 };
 const money=n=>(+n||0).toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2});
-const toast=m=>{const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'),2400)};
-async function hash(s){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s+'|pst'));
-  return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}
-const $=id=>document.getElementById(id);
 
-function generateSyncCode(){
-  const u=me();
-  const raw=JSON.stringify({set:u.set,recs:u.recs});
-  const code=btoa(encodeURIComponent(raw));
-  $('sSyncCode').value=code;
-  navigator.clipboard?.writeText(code);
-  toast('✅ สร้างและคัดลอกรหัสซิงค์ลงคลิปบอร์ดแล้ว');
-}
-function importSyncCode(){
-  const code=$('sSyncCode').value.trim();
-  if(!code)return toast('⚠️ กรุณาวางรหัสซิงค์ก่อน');
-  try{
-    const raw=decodeURIComponent(atob(code));
-    const data=JSON.parse(raw);
-    if(!data.recs)throw 0;
-    putMe(u=>{u.set={...DEF,...(data.set||{})};u.recs=data.recs});
-    loadSet();renderHist();fillCmp();toast('✅ นำเข้าข้อมูลสำเร็จ!');
-  }catch{toast('❌ รหัสซิงค์ไม่ถูกต้อง')}
+async function loadUserData(uid){
+  const { data, error } = await sb.from('user_data').select('*').eq('user_id', uid).maybeSingle();
+  if(error){ STATE={set:{...DEF},recs:[]}; console.error(error); return; }
+  if(!data){
+    STATE={set:{...DEF},recs:[]};
+    await sb.from('user_data').insert({ user_id: uid, settings: STATE.set, records: STATE.recs });
+  }else{
+    STATE={set:{...DEF,...(data.settings||{})}, recs:data.records||[]};
+  }
 }
 
-/* ============ AUTH (บัญชีในเครื่อง) ============ */
+async function doSave(){
+  if(!CU) return;
+  await sb.from('user_data').upsert({
+    user_id: CU.id,
+    settings: STATE.set,
+    records: STATE.recs,
+    updated_at: new Date().toISOString()
+  });
+}
+function putMe(f){ f(STATE); clearTimeout(saveTimer); saveTimer=setTimeout(doSave,900); }
+
+/* ============ AUTH ============ */
 let mode='login';
 function am(t,k){$('authMsg').innerHTML=`<div class="msg ${k}">${t}</div>`}
 function bindSwap(){$('auSwap').querySelector('span').onclick=doSwap}
@@ -467,666 +325,92 @@ function doSwap(){
   bindSwap();$('authMsg').innerHTML='';
 }
 bindSwap();
+
 $('auBtn').onclick=async()=>{
-  const u=$('auUser').value.trim().toLowerCase(),p=$('auPass').value;
-  if(!u||!p)return am('กรอกชื่อผู้ใช้และรหัสผ่านให้ครบ','err');
-  if(u.startsWith('ms:')||u.startsWith('fb:')||u.startsWith('google:'))return am('ชื่อผู้ใช้นี้ใช้ไม่ได้','err');
-  const d=db();
+  const email=$('auUser').value.trim();
+  const pw=$('auPass').value;
+  if(!email||!pw)return am('กรอกอีเมลและรหัสผ่านให้ครบ','err');
   if(mode==='reg'){
-    if(p.length<4)return am('รหัสผ่านอย่างน้อย 4 ตัว','err');
-    if(p!==$('auPass2').value)return am('รหัสผ่านไม่ตรงกัน','err');
-    if(d.users[u])return am('มีชื่อผู้ใช้นี้แล้ว','err');
-    d.users[u]={pw:await hash(p),set:{...DEF},recs:[]};save(d);
-    am('สร้างบัญชีสำเร็จ กำลังเข้าสู่ระบบ...','ok');setTimeout(()=>enter(u),600);
+    if(pw.length<6)return am('รหัสผ่านอย่างน้อย 6 ตัว','err');
+    if(pw!==$('auPass2').value)return am('รหัสผ่านไม่ตรงกัน','err');
+    const {data,error}=await sb.auth.signUp({email,password:pw});
+    if(error)return am(error.message,'err');
+    if(data.session) await afterLogin(data.user);
+    else am('สมัครสำเร็จ! กรุณายืนยันอีเมลก่อนเข้าสู่ระบบ','ok');
   }else{
-    if(!d.users[u]||!d.users[u].pw||d.users[u].pw!==await hash(p))return am('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง','err');
-    enter(u);
+    const {data,error}=await sb.auth.signInWithPassword({email,password:pw});
+    if(error)return am('อีเมลหรือรหัสผ่านไม่ถูกต้อง','err');
+    await afterLogin(data.user);
   }
 };
-$('auPass').onkeydown=e=>{if(e.key==='Enter')$('auBtn').click()};
-$('auPass2').onkeydown=e=>{if(e.key==='Enter')$('auBtn').click()};
-function enter(u){
-  CU=u;sessionStorage.setItem('pst_cu',u);
-  $('authView').classList.add('hide');$('appView').classList.remove('hide');
-  $('whoName').textContent=u;loadSet();renderHist();fillCmp();
-  const n=new Date();$('pMonth').value=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0');
-}
-$('btnOut').onclick=()=>{
-  sessionStorage.removeItem('pst_cu');
-  if(MS_ACC&&msalApp)msalApp.logoutRedirect({account:MS_ACC});
-  else location.reload();
-};
-const me=()=>db().users[CU];
-const mySet=()=>({...DEF,...(me().set||{})});
-function putMe(f,noSync){
-  const d=db();const u=d.users[CU];f(u);
-  if(!noSync)u.updatedAt=new Date().toISOString();
-  save(d);
-  if(!noSync)cloudPushSoon();
-}
 
-/* ============ FACEBOOK LOGIN ============ */
-const FB_APP_ID = '*************848';
-window.fbAsyncInit = function() {
-  FB.init({ appId: FB_APP_ID, cookie: true, xfbml: true, version: 'v18.0' });
-};
-(function(d, s, id){
-  var js, fjs = d.getElementsByTagName(s)[0];
-  if (d.getElementById(id)) return;
-  js = d.createElement(s); js.id = id;
-  js.src = "https://connect.facebook.net/th_TH/sdk.js";
-  fjs.parentNode.insertBefore(js, fjs);
-}(document, 'script', 'facebook-jssdk'));
+$('googleBtn').onclick=()=>sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.origin+location.pathname}});
+$('msBtn').onclick=()=>sb.auth.signInWithOAuth({provider:'azure',options:{redirectTo:location.origin+location.pathname,scopes:'email'}});
+$('fbBtn').onclick=()=>sb.auth.signInWithOAuth({provider:'facebook',options:{redirectTo:location.origin+location.pathname}});
 
-$('fbBtn').onclick = function() {
-  if(FB_APP_ID.includes('ใส่')) return toast('⚠️ กรุณาใส่ App ID Facebook ในโค้ดก่อน');
-  FB.login(function(response) {
-    if (response.authResponse) {
-      FB.api('/me', {fields: 'id,name,email'}, function(userInfo) {
-        enterFacebookUser(userInfo);
-      });
-    } else {
-      toast('❌ ยกเลิกการเข้าสู่ระบบด้วย Facebook');
-    }
-  }, {scope: 'public_profile'});
-};
-
-function enterFacebookUser(userInfo) {
-  const key = 'fb:' + userInfo.id;
-  const d = db();
-  if (!d.users[key]) {
-    d.users[key] = { pw: null, set: {...DEF}, recs: [] };
-    save(d);
-  }
-  CU = key;
-  sessionStorage.setItem('pst_cu', key);
+async function afterLogin(user){
+  CU=user;
+  await loadUserData(user.id);
   $('authView').classList.add('hide');
   $('appView').classList.remove('hide');
-  $('whoName').textContent = userInfo.name || 'ผู้ใช้ Facebook';
+  const label=user.user_metadata?.full_name||user.user_metadata?.name||user.email||'ผู้ใช้';
+  $('whoName').textContent=label;
   loadSet(); renderHist(); fillCmp();
-  const n = new Date();
-  $('pMonth').value = n.getFullYear() + '-' + String(n.getMonth() + 1).padStart(2, '0');
-  toast('✅ เข้าสู่ระบบด้วย Facebook สำเร็จ');
+  const n=new Date(); $('pMonth').value=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0');
 }
+$('btnOut').onclick=async()=>{ await sb.auth.signOut(); location.reload(); };
 
-/* ============ GOOGLE LOGIN + GOOGLE DRIVE SYNC ============ */
-const GOOGLE_CLIENT_ID = '73675866356-j3gtr6kjrcjhfeo9rr6u7ulkfs4sbvbh.apps.googleusercontent.com';
-let accessToken = null;
-let tokenClient = null;
-
-window.addEventListener('load', () => {
-  const checkGoogle = setInterval(() => {
-    if (typeof google !== 'undefined' && google.accounts) {
-      clearInterval(checkGoogle);
-      tokenClient = google.accounts.oauth2.initTokenClient({
-        client_id: GOOGLE_CLIENT_ID,
-        scope: 'https://www.googleapis.com/auth/drive.file',
-        callback: (response) => {
-          if (response.error) return toast('❌ เข้าสู่ระบบ Google ไม่สำเร็จ');
-          accessToken = response.access_token;
-          fetchGoogleUserInfo();
-        }
-      });
-    }
-  }, 500);
-});
-
-$('googleBtn').onclick = () => {
-  if (GOOGLE_CLIENT_ID.includes('ใส่')) return toast('⚠️ กรุณาใส่ Google Client ID ก่อน');
-  if (!tokenClient) return toast('⏳ กำลังโหลดระบบ Google กรุณารอสักครู่');
-  tokenClient.requestAccessToken({prompt: 'consent'});
-};
-
-async function fetchGoogleUserInfo() {
-  try {
-    const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-      headers: { Authorization: `Bearer ${accessToken}` }
-    });
-    const user = await res.json();
-    enterGoogleUser(user);
-  } catch (e) {
-    toast('❌ ไม่สามารถดึงข้อมูลผู้ใช้ Google ได้');
-  }
-}
-
-async function enterGoogleUser(userInfo) {
-  const key = 'google:' + userInfo.sub;
-  const d = db();
-  if (!d.users[key]) {
-    d.users[key] = { pw: null, set:{...DEF}, recs:[] };
-    save(d);
-  }
-  CU = key;
-  sessionStorage.setItem('pst_cu', key);
-  
-  toast('⏳ กำลังดึงข้อมูลจาก Google Drive...');
-  await loadFromGoogleDrive();
-
-  $('authView').classList.add('hide');
-  $('appView').classList.remove('hide');
-  $('whoName').textContent = userInfo.name || userInfo.email;
-  $('cloudDot').classList.remove('hide');
-  $('cloudCard').classList.remove('hide');
-  $('cloudWho').textContent = userInfo.email;
-  
-  loadSet(); renderHist(); fillCmp();
-  const n = new Date();
-  $('pMonth').value = n.getFullYear() + '-' + String(n.getMonth() + 1).padStart(2, '0');
-  toast('✅ เข้าสู่ระบบและซิงค์ Google Drive สำเร็จ');
-}
-
-async function saveToGoogleDrive() {
-  if (!accessToken) return;
-  const data = JSON.stringify(me());
-  try {
-    const searchRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=name='payslip_data.json' and trashed=false`, {
-      headers: { Authorization: `Bearer ${accessToken}` }
-    });
-    const searchJson = await searchRes.json();
-    
-    if (searchJson.files && searchJson.files.length > 0) {
-      const fileId = searchJson.files[0].id;
-      await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`, {
-        method: 'PATCH',
-        headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-        body: data
-      });
-    } else {
-      const metadata = { name: 'payslip_data.json', mimeType: 'application/json' };
-      const form = new FormData();
-      form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-      form.append('file', new Blob([data], { type: 'application/json' }));
-      
-      await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${accessToken}` },
-        body: form
-      });
-    }
-  } catch (e) {
-    console.error('Drive sync error', e);
-  }
-}
-
-async function loadFromGoogleDrive() {
-  if (!accessToken) return;
-  try {
-    const searchRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=name='payslip_data.json' and trashed=false`, {
-      headers: { Authorization: `Bearer ${accessToken}` }
-    });
-    const searchJson = await searchRes.json();
-    if (searchJson.files && searchJson.files.length > 0) {
-      const fileId = searchJson.files[0].id;
-      const fileRes = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
-        headers: { Authorization: `Bearer ${accessToken}` }
-      });
-      const cloudData = await fileRes.json();
-      const d = db();
-      d.users[CU] = cloudData;
-      save(d);
-    }
-  } catch (e) {
-    console.error('Drive load error', e);
-  }
-}
-
-/* ============ MICROSOFT LOGIN + ONEDRIVE SYNC ============ */
-const MS_CLIENT_ID='a4f88a9d-29ac-43c5-820e-65cf57d6b976';
-const MS_AUTHORITY='https://login.microsoftonline.com/consumers';
-const SCOPES=['User.Read','Files.ReadWrite.AppFolder'];
-const CLOUD_URL='https://graph.microsoft.com/v1.0/me/drive/special/approot:/payslip-data.json:/content';
-
-let msalApp=null,MS_ACC=null,pushTimer=null,MS_ERR='';
-(()=>{
-  if(typeof msal==='undefined'){MS_ERR='โหลดระบบ Microsoft ไม่สำเร็จ';return}
-  try{
-    const here=location.origin+location.pathname;
-    msalApp=new msal.PublicClientApplication({
-      auth:{clientId:MS_CLIENT_ID,authority:MS_AUTHORITY,redirectUri:here,postLogoutRedirectUri:here},
-      cache:{cacheLocation:'localStorage'}
-    });
-  }catch(e){MS_ERR='ตั้งค่า Microsoft ผิดพลาด'}
-})();
-
-$('msBtn').onclick=()=>{
-  if(!msalApp)return am(MS_ERR,'err');
-  msalApp.loginRedirect({scopes:SCOPES,prompt:'select_account'});
-};
-const cs=t=>{$('cloudStat').textContent=t};
-
-async function getToken(){
-  try{return (await msalApp.acquireTokenSilent({scopes:SCOPES,account:MS_ACC})).accessToken}
-  catch(e){await msalApp.acquireTokenRedirect({scopes:SCOPES,account:MS_ACC});return null}
-}
-async function cloudPull(){
-  const t=await getToken();if(!t)return null;
-  const r=await fetch(CLOUD_URL,{headers:{Authorization:'Bearer '+t}});
-  if(r.status===404)return null;
-  if(!r.ok)throw new Error('HTTP '+r.status);
-  return r.json();
-}
-async function cloudPush(silent){
-  if(!MS_ACC)return;
-  try{
-    cs('กำลังอัปโหลด...');
-    const t=await getToken();if(!t)return;
-    const u=me();
-    const body=JSON.stringify({set:u.set,recs:u.recs||[],updatedAt:u.updatedAt||new Date().toISOString()});
-    const r=await fetch(CLOUD_URL,{method:'PUT',
-      headers:{Authorization:'Bearer '+t,'Content-Type':'application/json'},body});
-    if(!r.ok)throw new Error('HTTP '+r.status);
-    cs('✅ ซิงค์ล่าสุด '+new Date().toLocaleTimeString('th-TH'));
-    if(!silent)toast('☁️ ซิงค์ขึ้น OneDrive แล้ว');
-  }catch(e){cs('❌ ซิงค์ไม่สำเร็จ');toast('⚠️ ซิงค์ OneDrive ไม่สำเร็จ')}
-}
-function cloudPushSoon(){
-  if(accessToken) { saveToGoogleDrive(); return; }
-  if(!MS_ACC)return;
-  clearTimeout(pushTimer);pushTimer=setTimeout(()=>cloudPush(),1500);
-}
-function applyCloud(c){
-  putMe(u=>{u.set={...DEF,...(c.set||{})};u.recs=c.recs||[];u.updatedAt=c.updatedAt||null},true);
-  loadSet();renderHist();fillCmp();
-  cs('✅ ซิงค์ล่าสุด '+new Date().toLocaleTimeString('th-TH'));
-}
-async function syncOnLogin(){
-  cs('กำลังตรวจสอบข้อมูลบน OneDrive...');
-  try{
-    const c=await cloudPull(),local=me();
-    if(c&&c.recs){
-      if(local.updatedAt&&c.updatedAt&&local.updatedAt>c.updatedAt){
-        await cloudPush(true);toast('☁️ ส่งข้อมูลล่าสุดในเครื่องขึ้น OneDrive แล้ว');
-      }else{applyCloud(c);toast('☁️ โหลดข้อมูลจาก OneDrive แล้ว')}
-    }else{await cloudPush(true)}
-  }catch(e){cs('❌ เชื่อม OneDrive ไม่ได้');}
-}
-async function enterMs(acc){
-  MS_ACC=acc;msalApp.setActiveAccount(acc);
-  const key='ms:'+acc.homeAccountId;
-  const d=db();
-  if(!d.users[key]){d.users[key]={pw:null,set:{...DEF},recs:[]};save(d)}
-  enter(key);
-  $('whoName').textContent=acc.name||acc.username;
-  $('cloudDot').classList.remove('hide');
-  $('cloudCard').classList.remove('hide');
-  $('cloudWho').textContent=acc.username;
-  await syncOnLogin();
-}
-$('btnPush').onclick=()=>cloudPush();
-$('btnPull').onclick=async()=>{
-  if(!confirm('โหลดข้อมูลจาก OneDrive มาทับข้อมูลในเครื่องนี้?'))return;
-  try{const c=await cloudPull();
-    if(!c)return toast('ℹ️ ยังไม่มีข้อมูลบน OneDrive');
-    applyCloud(c);toast('☁️ โหลดข้อมูลจาก OneDrive แล้ว');
-  }catch(e){toast('❌ โหลดไม่สำเร็จ')}
-};
-
-/* ============ SETTINGS ============ */
+/* ============ SETTINGS & APP LOGIC ============ */
 const SF=[['sRate','rate'],['sHours','hours'],['sHolMult','holMult'],['sSso','sso'],['sSsoCap','ssoCap'],
   ['sTax','tax'],['sOth','oth'],['sOthName','othName'],['sSsoBase','ssoBase'],['sQName','qName'],['sQAmt','qAmt']];
-function loadSet(){
-  const s=mySet();SF.forEach(([i,k])=>$(i).value=s[k]);
-  $('sSyncCode').value='';refreshQuick();
-}
-function refreshQuick(){
-  const s=mySet();
-  $('btnQuick').textContent=`⚡ ${s.qName||'รายการลัด'} +${money(s.qAmt)}`;
-  $('btnQuick').classList.toggle('hide',!(s.qAmt>0));
-  $('multShow').textContent=s.holMult;
-}
+function mySet(){return {...DEF,...(STATE.set||{})}}
+function loadSet(){ const s=mySet(); SF.forEach(([i,k])=>$(i).value=s[k]); }
 $('btnSaveSet').onclick=()=>{
-  const o={...mySet()};SF.forEach(([i,k])=>{const v=$(i).value;
-    o[k]=(k==='othName'||k==='ssoBase'||k==='qName')?v:(parseFloat(v)||0)});
-  putMe(u=>u.set=o);refreshQuick();if(DAYS.length)drawDays();toast('✅ บันทึกการตั้งค่าแล้ว');
+  const o={...mySet()}; SF.forEach(([i,k])=>{const v=$(i).value; o[k]=(k.includes('Name')||k==='ssoBase')?v:(parseFloat(v)||0)});
+  putMe(u=>u.set=o); toast('✅ บันทึกการตั้งค่าแล้ว');
 };
 
-/* ============ TABS ============ */
-function goTab(name){
-  document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x.dataset.t===name));
-  ['calc','hist','comp','set'].forEach(t=>$('tab-'+t).classList.toggle('hide',t!==name));
-  if(name==='hist')renderHist();if(name==='comp')fillCmp();
-  window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body.scrollTop=0;
-}
-document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>goTab(b.dataset.t));
-
-/* ============ IMAGE ============ */
-let IMG=null;
-$('drop').onclick=()=>$('fileIn').click();
-$('drop').ondragover=e=>{e.preventDefault();$('drop').style.borderColor='var(--pri)'};
-$('drop').ondragleave=()=>$('drop').style.borderColor='';
-$('drop').ondrop=e=>{e.preventDefault();$('drop').style.borderColor='';if(e.dataTransfer.files[0])pic(e.dataTransfer.files[0])};
-$('fileIn').onchange=e=>{if(e.target.files[0])pic(e.target.files[0])};
-function pic(f){
-  const r=new FileReader();
-  r.onload=ev=>{const im=new Image();im.onload=()=>{
-    const mx=1000,sc=Math.min(1,mx/im.width),c=document.createElement('canvas');
-    c.width=im.width*sc;c.height=im.height*sc;
-    c.getContext('2d').drawImage(im,0,0,c.width,c.height);
-    IMG=c.toDataURL('image/jpeg',.62);
-    $('thumbBox').innerHTML=`<div class="thumb"><img src="${IMG}"><button class="x" onclick="rmImg()">✕</button></div>`;
-    toast('📎 แนบรูปแล้ว');
-  };im.src=ev.target.result};
-  r.readAsDataURL(f);
-}
-function rmImg(){IMG=null;$('thumbBox').innerHTML=''}
-
-/* ============ DAY TABLE ============ */
-let DAYS=[],PINFO=null,EXTRAS=[];
-function dayMult(t){const s=mySet();const m=TYPES[t].mult;return m===null?s.holMult:m}
-$('btnGen').onclick=()=>{
-  const mv=$('pMonth').value;if(!mv)return toast('⚠️ เลือกเดือนก่อน');
-  const [y,m]=mv.split('-').map(Number),half=+$('pHalf').value;
-  const last=new Date(y,m,0).getDate();
-  const s=half===1?1:16,e=half===1?15:last;
-  const payD=half===1?new Date(y,m-1,20):new Date(y,m,5);
-  const pad=n=>String(n).padStart(2,'0');
-  PINFO={y,m,half,s,e,
-    key:`${y}-${pad(m)}-H${half}`,
-    label:`${s}–${e} ${MN[m-1]} ${y+543}`,
-    payDate:`${payD.getFullYear()}-${pad(payD.getMonth()+1)}-${pad(payD.getDate())}`,
-    payLabel:`${payD.getDate()} ${MN[payD.getMonth()]} ${payD.getFullYear()+543}`,
-    payMonthKey:`${payD.getFullYear()}-${pad(payD.getMonth()+1)}`};
-  DAYS=[];for(let d=s;d<=e;d++){const dt=new Date(y,m-1,d);
-    DAYS.push({d,dow:dt.getDay(),type:'work',un:0,hpOv:null})}
-  EXTRAS=[];drawExtras();
-  drawDays();$('daysCard').classList.remove('hide');$('extraCard').classList.remove('hide');
-  $('resBox').innerHTML='';
-  $('daysCard').scrollIntoView({behavior:'smooth',block:'start'});
-};
-function drawDays(){
-  const s=mySet();
-  $('dayBody').innerHTML=DAYS.map((x,i)=>{
-    const hp=holidayPaid(i);
-    let st;
-    if(x.type==='pubwork')st=`<span class="pill p-gold">🎌 ได้ ${s.holMult} เท่า = ${money(s.rate*s.holMult)} ฿</span>`;
-    else if(x.type==='puboff')st='<span class="pill p-gold">🎏 ได้ค่าจ้าง 1 เท่า</span>';
-    else if(x.type==='holiday')st=hp?'<span class="pill p-ok">ได้ค่าจ้างวันหยุด</span>':'<span class="pill p-bad">ไม่ได้ค่าจ้าง</span>';
-    else if(x.type==='absent')st='<span class="pill p-bad">ตัดค่าจ้าง + ตัดวันหยุดสัปดาห์นี้</span>';
-    else if(TYPES[x.type].pay)st=x.un>0?`<span class="pill p-warn">หัก ${x.un} ชม.</span>`:'<span class="pill p-ok">ได้ค่าจ้างเต็ม</span>';
-    else st='<span class="pill p-bad">ไม่ได้ค่าจ้าง</span>';
-    const gold=(x.type==='pubwork'||x.type==='puboff');
-    return `<tr class="${gold?'hl':''}">
-      <td class="dh"><b>${x.d}</b> <span class="dnum">${TH[x.dow]}</span></td>
-      <td data-l="ประเภทของวัน"><select onchange="setD(${i},'type',this.value)">${Object.entries(TYPES)
-        .map(([k,v])=>`<option value="${k}" ${x.type===k?'selected':''}>${v.n}</option>`).join('')}</select></td>
-      <td data-l="ชั่วโมงที่ไม่ได้ค่าจ้าง"><input type="number" min="0" step="0.25" value="${x.un}" ${TYPES[x.type].pay?'':'disabled'}
-        onchange="setD(${i},'un',parseFloat(this.value)||0)"></td>
-      <td data-l="ค่าจ้างวันหยุด">${x.type==='holiday'?`<label class="chk">
-        <input type="checkbox" ${hp?'checked':''} onchange="setD(${i},'hpOv',this.checked)"> จ่ายค่าจ้างวันหยุดนี้</label>`
-        :'<span class="dnum">—</span>'}</td>
-      <td data-l="ผลลัพธ์">${st}</td></tr>`}).join('');
-}
-function setD(i,k,v){DAYS[i][k]=v;if(k==='type')DAYS[i].hpOv=null;drawDays()}
-function holidayPaid(i){
-  if(DAYS[i].hpOv!==null)return DAYS[i].hpOv;
-  for(let j=Math.max(0,i-6);j<i;j++)if(DAYS[j].type==='absent')return false;
-  return true;
-}
-document.querySelectorAll('[data-fill]').forEach(b=>b.onclick=()=>{
-  if(!DAYS.length)return toast('⚠️ สร้างตารางก่อน');
-  const f=b.dataset.fill;
-  DAYS.forEach(x=>{if(f==='work')x.type='work';
-    if(f==='tue'&&x.dow===2)x.type='holiday';
-    if(f==='sun'&&x.dow===0)x.type='holiday';x.hpOv=null});
-  drawDays();
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x.dataset.t===b.dataset.t));
+  ['calc','hist','comp','set'].forEach(t=>$('tab-'+t).classList.toggle('hide',t!==b.dataset.t));
 });
 
-/* ============ EXTRA INCOME ============ */
-function drawExtras(){
-  $('extraRows').innerHTML=EXTRAS.length?EXTRAS.map((e,i)=>`
-    <div class="exrow">
-      <input class="inp" placeholder="ชื่อรายการ เช่น Incentive Audit" value="${(e.name||'').replace(/"/g,'&quot;')}"
-        onchange="EXTRAS[${i}].name=this.value">
-      <input class="inp" type="number" step="0.01" placeholder="0.00" value="${e.amt||''}"
-        onchange="EXTRAS[${i}].amt=parseFloat(this.value)||0">
-      <button class="del" onclick="EXTRAS.splice(${i},1);drawExtras()">✕</button>
-    </div>`).join('')
-    :'<div class="dnum" style="padding:6px 2px 10px">— งวดนี้ยังไม่มีรายได้เพิ่มเติม —</div>';
-}
-$('btnAddExtra').onclick=()=>{EXTRAS.push({name:'',amt:0});drawExtras()};
-$('btnQuick').onclick=()=>{const s=mySet();EXTRAS.push({name:s.qName,amt:s.qAmt});drawExtras()};
+let DAYS=[], EXTRAS=[];
+$('btnGen').onclick=()=>{
+  const mv=$('pMonth').value; if(!mv)return toast('⚠️ เลือกเดือนก่อน');
+  const [y,m]=mv.split('-').map(Number), half=+$('pHalf').value;
+  const last=new Date(y,m,0).getDate(), s=half===1?1:16, e=half===1?15:last;
+  const payD=half===1?new Date(y,m-1,20):new Date(y,m,5);
+  const pad=n=>String(n).padStart(2,'0');
+  PINFO={y,m,half,s,e, key:`${y}-${pad(m)}-H${half}`, label:`${s}–${e} ${MN[m-1]} ${y+543}`,
+    payDate:`${payD.getFullYear()}-${pad(payD.getMonth()+1)}-${pad(payD.getDate())}`,
+    payLabel:`${payD.getDate()} ${MN[payD.getMonth()]} ${payD.getFullYear()+543}`, payMonthKey:`${payD.getFullYear()}-${pad(payD.getMonth()+1)}`};
+  DAYS=[]; for(let d=s;d<=e;d++){ const dt=new Date(y,m-1,d); DAYS.push({d,dow:dt.getDay(),type:'work',un:0,hpOv:null}); }
+  EXTRAS=[]; drawExtras(); drawDays(); $('daysCard').classList.remove('hide'); $('extraCard').classList.remove('hide');
+};
 
-/* ============ CALCULATE ============ */
-let LAST=null;
-$('btnCalc').onclick=()=>{
+function drawDays(){
   const s=mySet();
-  let work=0,pubW=0,pubO=0,sick=0,per=0,ann=0,abs=0,unp=0,hol=0,holPaid=0,unHr=0,units=0;
-  DAYS.forEach((x,i)=>{
-    const t=x.type;
-    if(t==='work'){work++;units+=1}
-    else if(t==='pubwork'){pubW++;units+=s.holMult}
-    else if(t==='puboff'){pubO++;units+=1}
-    else if(t==='sick'){sick++;units+=1}
-    else if(t==='personal'){per++;units+=1}
-    else if(t==='annual'){ann++;units+=1}
-    else if(t==='absent')abs++;
-    else if(t==='unpaid')unp++;
-    else if(t==='holiday'){hol++;if(holidayPaid(i)){holPaid++;units+=1}}
-    if(TYPES[t].pay)unHr+=x.un||0;
-  });
-  const paidDays=work+pubW+pubO+sick+per+ann+holPaid;
-  const hourRate=s.rate/s.hours;
-  const unpaidCut=+(unHr*hourRate).toFixed(2);
-  const wage=+(units*s.rate-unpaidCut).toFixed(2);
-  const extras=EXTRAS.filter(e=>(+e.amt)>0).map(e=>({name:e.name||'รายได้เพิ่มเติม',amt:+e.amt}));
-  const extraSum=+extras.reduce((a,b)=>a+b.amt,0).toFixed(2);
-  const gross=+(wage+extraSum).toFixed(2);
-  const base=s.ssoBase==='all'?gross:wage;
-  let sso=Math.round(base*s.sso/100);
-  if(s.ssoCap>0)sso=Math.min(sso,s.ssoCap);
-  const ded=+(sso+s.tax+s.oth).toFixed(2);
-  const net=+(gross-ded).toFixed(2);
-  const lostAbs=+((abs+(hol-holPaid))*s.rate).toFixed(2);
-  const pubBonus=+(pubW*(s.holMult-1)*s.rate).toFixed(2);
-  LAST={...PINFO,img:IMG,days:JSON.parse(JSON.stringify(DAYS)),set:s,
-    st:{work,pubW,pubO,sick,per,ann,abs,unp,hol,holPaid,paidDays,unHr,units},
-    wage,extras,extraSum,gross,sso,tax:s.tax,oth:s.oth,othName:s.othName,
-    unpaidCut,ded,net,lostAbs,pubBonus,savedAt:new Date().toISOString()};
-  showRes(LAST,true);
-};
-function showRes(r,live){
-  const s={...DEF,...r.set},st=r.st;
-  const extras=r.extras||(r.inc>0?[{name:'Incentive',amt:r.inc}]:[]);
-  $('resBox').innerHTML=`
-  <div class="card">
-    <h2>💸 ผลคำนวณ — งวด ${r.label}</h2>
-    <div class="hint">เงินออกวันที่ <b>${r.payLabel}</b> · อัตราค่าจ้าง ${money(s.rate)} บาท/วัน (${money(s.rate/s.hours)} บาท/ชม.)</div>
-    <div class="kpi">
-      <div class="k"><div class="lb">วันที่ได้ค่าจ้าง</div><div class="vl">${st.paidDays} <small>วัน</small></div></div>
-      <div class="k"><div class="lb">รวมรายได้</div><div class="vl">${money(r.gross)}</div></div>
-      <div class="k ded"><div class="lb">รวมเงินหัก</div><div class="vl">−${money(r.ded)}</div></div>
-      <div class="k net"><div class="lb">เงินได้สุทธิ</div><div class="vl">${money(r.net)}</div></div>
-    </div>
-
-    <div class="rows" style="margin-bottom:16px">
-      <div class="row head"><span>🟢 เงินได้ (Income)</span><span>บาท</span></div>
-      <div class="row"><span>ค่าแรงรายวัน
-        <span class="ds">คิดเป็น ${st.units} หน่วยวัน × ${money(s.rate)}${
-          st.pubW?` (รวมนักขัตฤกษ์ ${st.pubW} วัน × ${s.holMult} เท่า)`:''}${
-          r.unpaidCut>0?` − หัก ${st.unHr} ชม. (${money(r.unpaidCut)})`:''}</span></span>
-        <span class="mono">${money(r.wage)}</span></div>
-      ${extras.map(e=>`<div class="row"><span>${e.name}<span class="ds">รายได้เพิ่มเติมงวดนี้</span></span>
-        <span class="mono">${money(e.amt)}</span></div>`).join('')}
-      ${extras.length?'':'<div class="row"><span class="dnum">— งวดนี้ไม่มีรายได้เพิ่มเติม —</span><span class="mono dnum">0.00</span></div>'}
-      <div class="row tot"><span>รวมรายได้</span><span class="mono">${money(r.gross)}</span></div>
-    </div>
-
-    <div class="rows" style="margin-bottom:16px">
-      <div class="row head"><span>🔴 เงินหัก (Deduction)</span><span>บาท</span></div>
-      <div class="row"><span>ประกันสังคม ${s.sso}%
-        <span class="ds">${s.ssoBase==='all'?'คิดจากรวมรายได้':'คิดจากค่าแรงรายวัน'} ${money(s.ssoBase==='all'?r.gross:r.wage)} บาท${s.ssoCap>0?` · เพดาน ${s.ssoCap}`:''}</span></span>
-        <span class="mono neg">−${money(r.sso)}</span></div>
-      <div class="row"><span>ภาษีหัก ณ ที่จ่าย</span><span class="mono neg">−${money(r.tax)}</span></div>
-      ${r.oth>0?`<div class="row"><span>${r.othName}</span><span class="mono neg">−${money(r.oth)}</span></div>`:''}
-      <div class="row tot"><span>รวมเงินหัก</span><span class="mono neg">−${money(r.ded)}</span></div>
-      <div class="row tot"><span>💰 เงินได้สุทธิ</span><span class="mono pos" style="font-size:18px">${money(r.net)}</span></div>
-    </div>
-
-    <div class="rows">
-      <div class="row head"><span>📋 สรุปวันทำงาน</span><span>จำนวน</span></div>
-      <div class="row"><span>✅ วันทำงานจริง</span><span class="mono">${st.work} วัน</span></div>
-      ${st.pubW?`<div class="row"><span>🎌 นักขัตฤกษ์ (มาทำงาน)<span class="ds">คิด ${s.holMult} เท่า = ${money(s.rate*s.holMult)} ฿/วัน</span></span>
-        <span class="mono gold">${st.pubW} วัน</span></div>`:''}
-      ${st.pubO?`<div class="row"><span>🎏 นักขัตฤกษ์ (หยุด)</span><span class="mono gold">${st.pubO} วัน</span></div>`:''}
-      ${st.sick?`<div class="row"><span>🤒 ลาป่วย (ได้เงิน)</span><span class="mono">${st.sick} วัน</span></div>`:''}
-      ${st.per?`<div class="row"><span>📄 ลากิจ (ได้เงิน)</span><span class="mono">${st.per} วัน</span></div>`:''}
-      ${st.ann?`<div class="row"><span>🌴 ลาพักร้อน</span><span class="mono">${st.ann} วัน</span></div>`:''}
-      <div class="row"><span>🏖️ วันหยุดที่<b>ได้</b>ค่าจ้าง</span><span class="mono pos">${st.holPaid} / ${st.hol} วัน</span></div>
-      ${st.abs?`<div class="row"><span>❌ ขาดงาน</span><span class="mono neg">${st.abs} วัน</span></div>`:''}
-      ${st.unp?`<div class="row"><span>⛔ ลาไม่รับค่าจ้าง</span><span class="mono neg">${st.unp} วัน</span></div>`:''}
-      <div class="row tot"><span>รวมหน่วยวันที่ได้ค่าจ้าง</span><span class="mono">${st.units} หน่วย</span></div>
-    </div>
-
-    ${r.pubBonus>0?`<div class="note gold">🎌 <b>โบนัสวันนักขัตฤกษ์: +${money(r.pubBonus)} บาท</b><br>
-      ทำงานวันนักขัตฤกษ์ ${st.pubW} วัน ได้ ${s.holMult} เท่า → ส่วนที่เพิ่มจากปกติ
-      = ${st.pubW} × ${s.holMult-1} × ${money(s.rate)}</div>`:''}
-
-    ${r.lostAbs>0?`<div class="note" style="border-color:rgba(255,107,122,.3);background:rgba(255,107,122,.07);color:#ffb3bb">
-      ⚠️ <b>เงินที่หายไปจากการขาดงาน: ${money(r.lostAbs)} บาท</b><br>
-      ค่าจ้างวันที่ขาด ${st.abs} วัน + ค่าจ้างวันหยุดที่ถูกตัด ${st.hol-st.holPaid} วัน
-      = รวม ${st.abs+(st.hol-st.holPaid)} วัน × ${money(s.rate)}<br>
-      👉 ขาด 1 วัน มักเสียเงินเท่ากับ 2 วัน เพราะโดนตัดค่าจ้างวันหยุดประจำสัปดาห์ด้วย</div>`:''}
-
-    ${live?`<div class="flex" style="margin-top:18px">
-      <button class="btn sm" onclick="saveRec()">💾 บันทึกงวดนี้เก็บไว้</button>
-      <button class="btn ghost sm" onclick="window.print()">🖨️ พิมพ์ / บันทึก PDF</button>
-    </div>`:''}
-  </div>`;
-  $('resBox').scrollIntoView({behavior:'smooth',block:'start'});
+  $('dayBody').innerHTML=DAYS.map((x,i)=>`<tr>
+    <td><b>${x.d}</b> <span style="color:var(--mut)">${TH[x.dow]}</span></td>
+    <td><select onchange="DAYS[${i}].type=this.value;drawDays()">${Object.entries(TYPES).map(([k,v])=>`<option value="${k}" ${x.type===k?'selected':''}>${v.n}</option>`).join('')}</select></td>
+    <td><input type="number" min="0" step="0.25" value="${x.un}" onchange="DAYS[${i}].un=parseFloat(this.value)||0"></td>
+    <td>—</td><td><span class="pill p-ok">ใช้งาน</span></td></tr>`).join('');
 }
-function saveRec(){
-  if(!LAST)return;
-  putMe(u=>{u.recs=(u.recs||[]).filter(x=>x.key!==LAST.key);u.recs.push(LAST);
-    u.recs.sort((a,b)=>a.payDate<b.payDate?1:-1)});
-  toast('💾 บันทึกงวด '+LAST.label+' แล้ว');
-  renderHist();fillCmp();
-  goTab('hist');
+function drawExtras(){
+  $('extraRows').innerHTML=EXTRAS.map((e,i)=>`
+    <div class="exrow"><input class="inp" placeholder="ชื่อ" value="${e.name}" onchange="EXTRAS[${i}].name=this.value">
+    <input class="inp" type="number" value="${e.amt}" onchange="EXTRAS[${i}].amt=parseFloat(this.value)||0">
+    <button class="del" onclick="EXTRAS.splice(${i},1);drawExtras()">✕</button></div>`).join('') || '<div style="color:var(--mut);font-size:12px">ไม่มีรายได้เพิ่มเติม</div>';
 }
+$('btnAddExtra').onclick=()=>{ EXTRAS.push({name:'',amt:0}); drawExtras(); };
 
-/* ============ HISTORY ============ */
-function renderHist(){
-  const rs=me().recs||[];
-  if(!rs.length){$('histBox').innerHTML='<div class="empty"><div class="ic">📭</div>ยังไม่มีข้อมูลที่บันทึก<br><small>ไปที่แท็บ "คำนวณงวดใหม่" เพื่อเริ่มต้น</small></div>';return}
-  const g={};rs.forEach(r=>{(g[r.payMonthKey]=g[r.payMonthKey]||[]).push(r)});
-  $('histBox').innerHTML=Object.keys(g).sort().reverse().map(k=>{
-    const [y,m]=k.split('-').map(Number),list=g[k];
-    const tot=list.reduce((a,b)=>a+b.net,0),gr=list.reduce((a,b)=>a+b.gross,0),dd=list.reduce((a,b)=>a+b.ded,0);
-    return `<div class="mgroup"><div class="mh"><b>${MN[m-1]} ${y+543}</b>
-      <span>${list.length} งวด · รายได้ ${money(gr)} · หัก ${money(dd)}</span>
-      <i>รับสุทธิ ${money(tot)} ฿</i></div>
-      ${list.sort((a,b)=>a.payDate<b.payDate?-1:1).map(r=>`
-      <div class="hitem">
-        ${r.img?`<img src="${r.img}" style="width:62px;height:46px;object-fit:cover;border-radius:8px;border:1px solid var(--line)">`:
-          '<div style="width:62px;height:46px;border-radius:8px;background:#0e1631;display:flex;align-items:center;justify-content:center;border:1px solid var(--line)">📄</div>'}
-        <div style="flex:1;min-width:150px">
-          <div class="t">งวด ${r.label}</div>
-          <div class="s">จ่าย ${r.payLabel} · ได้ค่าจ้าง ${r.st.paidDays} วัน
-            ${r.st.pubW?`· <span class="gold">🎌 นักขัตฤกษ์ ${r.st.pubW} วัน</span>`:''}
-            ${r.st.abs?`· <span style="color:var(--bad)">ขาด ${r.st.abs} วัน</span>`:''}</div>
-        </div>
-        <div style="text-align:right"><div class="amt">${money(r.net)}</div>
-          <div class="s">หัก ${money(r.ded)}</div></div>
-        <div class="flex">
-          <button class="btn ghost sm" onclick="openRec('${r.key}')">ดู</button>
-          <button class="btn ghost sm" onclick="delRec('${r.key}')">ลบ</button>
-        </div></div>`).join('')}</div>`}).join('');
-}
-function openRec(k){
-  const r=(me().recs||[]).find(x=>x.key===k);if(!r)return;
-  goTab('calc');
-  showRes(r,false);
-  if(r.img)$('resBox').insertAdjacentHTML('beforeend',
-    `<div class="card"><h2>🖼️ รูปตารางเวลาแนบของงวดนี้</h2><div class="thumb"><img src="${r.img}"></div></div>`);
-}
-function delRec(k){
-  if(!confirm('ลบงวดนี้ออกจากประวัติ?'))return;
-  putMe(u=>u.recs=u.recs.filter(x=>x.key!==k));renderHist();fillCmp();toast('🗑️ ลบแล้ว');
-}
-
-/* ============ COMPARE ============ */
-function fillCmp(){
-  const rs=me().recs||[];
-  const o=rs.map(r=>`<option value="${r.key}">${r.label} — จ่าย ${r.payLabel}</option>`).join('');
-  $('cmpA').innerHTML=o;$('cmpB').innerHTML=o;
-  if(rs.length>1){$('cmpA').selectedIndex=1;$('cmpB').selectedIndex=0}
-}
-$('btnCmp').onclick=()=>{
-  const rs=me().recs||[];
-  const A=rs.find(x=>x.key===$('cmpA').value),B=rs.find(x=>x.key===$('cmpB').value);
-  if(!A||!B)return toast('⚠️ ต้องมีอย่างน้อย 2 งวด');
-  if(A.key===B.key)return toast('⚠️ เลือกคนละงวด');
-  const ex=r=>r.extraSum!=null?r.extraSum:(r.inc||0);
-  const mx=Math.max(A.net,B.net)||1;
-  const d=(a,b,inv)=>{const x=(b||0)-(a||0);if(Math.abs(x)<.01)return '<span class="dnum">เท่าเดิม</span>';
-    const good=inv?x<0:x>0;return `<span class="${good?'pos':'neg'}">${x>0?'▲ +':'▼ '}${money(Math.abs(x))}</span>`};
-  const dn=(a,b,inv)=>{const x=(b||0)-(a||0);if(!x)return '<span class="dnum">เท่าเดิม</span>';
-    const good=inv?x<0:x>0;return `<span class="${good?'pos':'neg'}">${x>0?'+':'−'}${Math.abs(x)}</span>`};
-  $('cmpBox').innerHTML=`
-  <div class="grid2" style="margin-bottom:18px">
-    <div class="k"><div class="lb">งวด A · ${A.label}</div><div class="vl">${money(A.net)}</div>
-      <div class="bar"><div style="width:${A.net/mx*100}%"></div></div></div>
-    <div class="k"><div class="lb">งวด B · ${B.label}</div><div class="vl">${money(B.net)}</div>
-      <div class="bar"><div style="width:${B.net/mx*100}%"></div></div></div>
-  </div>
-  <div style="overflow-x:auto"><table class="ctbl">
-    <thead><tr><th>รายการ</th><th>งวด A</th><th>งวด B</th><th>ต่างกัน</th></tr></thead><tbody>
-    <tr><td>วันทำงานจริง</td><td>${A.st.work}</td><td>${B.st.work}</td><td>${dn(A.st.work,B.st.work)}</td></tr>
-    <tr><td>🎌 นักขัตฤกษ์ (ทำงาน)</td><td>${A.st.pubW||0}</td><td>${B.st.pubW||0}</td><td>${dn(A.st.pubW,B.st.pubW)}</td></tr>
-    <tr><td>วันหยุดที่ได้ค่าจ้าง</td><td>${A.st.holPaid}/${A.st.hol}</td><td>${B.st.holPaid}/${B.st.hol}</td><td>${dn(A.st.holPaid,B.st.holPaid)}</td></tr>
-    <tr><td>วันลา (ได้เงิน)</td><td>${A.st.sick+A.st.per+A.st.ann}</td><td>${B.st.sick+B.st.per+B.st.ann}</td><td>${dn(A.st.sick+A.st.per+A.st.ann,B.st.sick+B.st.per+B.st.ann)}</td></tr>
-    <tr><td>ขาดงาน</td><td>${A.st.abs}</td><td>${B.st.abs}</td><td>${dn(A.st.abs,B.st.abs,1)}</td></tr>
-    <tr><td><b>หน่วยวันที่ได้ค่าจ้าง</b></td><td><b>${A.st.units??A.st.paidDays}</b></td><td><b>${B.st.units??B.st.paidDays}</b></td><td>${dn(A.st.units??A.st.paidDays,B.st.units??B.st.paidDays)}</td></tr>
-    <tr><td>ค่าแรงรายวัน</td><td>${money(A.wage)}</td><td>${money(B.wage)}</td><td>${d(A.wage,B.wage)}</td></tr>
-    <tr><td>รายได้เพิ่มเติม</td><td>${money(ex(A))}</td><td>${money(ex(B))}</td><td>${d(ex(A),ex(B))}</td></tr>
-    <tr><td>รวมรายได้</td><td>${money(A.gross)}</td><td>${money(B.gross)}</td><td>${d(A.gross,B.gross)}</td></tr>
-    <tr><td>ประกันสังคม</td><td>−${money(A.sso)}</td><td>−${money(B.sso)}</td><td>${d(A.sso,B.sso,1)}</td></tr>
-    <tr><td>รวมเงินหัก</td><td>−${money(A.ded)}</td><td>−${money(B.ded)}</td><td>${d(A.ded,B.ded,1)}</td></tr>
-    <tr style="background:var(--card2)"><td><b>💰 เงินได้สุทธิ</b></td><td><b>${money(A.net)}</b></td>
-      <td><b>${money(B.net)}</b></td><td><b>${d(A.net,B.net)}</b></td></tr>
-  </tbody></table></div>
-  <div class="note">${B.net>A.net
-    ? `📈 งวด B ได้มากกว่า <b>${money(B.net-A.net)} บาท</b>${(B.st.pubW||0)>(A.st.pubW||0)?` — ส่วนหนึ่งมาจากทำงานวันนักขัตฤกษ์เพิ่ม ${(B.st.pubW||0)-(A.st.pubW||0)} วัน`:''}`
-    : B.net<A.net
-    ? `📉 งวด B ได้น้อยกว่า <b>${money(A.net-B.net)} บาท</b>${B.st.abs>A.st.abs?` — สาเหตุหลักคือขาดงานเพิ่ม ${B.st.abs-A.st.abs} วัน ซึ่งตัดค่าจ้างวันหยุดไปด้วย`:''}`
-    : '➖ ทั้งสองงวดได้เท่ากันพอดี'}</div>`;
-};
-
-/* ============ BACKUP ============ */
-$('btnExport').onclick=()=>{
-  const b=new Blob([JSON.stringify({user:CU,data:me()},null,2)],{type:'application/json'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(b);
-  const safe=CU.replace(/[^a-z0-9_.-]/gi,'_').slice(0,40);
-  a.download=`payslip-${safe}-${new Date().toISOString().slice(0,10)}.json`;a.click();
-  toast('⬇️ ดาวน์โหลดไฟล์สำรองแล้ว');
-};
-$('btnImport').onclick=()=>$('impFile').click();
-$('impFile').onchange=e=>{
-  const f=e.target.files[0];if(!f)return;const r=new FileReader();
-  r.onload=ev=>{try{const j=JSON.parse(ev.target.result);
-    if(!j.data||!j.data.recs)throw 0;
-    if(!confirm('กู้คืนข้อมูลทับของเดิม?'))return;
-    putMe(u=>{u.set={...DEF,...(j.data.set||{})};u.recs=j.data.recs});
-    loadSet();renderHist();fillCmp();toast('✅ กู้คืนข้อมูลสำเร็จ');
-  }catch{toast('❌ ไฟล์ไม่ถูกต้อง')}};
-  r.readAsText(f);e.target.value='';
-};
-$('btnWipe').onclick=()=>{
-  if(!confirm('ลบประวัติทั้งหมดของบัญชีนี้? กู้คืนไม่ได้'))return;
-  putMe(u=>u.recs=[]);renderHist();fillCmp();toast('🗑️ ล้างประวัติแล้ว');
-};
-
-/* ============ BOOT ============ */
+/* Session check */
 (async()=>{
-  if(msalApp){
-    try{
-      const res=await msalApp.handleRedirectPromise();
-      const acc=res?.account||msalApp.getActiveAccount()||msalApp.getAllAccounts()[0];
-      if(acc)return enterMs(acc);
-    }catch(e){am('เข้าสู่ระบบ Microsoft ไม่สำเร็จ','err')}
-  }
-  const u=sessionStorage.getItem('pst_cu');
-  if(u&&db().users[u]&&!u.startsWith('ms:'))enter(u);
+  const {data:{session}}=await sb.auth.getSession();
+  if(session?.user) await afterLogin(session.user);
+  sb.auth.onAuthStateChange(async(ev,s)=>{ if(ev==='SIGNED_IN'&&s?.user) await afterLogin(s.user); });
 })();
 </script>
 </body>
-</html>ฉันอยากให้เว็บของฉัน เชื่อมฐานข้อมูลออนไลน์  Supabase ให้สามารถเมื่อล็อคอินผ่าน เมล หริอ เฟสบุ๊ค หรือ microsoft จะเก็บข้อมูลอยู่ในแต่ล่ะที่ของนั้น มีข้อมูลของตัวเองแยกกัน และข้อมูลติดไปทุกเครื่องเมื่อล็อคอินด้วยเมลนั้น
+</html>
