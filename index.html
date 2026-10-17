@@ -561,7 +561,6 @@ async function enterGoogleUser(userInfo) {
   CU = key;
   sessionStorage.setItem('pst_cu', key);
   
-  // บังคับดึงข้อมูลจาก Google Drive ทันที
   toast('⏳ กำลังดึงข้อมูลจาก Google Drive...');
   await loadFromGoogleDrive();
 
@@ -572,20 +571,6 @@ async function enterGoogleUser(userInfo) {
   $('cloudCard').classList.remove('hide');
   $('cloudWho').textContent = userInfo.email;
   
-  loadSet(); renderHist(); fillCmp();
-  const n = new Date();
-  $('pMonth').value = n.getFullYear() + '-' + String(n.getMonth() + 1).padStart(2, '0');
-  toast('✅ เข้าสู่ระบบและซิงค์ Google Drive สำเร็จ');
-}
-  CU = key;
-  sessionStorage.setItem('pst_cu', key);
-  
-  await loadFromGoogleDrive();
-
-  $('authView').classList.add('hide');
-  $('appView').classList.remove('hide');
-  $('whoName').textContent = userInfo.name || userInfo.email;
-  $('cloudDot').classList.remove('hide');
   loadSet(); renderHist(); fillCmp();
   const n = new Date();
   $('pMonth').value = n.getFullYear() + '-' + String(n.getMonth() + 1).padStart(2, '0');
