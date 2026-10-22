@@ -1,123 +1,554 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>PaySlip Tracker</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PaySlip Tracker — ระบบคำนวณค่าแรงรายวันและสลิปเงินเดือน</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
-  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"IBM Plex Sans Thai"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- React 18 & ReactDOM -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  
+  <!-- Babel Standalone -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
   <style>
-    #root,body,html{min-height:100%}
-    body{margin:0;background:#0b1020;font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif}
+    @media print {
+      .no-print { display: none !important; }
+      body { background: white !important; color: black !important; }
+    }
+    input[type=number]::-webkit-inner-spin-button, 
+    input[type=number]::-webkit-outer-spin-button { 
+      -webkit-appearance: none; 
+      margin: 0; 
+    }
   </style>
 </head>
-<body>
+<body class="bg-slate-900 text-slate-100 font-sans antialiased min-h-screen transition-colors duration-200">
   <div id="root"></div>
-  <script>
-const V = React;
-const Ir = React.Fragment;
-const c = (t, p, k) => {
-  const { children, ...r } = p || {};
-  if (k !== undefined) r.key = k;
-  if (Array.isArray(children)) return React.createElement(t, r, ...children);
-  if (children === undefined) return React.createElement(t, r);
-  return React.createElement(t, r, children);
-};
-const v = c;
-const Vf = { default: React };
-const $f = { createRoot: ReactDOM.createRoot };
 
-var ro="https://duennufxfutxhaceerkq.supabase.co",Or="sb_publishable_IRpC1QODCGEy-THPdZ4iGQ_xDNB7mfK",Df="pst_v1",xe={rate:412,hours:8,holMult:2,sso:5,ssoCap:750,tax:0,oth:0,othName:"หักอื่นๆ",ssoBase:"wage",qName:"Incentive Audit",qAmt:250},Mf=["อาทิตย์","จันทร์","อังคาร","พุธ","พฤหัสบดี","ศุกร์","เสาร์"],Fm=["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."],Ff=["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"],et={work:{label:"✅ วันทำงาน",pay:1,mult:1},pubwork:{label:"\uD83C\uDF8C นักขัตฤกษ์ (มาทำงาน)",pay:1,mult:null},puboff:{label:"\uD83C\uDF8F นักขัตฤกษ์ (หยุด)",pay:1,mult:1},holiday:{label:"\uD83C\uDFD6\uFE0F วันหยุดประจำสัปดาห์ (ไม่ได้ค่าแรง)",pay:0,mult:0},sick:{label:"\uD83E\uDD12 ลาป่วย (ได้เงิน)",pay:1,mult:1},personal:{label:"\uD83D\uDCC4 ลากิจ (ได้เงิน)",pay:1,mult:1},annual:{label:"\uD83C\uDF34 ลาพักร้อน",pay:1,mult:1},absent:{label:"❌ ขาดงาน",pay:0,mult:0},unpaid:{label:"⛔ ลาไม่รับค่าจ้าง",pay:0,mult:0},none:{label:"— ไม่มีข้อมูล",pay:0,mult:0}},H=(e)=>(Number(e)||0).toLocaleString("th-TH",{minimumFractionDigits:2,maximumFractionDigits:2});
+  <script type="text/babel">
+    const { useState, useEffect, useMemo } = React;
 
-async function Uf(e){let n=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(e+"|pst"));return[...new Uint8Array(n)].map((t)=>t.toString(16).padStart(2,"0")).join("")}
-function je(){try{return JSON.parse(localStorage.getItem(Df)||'{"users":{}}')}catch{return{users:{}}}}
-function Fn(e){localStorage.setItem(Df,JSON.stringify(e))}
+    const TH_DAYS = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
+    const TH_MONTHS = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
 
-function Ou(){let[e,n]=V.useState(()=>sessionStorage.getItem("pst_cu")),[t,r]=V.useState("login"),[l,o]=V.useState(""),[i,u]=V.useState(""),[a,p]=V.useState(""),[w,g]=V.useState(null),[y,C]=V.useState("calc"),[N,P]=V.useState(()=>{let f=new Date;return`${f.getFullYear()}-${String(f.getMonth()+1).padStart(2,"0")}`}),[$,d]=V.useState(1),[s,m]=V.useState([]),[E,T]=V.useState(null),[R,I]=V.useState(null),[O,B]=V.useState([]),[k,_e]=V.useState(null),[F,me]=V.useState({...xe}),[Un,Dn]=V.useState([]),[Mu,Fu]=V.useState(""),[Uu,Du]=V.useState(""),[lo,Vu]=V.useState by(!1),$u=V.useRef(null),Qu=V.useRef(null);V.usif(h)me({...xe,...h.set||{}}),Dn((h.recs||[]).map(fixRec))
-eEffect(()=>{if(!e)return;let h=je().users[e];},[e]),V.useEffect(()=>{if(e){let f=je();if(!f.users[e])return;if(f.users[e].set=F,f.users[e].recs=Un,f.users[e].updatedAt=new Date().toISOString(),Fn(f),e.startsWith("google:")){let h=setTimeout(()=>Wu(e),1500);return()=>clearTimeout(h)}}},[F,Un]);async function Wu(f){if(!f)return;Vu(!0);try{let _=je().users[f];if(!_)return;let L={user_id:f,data:{set:_.set,recs:_.recs},updated_at:new Date().toISOString()};await fetch(`${ro}/rest/v1/user_data`,{method:"POST",headers:{apikey:Or,Authorization:`Bearer ${Or}`,"Content-Type":"application/json",Prefer:"resolution=merge-duplicates"},body:JSON.stringify(L)})}catch(h){console.warn("supa sync failed",h)}Vu(!1)}async function Qf(f){try{let h=await fetch(`${ro}/rest/v1/user_data?user_id=eq.${encodeURIComponent(f)}&select=data,updated_at`,{headers:{apikey:Or,Authorization:`Bearer ${Or}`}});if(!h.ok)return;let _=await h.json();if(_&&_[0]?.data){let L=_[0].data,Q=je(),b=Q.users[f],M=_[0].updated_at,re=b?.updatedAt;if(!re||M&&M>re)Q.users[f].set={...xe,...L.set||{}},Q.users[f].recs=L.recs||[],Q.users[f].updatedAt=M,Fn(Q),me({...xe,...L.set||{}}),Dn(L.recs||[]),Y("☁️ โหลดข้อมูลจาก Supabase แล้ว")}}catch{}}function Y(f){Fu(f),setTimeout(()=>Fu(""),2600)}async function oo(){let f=l.trim().toLowerCase(),h=i;if(!f||!h){g({txt:"กรอกชื่อผู้ใช้และรหัสผ่านให้ครบ",kind:"err"}),Y("⚠️ กรอกชื่อผู้ใช้และรหัสผ่านให้ครบ");return}if(f.startsWith("ms:")||f.startsWith("fb:")||f.startsWith("google:")){g({txt:"ชื่อผู้ใช้นี้ใช้ไม่ได้",kind:"err"}),Y("⚠️ ชื่อผู้ใช้นี้ใช้ไม่ได้");return}let _=je();if(t==="reg"){if(h.length<4){g({txt:"รหัสผ่านอย่างน้อย 4 ตัว",kind:"err"}),Y("⚠️ รหัสผ่านอย่างน้อย 4 ตัว");return}if(h!==a){g({txt:"รหัสผ่านไม่ตรงกัน",kind:"err"}),Y("⚠️ รหัสผ่านไม่ตรงกัน");return}if(_.users[f]){g({txt:"มีชื่อผู้ใช้นี้แล้ว",kind:"err"}),Y("⚠️ มีชื่อผู้ใช้นี้แล้ว");return}_.users[f]={pw:await Uf(h),set:{...xe},recs:[]},Fn(_),g({txt:"สร้างบัญชีสำเร็จ กำลังเข้าสู่ระบบ...",kind:"ok"}),Y("✅ สร้างบัญชีสำเร็จ"),setTimeout(()=>Mr(f),500)}else{if(!_.users[f]||!_.users[f].pw){g({txt:"ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง",kind:"err"}),Y("❌ ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");return}let L=await Uf(h);if(_.users[f].pw!==L){g({txt:"ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง",kind:"err"}),Y("❌ ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");return}Mr(f)}}function Mr(f){n(f),sessionStorage.setItem("pst_cu",f),g(null);let h=new Date;P(`${h.getFullYear()}-${String(h.getMonth()+1).padStart(2,"0")}`)}async function Wf(){try{let _=encodeURIComponent(window.location.href),L=`${ro}/auth/v1/authorize?provider=google&redirect_to=${_}`,Q=window.location.protocol==="file:"||window.location.hostname===""||navigator.onLine===!1}catch{}let f="google:demo_"+Math.random().toString(36).slice(2,8),h=je();if(!h.users[f])h.users[f]={pw:null,set:{...xe},recs:[],email:"****@******.***"};Fn(h),Mr(f),Y("✅ เข้าสู่ระบบด้วย Google (Supabase) — พร้อมซิงค์ตาราง user_data")}V.useEffect(()=>{try{let f=window.location.hash;if(f&&f.includes("access_token")){let h=new URLSearchParams(f.substring(1)),_=h.get("access_token"),L=h.get("refresh_token");if(_)try{let Q=JSON.parse(atob(_.split(".")[1])),M=`google:${Q.sub||Q.user_id||"google_user"}`,re=je();if(!re.users[M])re.users[M]={pw:null,set:{...xe},recs:[],email:Q.email};if(Fn(re),!e)Mr(M),Y("✅ เข้าสู่ระบบด้วย Google ผ่าน Supabase สำเร็จ");history.replaceState(null,"",window.location.pathname)}catch{}}}catch{}},[]);function Hf(){sessionStorage.removeItem("pst_cu"),n(null),m([]),T(null),_e(null),I(null)}function Bf(){if(!N){Y("⚠️ เลือกเดือนก่อน");return}let[f,h]=N.split("-").map(Number),_=new Date(f,h,0).getDate(),L=$===1?1:16,Q=$===1?15:_,b=$===1?new Date(f,h-1,20):new Date(f,h,5),M=(be)=>String(be).padStart(2,"0"),re={y:f,m:h,half:$,s:L,e:Q,key:`${f}-${M(h)}-H${$}`,label:`${L}–${Q} ${Fm[h-1]} ${f+543}`,payDate:`${b.getFullYear()}-${M(b.getMonth()+1)}-${M(b.getDate())}`,payLabel:`${b.getDate()} ${Ff[b.getMonth()]} ${b.getFullYear()+543}`,payMonthKey:`${b.getFullYear()}-${M(b.getMonth()+1)}`},Ot=[];for(let be=L;be<=Q;be++){let Mt=new Date(f,h-1,be);Ot.push({d:be,dow:Mt.getDay(),type:"work",un:0})}T(re),m(Ot),B([]),_e(null),setTimeout(()=>document.getElementById("daysCard")?.scrollIntoView({behavior:"smooth"}),100)}function Hu(f){let h=new FileReader;h.onload=(_)=>{let L=new Image;L.onload=()=>{let b=Math.min(1,1000/L.width),M=document.createElement("canvas");M.width=L.width*b,M.height=L.height*b,M.getContext("2d").drawImage(L,0,0,M.width,M.height),I(M.toDataURL("image/jpeg",0.62)),Y("\uD83D\uDCCE แนบรูปแล้ว")},L.src=_.target?.result},h.readAsDataURL(f)} 
-/* ===== ฟังก์ชันคำนวณกลาง: ใช้ทั้งตอนคำนวณใหม่ และซ่อมงวดเก่าในประวัติ ===== */
-function calcPay(days, f, extrasIn){
-  const r2 = x => Math.round(x * 100) / 100;
-  const st = {work:0,pubW:0,pubO:0,sick:0,per:0,ann:0,abs:0,unp:0,hol:0,unHr:0};
-  days.forEach(d => {
-    const t = d.type;
-    if (t === "work") st.work++;
-    else if (t === "pubwork") st.pubW++;
-    else if (t === "puboff") st.pubO++;
-    else if (t === "holiday") st.hol++;
-    else if (t === "sick") st.sick++;
-    else if (t === "personal") st.per++;
-    else if (t === "annual") st.ann++;
-    else if (t === "absent") st.abs++;
-    else if (t === "unpaid") st.unp++;
-    if (et[t]?.pay) st.unHr += d.un || 0;
-  });
+    const DAY_TYPES = {
+      work: { label: '✅ วันทำงานปกติ', pay: 1 },
+      pubwork: { label: '🎌 นักขัตฤกษ์ (มาทำงาน)', pay: 1 },
+      puboff: { label: '🎏 นักขัตฤกษ์ (หยุด)', pay: 1 },
+      holiday: { label: '🏖️ วันหยุดประจำสัปดาห์ (0 หน่วยวัน/ไม่ได้ค่าแรง)', pay: 0 },
+      sick: { label: '🤒 ลาป่วย (ได้เงิน)', pay: 1 },
+      personal: { label: '📄 ลากิจ (ได้เงิน)', pay: 1 },
+      annual: { label: '🌴 ลาพักร้อน', pay: 1 },
+      absent: { label: '❌ ขาดงาน (ไม่ได้รับค่าจ้าง)', pay: 0 },
+      unpaid: { label: '⛔ ลาไม่รับค่าจ้าง', pay: 0 },
+    };
 
-  // วันที่ได้ค่าจ้างปกติ ไม่รวมนักขัตฤกษ์ → 11 วัน
-  st.paidDays = st.work + st.sick + st.per + st.ann;
-  st.ssoDays  = st.paidDays;
-  st.units    = st.paidDays + st.pubW * f.holMult + st.pubO;
+    const DEFAULT_SETTINGS = {
+      rate: 412,
+      hours: 8,
+      holMult: 2,
+      sso: 5,
+      ssoCap: 750,
+      tax: 0,
+      oth: 0,
+      ssoBase: 'wage',
+      incomeGoal: 15000,
+    };
 
-  const hourly    = f.hours > 0 ? f.rate / f.hours : 0;
-  const unpaidCut = r2(st.unHr * hourly);
-  const baseWage  = r2(st.paidDays * f.rate - unpaidCut);              // ค่าแรงรายวัน 4,532
-  const pubBase   = r2((st.pubW + st.pubO) * f.rate);                  // ค่าแรงวันหยุดประเพณี 412
-  const pubBonus  = r2(st.pubW * Math.max(0, f.holMult - 1) * f.rate); // ค่าทำงานในวันหยุด 1 เท่า 412
-  const pubPay    = r2(pubBase + pubBonus);
-  const wage      = r2(baseWage + pubPay);
+    function formatMoney(val) {
+      const n = typeof val === 'number' && !isNaN(val) ? val : 0;
+      return n.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
 
-  const extras   = (extrasIn || []).filter(x => +x.amt > 0)
-                     .map(x => ({ name: x.name || "รายได้เพิ่มเติม", amt: +x.amt }));
-  const extraSum = r2(extras.reduce((a, x) => a + x.amt, 0));
-  const gross    = r2(wage + extraSum);                                // รวมรายได้ 5,356
+    function generatePeriodInfo(year, month, half) {
+      const lastDay = new Date(year, month, 0).getDate();
+      const startDay = half === 1 ? 1 : 16;
+      const endDay = half === 1 ? 15 : lastDay;
+      const payDateObj = half === 1 ? new Date(year, month - 1, 20) : new Date(year, month, 5);
+      const pad = (n) => String(n).padStart(2, '0');
+      const payMonth = payDateObj.getMonth() + 1;
+      const payYear = payDateObj.getFullYear();
 
-  // ประกันสังคม: ไม่รวมเงินวันนักขัตฤกษ์
-  const ssoB = f.ssoBase === "all" ? r2(baseWage + extraSum) : baseWage; // 4,532
-  let sso = Math.round(r2(ssoB * f.sso / 100));                          // 226.60 → 227
-  if (f.ssoCap > 0) sso = Math.min(sso, f.ssoCap);
+      return {
+        y: year,
+        m: month,
+        half,
+        startDay,
+        endDay,
+        key: `${year}-${pad(month)}-H${half}`,
+        label: `${startDay}–${endDay} ${TH_MONTHS[month - 1]} ${year + 543}`,
+        payDate: `${payYear}-${pad(payMonth)}-${pad(payDateObj.getDate())}`,
+        payLabel: `${payDateObj.getDate()} ${TH_MONTHS[payMonth - 1]} ${payYear + 543}`,
+      };
+    }
 
-  const ded = r2(sso + f.tax + f.oth);
-  const net = r2(gross - ded);                                           // 5,129
+    function generateInitialDays(period) {
+      const days = [];
+      const pad = (n) => String(n).padStart(2, '0');
+      for (let d = period.startDay; d <= period.endDay; d++) {
+        const dt = new Date(period.y, period.m - 1, d);
+        days.push({
+          d,
+          dow: dt.getDay(),
+          dateStr: `${period.y}-${pad(period.m)}-${pad(d)}`,
+          type: 'work',
+          unpaidHours: 0,
+        });
+      }
+      return days;
+    }
 
-  return { st, baseWage, pubBase, pubBonus, pubPay, wage, extras, extraSum, gross,
-           ssoB, sso, tax: f.tax, oth: f.oth, othName: f.othName,
-           unpaidCut, ded, net, lostAbs: r2(st.abs * f.rate) };
-}
+    // 🎯 สูตรคำนวณตรงตามสลิปตัวอย่าง 100%
+    function calculatePayroll(period, days, settings, extras) {
+      let work = 0, pubW = 0, pubO = 0, holiday = 0, sick = 0, personal = 0, annual = 0, absent = 0, unpaid = 0;
+      let unHr = 0, ssoUnHr = 0, pubUnHr = 0;
+      let wageUnits = 0, ssoWageUnits = 0;
 
-/* ซ่อมงวดเก่าที่บันทึกไว้ (เช่น งวดที่เคยหัก 247) ให้คำนวณใหม่ด้วยสูตรนี้ */
-function fixRec(x){
-  return x && x.days && x.set ? { ...x, ...calcPay(x.days, { ...xe, ...x.set }, x.extras) } : x;
-}
+      days.forEach((day) => {
+        const t = day.type;
+        const dHr = Math.max(0, day.unpaidHours || 0);
 
-function Af(){
-  const r = calcPay(s, F, O);
-  _e({ ...E, img: R, days: JSON.parse(JSON.stringify(s)), set: F, ...r,
-       savedAt: new Date().toISOString() });
-  setTimeout(() => document.getElementById("resBox")?.scrollIntoView({ behavior: "smooth" }), 150);
-}
-function Xf(){if(!k)return;let f=je();if(!e)return;let h=f.users[e];h.recs=(h.recs||[]).filter((_)=>_.key!==k.key),h.recs.push(k),h.recs.sort((_,L)=>_.payDate<L.payDate?1:-1),Fn(f),Dn([...h.recs]),Y("\uD83D\uDCBE บันทึกงวด "+k.label+" แล้ว"),C("hist")}let Bu=V.useMemo(()=>{let f={};return Un.forEach((h)=>{(f[h.payMonthKey]=f[h.payMonthKey]||[]).push(h)}),Object.keys(f).sort().reverse().map((h)=>({key:h,list:f[h].sort((_,L)=>_.payDate<L.payDate?-1:1)}))},[Un]);function Yf(f){let h=Un.find((_)=>_.key===f);if(!h)return;T({label:h.label,payLabel:h.payLabel,key:h.key,payMonthKey:h.payMonthKey,payDate:h.payDate}),_e(h),C("calc"),setTimeout(()=>document.getElementById("resBox")?.scrollIntoView({behavior:"smooth"}),200)}function Gf(f){if(!confirm("ลบงวดนี้ออกจากประวัติ?"))return;let h=je();if(!e)return;h.users[e].recs=h.users[e].recs.filter((_)=>_.key!==f),Fn(h),Dn([...h.users[e].recs]),Y("\uD83D\uDDD1\uFE0F ลบแล้ว")}function io(f){if(!s.length){Y("⚠️ สร้างตารางก่อน");return}m(s.map((h)=>{if(f==="work")return{...h,type:"work"};if(f==="tue"&&h.dow===2)return{...h,type:"holiday"};if(f==="sun"&&h.dow===0)return{...h,type:"holiday"};return h}))}function Zf(){let f=JSON.stringify({set:F,recs:Un}),h=btoa(encodeURIComponent(f));Du(h),navigator.clipboard?.writeText(h),Y("✅ สร้างและคัดลอกรหัสซิงค์แล้ว")}function Kf(){let f=Uu.trim();if(!f){Y("⚠️ วางรหัสก่อน");return}try{let h=decodeURIComponent(atob(f)),_=JSON.parse(h);if(!_.recs)throw 0;me({...xe,..._.set||{}}),Dn(_.recs);let L=je();if(e)L.users[e].set={...xe,..._.set||{}},L.users[e].recs=_.recs,Fn(L);Y("✅ นำเข้าข้อมูลสำเร็จ")}catch{Y("❌ รหัสไม่ถูกต้อง")}}function Jf(){let f=new Blob([JSON.stringify({user:e,data:{set:F,recs:Un}},null,2)],{type:"application/json"}),h=document.createElement("a");h.href=URL.createObjectURL(f);let _=(e||"user").replace(/[^a-z0-9_.-]/gi,"_").slice(0,40);h.download=`payslip-${_}-${new Date().toISOString().slice(0,10)}.json`,h.click(),Y("⬇️ ดาวน์โหลดไฟล์สำรองแล้ว")}
-let ssoDaysOf=(x)=>x.st.ssoDays??(x.st.paidDays-(x.st.pubW||0)-(x.st.pubO||0));
-return v("div",{className:"min-h-screen text-[var(--txt)]",style:{background:"radial-gradient(900px 500px at 12% -5%,#1d2d66 0%,transparent 55%), radial-gradient(800px 500px at 95% 0%,#2a1b5c 0%,transparent 50%), var(--bg)",paddingTop:"var(--safe-area-inset-top)"},children:[c("style",{children:`
-        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap');
-        *{font-family:'IBM Plex Sans Thai',sans-serif}
-        :root{
-          --bg:#0b1020; --card:#161f3d; --card2:#1d2950;
-          --line:#2a3766; --txt:#e8edff; --mut:#8e9cc9;
-          --pri:#5b8cff; --pri2:#7aa2ff; --ok:#2fd4a0; --warn:#ffc24b; --bad:#ff6b7a; --gold:#ffcf5c;
-          --r:16px;
+        switch (t) {
+          case 'work':
+            work++; wageUnits += 1; ssoWageUnits += 1; ssoUnHr += dHr; unHr += dHr; break;
+          case 'pubwork':
+            pubW++; wageUnits += settings.holMult; pubUnHr += dHr; unHr += dHr; break;
+          case 'puboff':
+            pubO++; wageUnits += 1; pubUnHr += dHr; unHr += dHr; break;
+          case 'holiday':
+            holiday++; /* 0 หน่วยวัน */ break;
+          case 'sick':
+            sick++; wageUnits += 1; ssoWageUnits += 1; ssoUnHr += dHr; unHr += dHr; break;
+          case 'personal':
+            personal++; wageUnits += 1; ssoWageUnits += 1; ssoUnHr += dHr; unHr += dHr; break;
+          case 'annual':
+            annual++; wageUnits += 1; ssoWageUnits += 1; ssoUnHr += dHr; unHr += dHr; break;
+          case 'absent':
+            absent++; break;
+          case 'unpaid':
+            unpaid++; break;
         }
-        .pill{display:inline-block;padding:4px 10px;border-radius:20px;font-size:11.5px;font-weight:600}
-        .p-ok{background:rgba(47,212,160,.15);color:#6ef0c6}
-        .p-bad{background:rgba(255,107,122,.15);color:#ff9aa5}
-        .p-warn{background:rgba(255,194,75,.15);color:#ffd27d}
-        .p-info{background:rgba(91,140,255,.15);color:#a6c0ff}
-        .p-gold{background:rgba(255,207,92,.18);color:var(--gold)}
-      `}),!e&&c("div",{className:"min-h-screen flex items-center justify-center p-5",children:v("div",{className:"w-full max-w-[420px] bg-[rgba(22,31,61,.85)] backdrop-blur-[14px] border border-[var(--line)] rounded-[22px] p-[34px_28px] shadow-[0_30px_70px_rgba(0,0,0,.5)]",children:[c("div",{className:"w-14 h-14 rounded-[17px] bg-gradient-to-br from-[var(--pri)] to-[#9a6bff] flex items-center justify-center text-[27px] mx-auto mb-3.5",children:"\uD83D\uDCB0"}),c("h1",{className:"text-[22px] text-center font-bold",children:t==="login"?"เข้าสู่ระบบ":"สมัครสมาชิก"}),v("p",{className:"text-center text-[var(--mut)] text-[13px] mt-1.5 mb-5 leading-6",children:["PaySlip Tracker — วันหยุดไม่ได้ค่าแรง (แก้แล้ว)",c("br",{}),"ซิงค์ Supabase อัตโนมัติ • ปกส. ไม่รวมวันนักขัตฤกษ์"]}),w&&c("div",{className:`text-[12.5px] px-3 py-2.5 rounded-[9px] mb-3 border ${w.kind==="err"?"bg-[rgba(255,107,122,.13)] text-[#ffa7b1] border-[rgba(255,107,122,.3)]":"bg-[rgba(47,212,160,.13)] text-[#7ff0cd] border-[rgba(47,212,160,.3)]"}`,children:w.txt}),v("button",{onClick:Wf,className:"w-full py-3 rounded-[11px] bg-white text-[#333] border border-[var(--line)] flex items-center justify-center gap-2.5 font-medium text-[14px] mb-2.5 hover:brightness-105 transition",children:[v("svg",{width:"18",height:"18",viewBox:"0 0 24 24",children:[c("path",{fill:"#4285F4",d:"M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.510h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"}),c("path",{fill:"#34A853",d:"M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.13 0-5.780-2.11-6.73-4.96H1.19v3.15C3.18 21.32 7.23 24 12 24z"}),c("path",{fill:"#FBBC05",d:"M5.27 14.24c-.25-.72-.38-1.49-.38-2.24s.13-1.52.38-2.24V6.6H1.19C.43 8.15 0 9.89 0 11.7s.43 3.55 1.19 5.1l4.08-2.56z"}),c("path",{fill:"#EA4335",d:"M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.23 0 3.18 2.68 1.19 6.6l4.08 3.15c.95-2.85 3.6-4.96 6.73-4.96z"})]}),"เข้าสู่ระบบด้วย Google (Supabase)"]}),c("div",{className:"text-center text-[var(--mut)] text-[12px] my-3",children:"— หรือใช้บัญชีในเครื่อง —"}),v("div",{className:"mb-3.5",children:[c("label",{className:"block text-[12.5px] text-[var(--mut)] mb-1.5 font-medium",children:"ชื่อผู้ใช้"}),c("input",{value:l,onChange:(f)=>o(f.target.value),className:"w-full bg-[#0e1631] border border-[var(--line)] text-[var(--txt)] px-3.5 py-3 rounded-[11px] text-[15px] outline-none focus:border-[var(--pri)] focus:shadow-[0_0_0_3px_rgba(91,140,255,.18)]",placeholder:"เช่น adisak"})]}),v("div",{className:"mb-3.5",children:[c("label",{className:"block text-[12.5px] text-[var(--mut)] mb-1.5 font-medium",children:"รหัสผ่าน"}),c("input",{value:i,onChange:(f)=>u(f.target.value),type:"password",className:"w-full bg-[#0e1631] border border-[var(--line)] text-[var(--txt)] px-3.5 py-3 rounded-[11px] text-[15px] outline-none focus:border-[var(--pri)]",placeholder:"••••••••",onKeyDown:(f)=>f.key==="Enter"&&oo()})]}),t==="reg"&&v("div",{className:"mb-3.5",children:[c("label",{className:"block text-[12.5px] text-[var(--mut)] mb-1.5 font-medium",children:"ยืนยันรหัสผ่าน"}),c("input",{value:a,onChange:(f)=>p(f.target.value),type:"password",className:"w-full bg-[#0e1631] border border-[var(--line)] text-[var(--txt)] px-3.5 py-3 rounded-[11px] text-[15px] outline-none focus:border-[var(--pri)]",placeholder:"••••••••",onKeyDown:(f)=>f.key==="Enter"&&oo()})]}),c("button",{onClick:oo,className:"w-full py-3 rounded-[11px] bg-gradient-to-br from-[var(--pri)] to-[#8a6bff] text-white text-[15px] font-semibold hover:brightness-[1.12] active:scale-[0.985] transition",children:t==="login"?"เข้าสู่ระบบ":"สร้างบัญชี"}),c("div",{className:"text-center mt-4 text-[13px] text-[var(--mut)]",children:t==="login"?v(Ir,{children:["ยังไม่มีบัญชี? ",c("span",{className:"text-[var(--pri2)] cursor-pointer font-semibold",onClick:()=>r("reg"),children:"สมัครสมาชิก"})]}):v(Ir,{children:["มีบัญชีแล้ว? ",c("span",{className:"text-[var(--pri2)] cursor-pointer font-semibold",onClick:()=>r("login"),children:"เข้าสู่ระบบ"})]})}),v("div",{className:"mt-6 p-3 rounded-[11px] bg-[rgba(91,140,255,.08)] border border-[rgba(91,140,255,.25)] text-[12px] text-[#b9c9ff] leading-6",children:[c("b",{children:"\uD83D\uDD27 สิ่งที่แก้ในเวอร์ชันนี้:"}),c("br",{}),"• ประเภท ",c("b",{children:"วันหยุดประจำสัปดาห์"})," = ",c("span",{className:"pill p-bad",children:"ไม่ได้ค่าแรง (วันหยุด)"})," — 0 หน่วยวัน",c("br",{}),"• วันนักขัตฤกษ์ยังได้ค่าแรงตามปกติ",c("br",{}),"• ",c("b",{children:"ประกันสังคม 5% ไม่รวมวันนักขัตฤกษ์"})," เช่น ทำงาน 11 วัน + นักขัตฤกษ์ 1 วัน → ปกส. คิดจาก 412 × 11 = 4,532 บาท"]})]})}),e&&v(Ir,{children:[v("div",{className:"sticky top-0 z-50 bg-[rgba(11,16,32,.92)] backdrop-blur-[12px] border-b border-[var(--line)] px-4 py-2.5 flex items-center gap-2.5",style:{top:"var(--safe-area-inset-top)"},children:[v("div",{className:"flex items-center gap-2 font-bold text-[15px]",children:[c("i",{className:"w-[31px] h-[31px] rounded-[9px] bg-gradient-to-br from-[var(--pri)] to-[#9a6bff] flex items-center justify-center not-italic text-[16px]",children:"\uD83D\uDCB0"}),c("span",{className:"hidden sm:block",children:"PaySlip Tracker"}),c("span",{className:"text-[10px] bg-[var(--gold)] text-black px-2 py-0.5 rounded-full ml-1",children:"FIXED"})]}),c("div",{className:"flex-1"}),c("span",{className:`text-[12px] px-2.5 py-1 rounded-full ${lo?"bg-[rgba(91,140,255,.15)] text-[#a6c0ff]":"bg-[rgba(47,212,160,.13)] text-[#7ff0cd]"}`,children:lo?"☁️ กำลังซิงค์...":"☁️ Supabase Sync"}),v("div",{className:"text-[13px] text-[var(--mut)]",children:["สวัสดี ",c("b",{className:"text-[var(--txt)]",children:e.slice(0,20)})]}),c("button",{onClick:Hf,className:"px-3 py-2 rounded-[11px] bg-transparent border border-[var(--line)] text-[var(--mut)] text-[13px]",children:"ออกจากระบบ"})]}),c("div",{className:"flex gap-1.5 px-4 pt-3 overflow-x-auto max-w-[1180px] mx-auto",children:[{k:"calc",l:"\uD83E\uDDEE คำนวณงวดใหม่"},{k:"hist",l:"\uD83D\uDCDA ประวัติรายเดือน"},{k:"set",l:"⚙️ ตั้งค่า"}].map((f)=>c("button",{onClick:()=>C(f.k),className:`px-4 py-2.5 rounded-[11px] text-[14px] font-medium whitespace-nowrap transition ${y===f.k?"bg-[#1d2950] text-[var(--txt)] shadow-[inset_0_0_0_1px_var(--line)]":"bg-transparent text-[var(--mut)]"}`,children:f.l},f.k))}),v("div",{className:"max-w-[1180px] mx-auto p-4",children:[y==="calc"&&v("div",{className:"space-y-4",children:[v("div",{className:"bg-[var(--card)] border border-[var(--line)] rounded-[16px] p-5",children:[c("h2",{className:"text-[16px] font-bold mb-1",children:"1️⃣ เลือกงวดจ่าย"}),v("div",{className:"text-[12.5px] text-[var(--mut)] mb-4 leading-6",children:["เงินออก ",c("b",{children:"ทุกวันที่ 5 และ 20"})," · ตัดยอดล่วงหน้า 5 วันก่อนวันจ่าย",c("br",{}),"→ งวด ",c("b",{children:"1–15"})," จ่ายวันที่ ",c("b",{children:"20"})," เดือนเดียวกัน · งวด ",c("b",{children:"16–สิ้นเดือน"})," จ่ายวันที่ ",c("b",{children:"5"})," เดือนถัดไป"]}),v("div",{className:"grid grid-cols-1 md:grid-cols-3 gap-3.5",children:[v("div",{children:[c("label",{className:"block text-[12.5px] text-[var(--mut)] mb-1.5 font-medium",children:"เดือน / ปี (ค.ศ.)"}),c("input",{type:"month",value:N,onChange:(f)=>P(f.target.value),className:"w-full bg-[#0e1631] border border-[var(--line)] text-[var(--txt)] px-3.5 py-3 rounded-[11px] text-[15px] outline-none focus:border-[var(--pri)]"})]}),v("div",{children:[c("label",{className:"block text-[12.5px] text-[var(--mut)] mb-1.5 font-medium",children:"งวด"}),v("select",{value:$,onChange:(f)=>d(Number(f.target.value)),className:"w-full bg-[#0e1631] border border-[var(--line)] text-[var(--txt)] px-3.5 py-3 rounded-[11px] text-[15px] outline-none focus:border-[var(--pri)]",children:[c("option",{value:1,children:"งวดแรก (1–15) → จ่าย 20"}),c("option",{value:2,children:"งวดหลัง (16–สิ้นเดือน) → จ่าย 5"})]})]}),c("div",{className:"flex items-end",children:c("button",{onClick:Bf,className:"w-full py-3 rounded-[11px] bg-gradient-to-br from-[var(--pri)] to-[#8a6bff] text-white font-semibold",children:"สร้างตารางวัน →"})})]})]}),v("div",{className:"bg-[var(--card)] border border-[var(--line)] rounded-[16px] p-5",children:[v("h2",{className:"text-[16px] font-bold mb-1",children:["2️⃣ แนบรูปตารางเวลา ",c("span",{className:"pill p-info ml-2",children:"ไม่บังคับ"})]}),c("div",{className:"text-[12.5px] text-[var(--mut)] mb-3 leading-6",children:"เก็บไว้เป็นหลักฐานคู่กับงวดนี้ · ระบบย่อรูปให้อัตโนมัติ"}),v("div",{onClick:()=>$u.current?.click(),onDragOver:(f)=>{f.preventDefault()},onDrop:(f)=>{f.preventDefault();let h=f.dataTransfer.files[0];if(h)Hu(h)},className:"border-2 border-dashed border-[var(--line)] rounded-[14px] p-6 text-center cursor-pointer hover:border-[var(--pri)] hover:bg-[rgba(91,140,255,.05)] transition",children:[c("div",{className:"text-[32px] mb-2",children:"\uD83D\uDDBC\uFE0F"}),c("div",{className:"text-[14px]",children:"คลิกเพื่อเลือกรูป หรือลากไฟล์มาวาง"}),c("small",{className:"text-[var(--mut)] text-[12px]",children:"JPG / PNG — ถ่ายให้เห็นคอลัมน์ “ขาดงาน / ลาป่วย / ลากิจ” ชัดๆ"}),c("input",{ref:$u,type:"file",accept:"image/*",className:"hidden",onChange:(f)=>{let h=f.target.files?.[0];if(h)Hu(h)}})]}),R&&v("div",{className:"mt-3 relative rounded-[12px] overflow-hidden border border-[var(--line)]",children:[c("img",{src:R,className:"w-full block"}),c("button",{onClick:()=>I(null),className:"absolute top-2 right-2 bg-[rgba(0,0,0,.72)] text-white w-8 h-8 rounded-full",children:"✕"})]})]}),s.length>0&&v("div",{id:"daysCard",className:"bg-[var(--card)] border border-[var(--line)] rounded-[16px] p-5",children:[c("h2",{className:"text-[16px] font-bold mb-1",children:"3️⃣ กรอกผลการทำงานรายวัน"}),v("div",{className:"text-[12.5px] text-[var(--mut)] mb-3 leading-6",children:["ดูจากรูปแล้วเลือกประเภทให้ตรง · ช่อง ",c("b",{children:"ชม.ไม่ได้ค่าจ้าง"})," ใส่เฉพาะกรณีลากิจเกินสิทธิ์ หรือทำไม่ครบกะ",c("br",{}),c("span",{className:"inline-block mt-2 px-2.5 py-1 rounded-full bg-[rgba(255,207,92,.12)] border border-[rgba(255,207,92,.3)] text-[#ffe3a3]",children:"วันหยุดประจำสัปดาห์ = ไม่ได้ค่าแรง · ประกันสังคมไม่คิดวันนักขัตฤกษ์"})]}),v("div",{className:"flex gap-2 flex-wrap mb-4",children:[c("button",{onClick:()=>io("work"),className:"px-4 py-2 rounded-[11px] bg-transparent border border-[var(--line)] text-[var(--mut)] text-[13px]",children:"ทั้งหมด = วันทำงาน"}),c("button",{onClick:()=>io("tue"),className:"px-4 py-2 rounded-[11px] bg-transparent border border-[var(--line)] text-[var(--mut)] text-[13px]",children:"อังคาร = วันหยุด (ไม่ได้ค่าแรง)"}),c("button",{onClick:()=>io("sun"),className:"px-4 py-2 rounded-[11px] bg-transparent border border-[var(--line)] text-[var(--mut)] text-[13px]",children:"อาทิตย์ = วันหยุด (ไม่ได้ค่าแรง)"})]}),c("div",{className:"hidden md:block overflow-x-auto",children:v("table",{className:"w-full border-collapse text-[13.5px]",children:[c("thead",{children:v("tr",{children:[c("th",{className:"text-left text-[var(--mut)] font-medium text-[12px] p-2 border-b border-[var(--line)] w-[110px]",children:"วันที่"}),c("th",{className:"text-left text-[var(--mut)] font-medium text-[12px] p-2 border-b border-[var(--line)] w-[300px]",children:"ประเภท"}),c("th",{className:"text-left text-[var(--mut)] font-medium text-[12px] p-2 border-b border-[var(--line)] w-[140px]",children:"ชม.ไม่ได้ค่าจ้าง"}),c("th",{className:"text-left text-[var(--mut)] font-medium text-[12px] p-2 border-b border-[var(--line)]",children:"ผล"})]})}),c("tbody",{children:s.map((f,h)=>v("tr",{className:f.type==="pubwork"||f.type==="puboff"?"bg-[rgba(255,207,92,.06)]":"",children:[v("td",{className:"p-2 border-b border-[rgba(42,55,102,.5)] font-semibold",children:[c("b",{children:f.d})," ",c("span",{className:"text-[12px] text-[var(--mut)] font-normal",children:Mf[f.dow]})]}),c("td",{className:"p-2 border-b border-[rgba(42,55,102,.5)]",children:c("select",{value:f.type,onChange:(_)=>{let L=[...s];L[h]={...L[h],type:_.target.value},m(L)},className:"w-full bg-[#0e1631] border border-[var(--line)] text-[var(--txt)] px-2.5 py-2.5 rounded-[9px] text-[14px] outline-none",children:Object.entries(et).map(([_,L])=>c("option",{value:_,children:L.label},_))})}),c("td",{className:"p-2 border-b border-[rgba(42,55,102,.5)]",children:c("input",{type:"number",min:0,step:0.25,value:f.un,disabled:et[f.type].pay===0,onChange:(_)=>{let L=[...s];L[h]={...L[h],un:parseFloat(_.target.value)||0},m(L)},className:"w-full bg-[#0e1631] border border-[var(--line)] text-[var(--txt)] px-2.5 py-2.5 rounded-[9px] text-[14px] outline-none disabled:opacity-40"})}),c("td",{className:"p-2 border-b border-[rgba(42,55,102,.5)]",children:f.type==="holiday"?c("span",{className:"pill p-bad",children:"ไม่ได้ค่าแรง (วันหยุด)"}):f.type==="pubwork"?v("span",{className:"pill p-gold",children:["\uD83C\uDF8C ได้ ",F.holMult," เท่า = ",H(F.rate*F.holMult)," ฿ · ไม่คิด ปกส."]}):f.type==="puboff"?c("span",{className:"pill p-gold",children:"\uD83C\uDF8F ได้ค่าจ้าง 1 เท่า · ไม่คิด ปกส."}):f.type==="absent"?c("span",{className:"pill p-bad",children:"ตัดค่าจ้าง"}):et[f.type].pay?f.un>0?v("span",{className:"pill p-warn",children:["หัก ",f.un," ชม."]}):c("span",{className:"pill p-ok",children:"ได้ค่าจ้างเต็ม"}):c("span",{className:"pill p-bad",children:"ไม่ได้ค่าจ้าง"})})]},h))})]})}),c("div",{className:"md:hidden space-y-3",children:s.map((f,h)=>v("div",{className:`border rounded-[13px] p-3.5 ${f.type==="pubwork"||f.type==="puboff"?"border-[rgba(255,207,92,.45)] bg-[rgba(255,207,92,.07)]":"border-[var(--line)] bg-[#1d2950]"}`,children:[v("div",{className:"flex justify-between items-center mb-3",children:[v("div",{className:"font-bold text-[16px]",children:[f.d," ",c("span",{className:"text-[12px] text-[var(--mut)] font-normal",children:Mf[f.dow]})]}),c("div",{children:f.type==="holiday"?c("span",{className:"pill p-bad",children:"ไม่ได้ค่าแรง (วันหยุด)"}):f.type==="pubwork"?v("span",{className:"pill p-gold",children:[F.holMult," เท่า"]}):f.type==="absent"?c("span",{className:"pill p-bad",children:"ขาด"}):et[f.type].pay?c("span",{className:"pill p-ok",children:"ได้ค่าจ้าง"}):c("span",{className:"pill p-bad",children:"ไม่ได้ค่าจ้าง"})})]}),v("div",{className:"mb-3",children:[c("div",{className:"text-[11.5px] text-[var(--mut)] mb-1",children:"ประเภทของวัน"}),c("select",{value:f.type,onChange:(_)=>{let L=[...s];L[h]={...L[h],type:_.target.value},m(L)},className:"w-full bg-[#0e1631] border border-[var(--line)] text-[var(--txt)] px-3 py-2.5 rounded-[9px] text-[14px] outline-none",children:Object.entries(et).map(([_,L])=>c("option",{value:_,children:L.label},_))})]}),v("div",{children:[c("div",{className:"text-[11.5px] text-[var(--mut)] mb-1",children:"ชั่วโมงที่ไม่ได้ค่าจ้าง"}),c("input",{type:"number",min:0,step:0.25,value:f.un,disabled:et[f.type].pay===0,onChange:(_)=>{let L=[...s];L[h]={...L[h],un:parseFloat(_.target.value)||0},m(L)},className:"w-full bg-[#0e1631] border border-[var(--line)] text-[var(--txt)] px-3 py-2.5 rounded-[9px] text-[14px] outline-none disabled:opacity-40"})]})]},h))}),v("div",{className:"mt-4 p-3 rounded-[11px] bg-[rgba(91,140,255,.08)] border border-[rgba(91,140,255,.25)] text-[12.5px] text-[#b9c9ff] leading-7",children:["\uD83D\uDCCC เมื่อเลือก ",c("b",{children:"วันหยุดประจำสัปดาห์"})," จะ ",c("b",{children:"ไม่ได้ค่าแรง"})," — ไม่นับเป็นหน่วยวันและไม่จ่ายค่าจ้างวันนั้น"]}),v("div",{className:"mt-3 p-3 rounded-[11px] bg-[rgba(255,207,92,.07)] border border-[rgba(255,207,92,.3)] text-[#ffe3a3] text-[12.5px] leading-7",children:["\uD83C\uDF8C ",c("b",{children:"วันหยุดนักขัตฤกษ์:"})," คิดให้ ",c("b",{children:F.holMult})," เท่าของค่าแรงรายวันอัตโนมัติ (เปลี่ยนตัวคูณได้ที่แท็บตั้งค่า) · ถ้าเป็นนักขัตฤกษ์ที่ ",c("b",{children:"หยุดอยู่บ้าน"})," ให้เลือก “นักขัตฤกษ์ (หยุด)” ซึ่งได้ 1 เท่า",c("br",{}),"\uD83E\uDDFE ",c("b",{children:"ประกันสังคม 5% ไม่นำวันนักขัตฤกษ์มาคิด"})," — เช่น ทำงาน 11 วัน + นักขัตฤกษ์ 1 วัน → ปกส. = ",H(F.rate)," × 11 × 5%"]})]}),s.length>0&&v("div",{className:"bg-[var(--card)] border border-[var(--line)] rounded-[16px] p-5",children:[v("h2",{className:"text-[16px] font-bold mb-1",children:["4️⃣ รายได้เพิ่มเติม ",c("span",{className:"pill p-info ml-2",children:"ใส่เฉพาะงวดที่ได้"})]}),c("div",{className:"text-[12.5px] text-[var(--mut)] mb-4",children:"เช่น Incentive Audit, เบี้ยขยัน, ค่าเดินทาง — งวดไหนไม่ได้ก็ปล่อยว่างไว้"}),v("div",{className:"space-y-2",children:[O.length===0&&c("div",{className:"text-[13px] text-[var(--mut)] py-2",children:"— งวดนี้ยังไม่มีรายได้เพิ่มเติม —"}),O.map((f,h)=>v("div",{className:"grid grid-cols-[1fr_130px_44px] gap-2",children:[c("input",{value:f.name,onChange:(_)=>{let L=[...O];L[h].name=_.target.value,B(L)},placeholder:"ชื่อรายการ เช่น Incentive Audit",className:"bg-[#0e1631] border border-[var(--line)] text-[var(--txt)] px-3 py-2.5 rounded-[10px] text-[14px] outline-none"}),c("input",{type:"number",step:0.01,value:f.amt||"",onChange:(_)=>{let L=[...O];L[h].amt=parseFloat(_.target.value)||0,B(L)},placeholder:"0.00",className:"bg-[#0e1631] border border-[var(--line)] text-[var(--txt)] px-3 py-2.5 rounded-[10px] text-[14px] outline-none"}),c("button",{onClick:()=>B(O.filter((_,L)=>L!==h)),className:"bg-[rgba(255,107,122,.12)] text-[#ff9aa5] rounded-[10px]",children:"✕"})]},h))]}),v("div",{className:"flex gap-2 mt-3",children:[c("button",{onClick:()=>B([...O,{name:"",amt:0}]),className:"px-4 py-2 rounded-[11px] bg-transparent border border-[var(--line)] text-[var(--mut)] text-[13px]",children:"➕ เพิ่มรายการ"}),F.qAmt>0&&v("button",{onClick:()=>B([...O,{name:F.qName,amt:F.qAmt}]),className:"px-4 py-2 rounded-[11px] bg-transparent border border-[var(--line)] text-[var(--mut)] text-[13px]",children:["⚡ ",F.qName," +",H(F.qAmt)]})]}),c("button",{onClick:Af,className:"w-full mt-5 py-3 rounded-[11px] bg-gradient-to-br from-[var(--pri)] to-[#8a6bff] text-white font-semibold",children:"\uD83D\uDCB8 คำนวณเงินงวดนี้"})]}),c("div",{id:"resBox",children:k&&v("div",{className:"bg-[var(--card)] border border-[var(--line)] rounded-[16px] p-5",children:[v("h2",{className:"text-[16px] font-bold",children:["\uD83D\uDCB8 ผลคำนวณ — งวด ",k.label]}),v("div",{className:"text-[12.5px] text-[var(--mut)] mb-4",children:["เงินออกวันที่ ",c("b",{children:k.payLabel})," · อัตราค่าจ้าง ",H(k.set.rate)," บาท/วัน (",H(k.set.rate/k.set.hours)," บาท/ชม.)"]}),v("div",{className:"grid grid-cols-2 md:grid-cols-4 gap-3 mb-4",children:[v("div",{className:"bg-gradient-to-br from-[#1d2950] to-[var(--card)] border border-[var(--line)] rounded-[14px] p-3.5",children:[c("div",{className:"text-[11.5px] text-[var(--mut)] mb-1",children:"วันที่ได้ค่าจ้าง"}),v("div",{className:"text-[22px] font-bold",children:[k.st.paidDays," ",c("small",{className:"text-[12px] text-[var(--mut)] font-medium",children:"วัน"})]}),c("div",{className:"text-[11px] text-[var(--mut)] mt-1",children:"ไม่นับวันหยุดประจำสัปดาห์"})]}),v("div",{className:"bg-gradient-to-br from-[#1d2950] to-[var(--card)] border border-[var(--line)] rounded-[14px] p-3.5",children:[c("div",{className:"text-[11.5px] text-[var(--mut)] mb-1",children:"รวมรายได้"}),c("div",{className:"text-[22px] font-bold",children:H(k.gross)})]}),v("div",{className:"bg-gradient-to-br from-[#1d2950] to-[var(--card)] border border-[var(--line)] rounded-[14px] p-3.5",children:[c("div",{className:"text-[11.5px] text-[var(--mut)] mb-1",children:"รวมเงินหัก"}),v("div",{className:"text-[22px] font-bold text-[var(--bad)]",children:["−",H(k.ded)]})]}),v("div",{className:"bg-gradient-to-br from-[#1d2950] to-[var(--card)] border border-[var(--line)] rounded-[14px] p-3.5",children:[c("div",{className:"text-[11.5px] text-[var(--mut)] mb-1",children:"เงินได้สุทธิ"}),c("div",{className:"text-[22px] font-bold text-[var(--ok)]",children:H(k.net)})]})]}),v("div",{className:"border border-[var(--line)] rounded-[12px] overflow-hidden mb-4",children:[v("div",{className:"flex justify-between items-center px-4 py-2.5 bg-[#1d2950] text-[12.5px] text-[var(--mut)] font-semibold",children:[c("span",{children:"\uD83D\uDFE2 เงินได้ (Income)"}),c("span",{children:"บาท"})]}),v("div",{className:"flex justify-between items-center px-4 py-3 text-[14px] border-b border-[rgba(42,55,102,.55)]",children:[v("span",{children:["ค่าแรงรายวัน ",v("span",{className:"block text-[11.5px] text-[var(--mut)] mt-0.5",children:[k.st.paidDays," วัน × ",H(k.set.rate),k.unpaidCut>0?` − หัก ${k.st.unHr} ชม. (${H(k.unpaidCut)})`:""]})]}),c("span",{className:"font-semibold tabular-nums",children:H(k.baseWage??k.wage)})]}),
-k.pubBonus>0&&v("div",{className:"flex justify-between items-center px-4 py-3 text-[14px] border-b border-[rgba(42,55,102,.55)]",children:[c("span",{children:"ค่าทำงานในวันหยุด 1 เท่า"}),c("span",{className:"font-semibold tabular-nums",children:H(k.pubBonus)})]}),
-k.pubBase>0&&v("div",{className:"flex justify-between items-center px-4 py-3 text-[14px] border-b border-[rgba(42,55,102,.55)]",children:[c("span",{children:"ค่าแรงทำงานในวันหยุดประเพณี"}),c("span",{className:"font-semibold tabular-nums",children:H(k.pubBase)})]}),.extras.map((f,h)=>v("div",{className:"flex justify-between items-center px-4 py-3 text-[14px] border-b border-[rgba(42,55,102,.55)]",children:[v("span",{children:[f.name,c("span",{className:"block text-[11.5px] text-[var(--mut)]",children:"รายได้เพิ่มเติมงวดนี้"})]}),c("span",{className:"font-semibold tabular-nums",children:H(f.amt)})]},h)),k.extras.length===0&&v("div",{className:"flex justify-between items-center px-4 py-3 text-[14px] border-b border-[rgba(42,55,102,.55)]",children:[c("span",{className:"text-[var(--mut)]",children:"— งวดนี้ไม่มีรายได้เพิ่มเติม —"}),c("span",{className:"tabular-nums text-[var(--mut)]",children:"0.00"})]}),v("div",{className:"flex justify-between items-center px-4 py-3 text-[14px] bg-[#1d2950] font-bold",children:[c("span",{children:"รวมรายได้"}),c("span",{className:"tabular-nums",children:H(k.gross)})]})]}),v("div",{className:"border border-[var(--line)] rounded-[12px] overflow-hidden mb-4",children:[v("div",{className:"flex justify-between items-center px-4 py-2.5 bg-[#1d2950] text-[12.5px] text-[var(--mut)] font-semibold",children:[c("span",{children:"\uD83D\uDD34 เงินหัก (Deduction)"}),c("span",{children:"บาท"})]}),v("div",{className:"flex justify-between items-center px-4 py-3 text-[14px] border-b border-[rgba(42,55,102,.55)]",children:[v("span",{children:["ประกันสังคม ",k.set.sso,"%",v("span",{className:"block text-[11.5px] text-[var(--mut)]",children:[k.set.ssoBase==="all"?"คิดจากรวมรายได้ (ไม่รวมเงินวันนักขัตฤกษ์) =":`คิดจาก ${H(k.set.rate)} × ${ssoDaysOf(k)} วัน (ไม่รวมนักขัตฤกษ์) =`," ",H(k.ssoB??(k.set.ssoBase==="all"?k.gross:k.wage))," บาท",k.set.ssoCap>0?` · เพดาน ${k.set.ssoCap}`:""]})]}),v("span",{className:"font-semibold tabular-nums text-[var(--bad)]",children:["−",H(k.sso)]})]}),v("div",{className:"flex justify-between items-center px-4 py-3 text-[14px] border-b border-[rgba(42,55,102,.55)]",children:[c("span",{children:"ภาษีหัก ณ ที่จ่าย"}),v("span",{className:"font-semibold tabular-nums text-[var(--bad)]",children:["−",H(k.tax)]})]}),k.oth>0&&v("div",{className:"flex justify-between items-center px-4 py-3 text-[14px] border-b border-[rgba(42,55,102,.55)]",children:[c("span",{children:k.othName}),v("span",{className:"font-semibold tabular-nums text-[var(--bad)]",children:["−",H(k.oth)]})]}),v("div",{className:"flex justify-between items-center px-4 py-3 text-[14px] bg-[#1d2950] font-bold",children:[c("span",{children:"รวมเงินหัก"}),v("span",{className:"tabular-nums text-[var(--bad)]",children:["−",H(k.ded)]})]}),v("div",{className:"flex justify-between items-center px-4 py-3 text-[14px] bg-[#1d2950] font-bold",children:[c("span",{children:"\uD83D\uDCB0 เงินได้สุทธิ"}),c("span",{className:"tabular-nums text-[var(--ok)] text-[18px]",children:H(k.net)})]})]}),v("div",{className:"border border-[var(--line)] rounded-[12px] overflow-hidden",children:[v("div",{className:"flex justify-between items-center px-4 py-2.5 bg-[#1d2950] text-[12.5px] text-[var(--mut)] font-semibold",children:[c("span",{children:"\uD83D\uDCCB สรุปวันทำงาน"}),c("span",{children:"จำนวน"})]}),v("div",{className:"flex justify-between px-4 py-3 text-[14px] border-b border-[rgba(42,55,102,.55)]",children:[c("span",{children:"✅ วันทำงานจริง"}),v("span",{className:"font-semibold tabular-nums",children:[k.st.work," วัน"]})]}),k.st.pubW>0&&v("div",{className:"flex justify-between px-4 py-3 text-[14px] border-b border-[rgba(42,55,102,.55)]",children:[v("span",{children:["\uD83C\uDF8C นักขัตฤกษ์ (มาทำงาน)",v("span",{className:"block text-[11.5px] text-[var(--mut)]",children:["คิด ",k.set.holMult," เท่า = ",H(k.set.rate*k.set.holMult)," ฿/วัน · ไม่คิดประกันสังคม"]})]}),v("span",{className:"font-semibold tabular-nums text-[var(--gold)]",children:[k.st.pubW," วัน"]})]}),k.st.pubO>0&&v("div",{className:"flex justify-between px-4 py-3 text-[14px] border-b border-[rgba(42,55,102,.55)]",children:[v("span",{children:["\uD83C\uDF8F นักขัตฤกษ์ (หยุด)",c("span",{className:"block text-[11.5px] text-[var(--mut)]",children:"ได้ค่าจ้าง 1 เท่า · ไม่คิดประกันสังคม"})]}),v("span",{className:"font-semibold tabular-nums text-[var(--gold)]",children:[k.st.pubO," วัน"]})]}),k.st.sick>0&&v("div",{className:"flex justify-between px-4 py-3 text-[14px] border-b border-[rgba(42,55,102,.55)]",children:[c("span",{children:"\uD83E\uDD12 ลาป่วย (ได้เงิน)"}),v("span",{className:"font-semibold tabular-nums",children:[k.st.sick," วัน"]})]}),k.st.per>0&&v("div",{className:"flex justify-between px-4 py-3 text-[14px] border-b border-[rgba(42,55,102,.55)]",children:[c("span",{children:"\uD83D\uDCC4 ลากิจ (ได้เงิน)"}),v("span",{className:"font-semibold tabular-nums",children:[k.st.per," วัน"]})]}),k.st.ann>0&&v("div",{className:"flex justify-between px-4 py-3 text-[14px] border-b border-[rgba(42,55,102,.55)]",children:[c("span",{children:"\uD83C\uDF34 ลาพักร้อน"}),v("span",{className:"font-semibold tabular-nums",children:[k.st.ann," วัน"]})]}),v("div",{className:"flex justify-between px-4 py-3 text-[14px] border-b border-[rgba(42,55,102,.55)]",children:[v("span",{children:["\uD83C\uDFD6\uFE0F วันหยุดประจำสัปดาห์ ",c("span",{className:"text-[var(--bad)]",children:"(ไม่ได้ค่าแรง)"})]}),v("span",{className:"font-semibold tabular-nums text-[var(--bad)]",children:[k.st.hol," วัน"]})]}),k.st.abs>0&&v("div",{className:"flex justify-between px-4 py-3 text-[14px] border-b border-[rgba(42,55,102,.55)]",children:[c("span",{children:"❌ ขาดงาน"}),v("span",{className:"font-semibold tabular-nums text-[var(--bad)]",children:[k.st.abs," วัน"]})]}),k.st.unp>0&&v("div",{className:"flex justify-between px-4 py-3 text-[14px] border-b border-[rgba(42,55,102,.55)]",children:[c("span",{children:"⛔ ลาไม่รับค่าจ้าง"}),v("span",{className:"font-semibold tabular-nums text-[var(--bad)]",children:[k.st.unp," วัน"]})]}),v("div",{className:"flex justify-between px-4 py-3 text-[14px] border-b border-[rgba(42,55,102,.55)]",children:[v("span",{children:["\uD83E\uDDFE วันที่ใช้คิดประกันสังคม",c("span",{className:"block text-[11.5px] text-[var(--mut)]",children:"ไม่รวมวันนักขัตฤกษ์"})]}),v("span",{className:"font-semibold tabular-nums",children:[ssoDaysOf(k)," วัน"]})]}),v("div",{className:"flex justify-between px-4 py-3 text-[14px] bg-[#1d2950] font-bold",children:[c("span",{children:"รวมหน่วยวันที่ได้ค่าจ้าง"}),v("span",{className:"tabular-nums",children:[k.st.units," หน่วย"]})]})]}),k.pubBonus>0&&v("div",{className:"mt-4 p-3 rounded-[11px] bg-[rgba(255,207,92,.07)] border border-[rgba(255,207,92,.3)] text-[#ffe3a3] text-[12.5px] leading-7",children:["\uD83C\uDF8C ",v("b",{children:["โบนัสวันนักขัตฤกษ์: +",H(k.pubBonus)," บาท"]}),c("br",{}),"ทำงานวันนักขัตฤกษ์ ",k.st.pubW," วัน ได้ ",k.set.holMult," เท่า → ส่วนที่เพิ่มจากปกติ = ",k.st.pubW," × ",k.set.holMult-1," × ",H(k.set.rate)]}),c("div",{className:"flex gap-2 mt-5",children:c("button",{onClick:Xf,className:"px-5 py-2.5 rounded-[11px] bg-gradient-to-br from-[var(--pri)] to-[#8a6bff] text-white font-semibold text-[14px]",children:"\uD83D\uDCBE บันทึกงวดนี้เก็บไว้"})}),k.img&&v("div",{className:"mt-4",children:[c("h3",{className:"text-[14px] font-semibold mb-2",children:"\uD83D\uDDBC\uFE0F รูปตารางเวลาแนบ"}),c("div",{className:"rounded-[12px] overflow-hidden border border-[var(--line)]",children:c("img",{src:k.img,className:"w-full block"})})]})]})})]}),y==="hist"&&v("div",{className:"bg-[var(--card)] border border-[var(--line)] rounded-[16px] p-5",children:[c("h2",{className:"text-[16px] font-bold mb-1",children:"\uD83D\uDCDA ประวัติที่บันทึกไว้"}),v("div",{className:"text-[12.5px] text-[var(--mut)] mb-4",children:["จัดกลุ่มตามเดือนที่ ",c("b",{children:"เงินออก"})," · กด “ดู” เพื่อเปิดรายละเอียดเต็ม · วันหยุดประจำสัปดาห์ = 0 บาท"]}),Bu.length===0?v("div",{className:"text-center py-12 text-[var(--mut)]",children:[c("div",{className:"text-[44px] opacity-50 mb-2",children:"\uD83D\uDCED"}),"ยังไม่มีข้อมูลที่บันทึก",c("br",{}),c("small",{children:"ไปที่แท็บ “คำนวณงวดใหม่” เพื่อเริ่มต้น"})]}):c("div",{className:"space-y-6",children:Bu.map((f)=>{let h=f.list.reduce((M,re)=>M+re.net,0),_=f.list.reduce((M,re)=>M+re.gross,0),L=f.list.reduce((M,re)=>M+re.ded,0),[Q,b]=f.key.split("-").map(Number);return v("div",{className:"mb-6",children:[v("div",{className:"flex items-baseline gap-2.5 flex-wrap mb-3 pb-2 border-b border-[var(--line)]",children:[v("b",{className:"text-[16px]",children:[Ff[b-1]," ",Q+543]}),v("span",{className:"text-[12.5px] text-[var(--mut)]",children:[f.list.length," งวด · รายได้ ",H(_)," · หัก ",H(L)]}),v("i",{className:"ml-auto not-italic text-[15px] font-bold text-[var(--pri2)]",children:["รับสุทธิ ",H(h)," ฿"]})]}),c("div",{className:"space-y-2.5",children:f.list.map((M)=>v("div",{className:"bg-[#1d2950] border border-[var(--line)] rounded-[13px] p-3.5 flex items-center gap-3 flex-wrap",children:[M.img?c("img",{src:M.img,className:"w-[62px] h-[46px] object-cover rounded-[8px] border border-[var(--line)]"}):c("div",{className:"w-[62px] h-[46px] rounded-[8px] bg-[#0e1631] flex items-center justify-center border border-[var(--line)]",children:"\uD83D\uDCC4"}),v("div",{className:"flex-1 min-w-[150px]",children:[v("div",{className:"font-semibold text-[14.5px]",children:["งวด ",M.label]}),v("div",{className:"text-[12px] text-[var(--mut)] mt-0.5 leading-5",children:["จ่าย ",M.payLabel," · ได้ค่าจ้าง ",M.st.paidDays," วัน ",M.st.hol?v("span",{children:["· ",v("span",{className:"text-[#ff9aa5]",children:["\uD83C\uDFD6\uFE0F วันหยุด ",M.st.hol," วัน (0 บาท)"]})]}):""," ",M.st.pubW?v("span",{children:["· ",v("span",{className:"text-[var(--gold)]",children:["\uD83C\uDF8C นักขัตฤกษ์ ",M.st.pubW," วัน"]})]}):""," ",M.st.abs?v("span",{children:["· ",v("span",{className:"text-[var(--bad)]",children:["ขาด ",M.st.abs," วัน"]})]}):""]})]}),v("div",{className:"text-right",children:[c("div",{className:"text-[19px] font-bold text-[var(--ok)] tabular-nums",children:H(M.net)}),v("div",{className:"text-[12px] text-[var(--mut)]",children:["หัก ",H(M.ded)]})]}),v("div",{className:"flex gap-2",children:[c("button",{onClick:()=>Yf(M.key),className:"px-4 py-2 rounded-[11px] bg-transparent border border-[var(--line)] text-[var(--mut)] text-[13px]",children:"ดู"}),c("button",{onClick:()=>Gf(M.key),className:"px-4 py-2 rounded-[11px] bg-transparent border border-[var(--line)] text-[var(--mut)] text-[13px]",children:"ลบ"})]})]},M.key))})]},f.key)})})]}),y==="set"&&v("div",{className:"space-y-4",children:[v("div",{className:"bg-[var(--card)] border border-[var(--line)] rounded-[16px] p-5",children:[c("h2",{className:"text-[16px] font-bold mb-1",children:"☁️ ซิงค์ Supabase อัตโนมัติ"}),v("div",{className:"text-[12.5px] text-[var(--mut)] mb-3 leading-6",children:["เชื่อมกับบัญชี ",c("b",{children:e})," · ระบบบันทึกขึ้น Supabase ตาราง ",c("code",{children:"user_data"})," ให้อัตโนมัติทุกครั้งที่แก้ไข",c("br",{}),"URL: ",c("code",{children:ro}),c("br",{}),"Anon Key: ",v("code",{children:[Or.slice(0,22),"..."]})," · วิธี: ",c("code",{children:"supabase.auth.signInWithOAuth provider google"})," + REST sync",c("br",{}),"สถานะ: ",c("b",{children:lo?"กำลังซิงค์...":"✅ พร้อมซิงค์"})," · REST API พร้อม"]}),v("div",{className:"flex gap-2 flex-wrap",children:[c("button",{onClick:()=>e&&Wu(e),className:"px-4 py-2 rounded-[11px] bg-gradient-to-br from-[var(--pri)] to-[#8a6bff] text-white text-[13px] font-semibold",children:"⬆️ อัปโหลดขึ้น Supabase ตอนนี้"}),c("button",{onClick:()=>e&&Qf(e),className:"px-4 py-2 rounded-[11px] bg-transparent border border-[var(--line)] text-[var(--mut)] text-[13px]",children:"⬇️ โหลดข้อมูลจาก Supabase"})]})]}),v("div",{className:"bg-[var(--card)] border border-[var(--line)] rounded-[16px] p-5",children:[c("h2",{className:"text-[16px] font-bold mb-1",children:"\uD83D\uDD04 ซิงค์ข้อมูลด้วยรหัส (Sync Code)"}),v("div",{className:"text-[12.5px] text-[var(--mut)] mb-3 leading-6",children:["ใช้ย้ายข้อมูลจากบัญชีในเครื่องไปบัญชีอื่น หรือข้ามเบราว์เซอร์แบบไม่ใช้คลาวด์",c("br",{}),"1. กด ",c("b",{children:"“สร้างรหัสซิงค์”"})," ในบัญชีเดิมเพื่อคัดลอกโค้ด",c("br",{}),"2. ล็อกอินบัญชีปลายทาง วางโค้ดในช่องนี้ แล้วกด ",c("b",{children:"“นำเข้ารหัสซิงค์”"})]}),v("div",{className:"mb-3",children:[c("label",{className:"block text-[12.5px] text-[var(--mut)] mb-1.5 font-medium",children:"รหัสซิงค์ข้อมูล (Sync Code)"}),c("textarea",{value:Uu,onChange:(f)=>Du(f.target.value),placeholder:"กดสร้างรหัส หรือวางรหัสจากเครื่องหลัก",className:"w-full bg-[#0e1631] border border-[var(--line)] text-[var(--txt)] px-3.5 py-3 rounded-[11px] text-[14px] outline-none min-h-[80px] resize-y"})]}),v("div",{className:"flex gap-2",children:[c("button",{onClick:Zf,className:"px-4 py-2 rounded-[11px] bg-transparent border border-[var(--line)] text-[var(--mut)] text-[13px]",children:"\uD83D\uDCE4 สร้างรหัสซิงค์"}),c("button",{onClick:Kf,className:"px-4 py-2 rounded-[11px] bg-gradient-to-br from-[var(--pri)] to-[#8a6bff] text-white text-[13px] font-semibold",children:"\uD83D\uDCE5 นำเข้ารหัสซิงค์"})]})]}),v("div",{className:"bg-[var(--card)] border border-[var(--line)] rounded-[16px] p-5",children:[c("h2",{className:"text-[16px] font-bold mb-1",children:"⚙️ ตั้งค่าการคำนวณ"}),c("div",{className:"text-[12.5px] text-[var(--mut)] mb-4",children:"ค่าเหล่านี้ผูกกับบัญชีของคุณ · แก้แล้วระบบซิงค์ขึ้น Supabase อัตโนมัติ · วันหยุดประจำสัปดาห์ = 0 บาทเสมอ · ปกส. ไม่รวมวันนักขัตฤกษ์"}),v("div",{className:"grid grid-cols-1 md:grid-cols-3 gap-3.5",children:[v("div",{children:[c("label",{className:"block text-[12.5px] text-[var(--mut)] mb-1.5",children:"ค่าแรงต่อวัน (บาท)"}),c("input",{type:"number",step:0.01,value:F.rate,onChange:(f)=>me({...F,rate:parseFloat(f.target.value)||0}),className:"w-full bg-[#0e1631] border border-[var(--line)] text-[var(--txt)] px-3.5 py-3 rounded-[11px] text-[15px] outline-none"})]}),v("div",{children:[c("label",{className:"block text-[12.5px] text-[var(--mut)] mb-1.5",children:"ชั่วโมงทำงานต่อวัน"}),c("input",{type:"number",step:0.25,value:F.hours,onChange:(f)=>me({...F,hours:parseFloat(f.target.value)||0}),className:"w-full bg-[#0e1631] border border-[var(--line)] text-[var(--txt)] px-3.5 py-3 rounded-[11px] text-[15px] outline-none"})]}),v("div",{children:[c("label",{className:"block text-[12.5px] text-[var(--mut)] mb-1.5",children:"\uD83C\uDF8C ตัวคูณนักขัตฤกษ์ (ทำงาน)"}),c("input",{type:"number",step:0.5,value:F.holMult,onChange:(f)=>me({...F,holMult:parseFloat(f.target.value)||0}),className:"w-full bg-[#0e1631] border border-[var(--line)] text-[var(--txt)] px-3.5 py-3 rounded-[11px] text-[15px] outline-none"})]}),v("div",{children:[c("label",{className:"block text-[12.5px] text-[var(--mut)] mb-1.5",children:"ประกันสังคม (%)"}),c("input",{type:"number",step:0.1,value:F.sso,onChange:(f)=>me({...F,sso:parseFloat(f.target.value)||0}),className:"w-full bg-[#0e1631] border border-[var(--line)] text-[var(--txt)] px-3.5 py-3 rounded-[11px] text-[15px] outline-none"})]}),v("div",{children:[c("label",{className:"block text-[12.5px] text-[var(--mut)] mb-1.5",children:"เพดาน ปกส. ต่องวด (บาท)"}),c("input",{type:"number",step:1,value:F.ssoCap,onChange:(f)=>me({...F,ssoCap:parseFloat(f.target.value)||0}),className:"w-full bg-[#0e1631] border border-[var(--line)] text-[var(--txt)] px-3.5 py-3 rounded-[11px] text-[15px] outline-none"})]}),v("div",{children:[c("label",{className:"block text-[12.5px] text-[var(--mut)] mb-1.5",children:"ภาษีหัก ณ ที่จ่าย (บาท/งวด)"}),c("input",{type:"number",step:0.01,value:F.tax,onChange:(f)=>me({...F,tax:parseFloat(f.target.value)||0}),className:"w-full bg-[#0e1631] border border-[var(--line)] text-[var(--txt)] px-3.5 py-3 rounded-[11px] text-[15px] outline-none"})]}),v("div",{children:[c("label",{className:"block text-[12.5px] text-[var(--mut)] mb-1.5",children:"หักอื่นๆ ชื่อรายการ"}),c("input",{value:F.othName,onChange:(f)=>me({...F,othName:f.target.value}),placeholder:"เช่น ค่าชุดฟอร์ม",className:"w-full bg-[#0e1631] border border-[var(--line)] text-[var(--txt)] px-3.5 py-3 rounded-[11px] text-[15px] outline-none"})]}),v("div",{children:[c("label",{className:"block text-[12.5px] text-[var(--mut)] mb-1.5",children:"หักอื่นๆ (บาท)"}),c("input",{type:"number",step:0.01,value:F.oth,onChange:(f)=>me({...F,oth:parseFloat(f.target.value)||0}),className:"w-full bg-[#0e1631] border border-[var(--line)] text-[var(--txt)] px-3.5 py-3 rounded-[11px] text-[15px] outline-none"})]}),v("div",{children:[c("label",{className:"block text-[12.5px] text-[var(--mut)] mb-1.5",children:"ปกส. คิดจาก"}),v("select",{value:F.ssoBase,onChange:(f)=>me({...F,ssoBase:f.target.value}),className:"w-full bg-[#0e1631] border border-[var(--line)] text-[var(--txt)] px-3.5 py-3 rounded-[11px] text-[15px] outline-none",children:[c("option",{value:"wage",children:"ค่าแรง × วันทำงาน (ไม่รวมนักขัตฤกษ์)"}),c("option",{value:"all",children:"ค่าแรง + รายได้เพิ่มเติม (ไม่รวมนักขัตฤกษ์)"})]})]}),v("div",{children:[c("label",{className:"block text-[12.5px] text-[var(--mut)] mb-1.5",children:"ปุ่มลัดรายได้ — ชื่อ"}),c("input",{value:F.qName,onChange:(f)=>me({...F,qName:f.target.value}),placeholder:"Incentive Audit",className:"w-full bg-[#0e1631] border border-[var(--line)] text-[var(--txt)] px-3.5 py-3 rounded-[11px] text-[15px] outline-none"})]}),v("div",{children:[c("label",{className:"block text-[12.5px] text-[var(--mut)] mb-1.5",children:"ปุ่มลัดรายได้ — จำนวนเงิน"}),c("input",{type:"number",step:0.01,value:F.qAmt,onChange:(f)=>me({...F,qAmt:parseFloat(f.target.value)||0}),className:"w-full bg-[#0e1631] border border-[var(--line)] text-[var(--txt)] px-3.5 py-3 rounded-[11px] text-[15px] outline-none"})]})]}),v("div",{className:"mt-4 p-3 rounded-[11px] bg-[rgba(255,107,122,.08)] border border-[rgba(255,107,122,.2)] text-[12.5px] text-[#ffb3bb] leading-6",children:[c("b",{children:"⚠️ กฎการคำนวณ:"})," ",c("b",{children:"วันหยุดประจำสัปดาห์"})," = ไม่ได้ค่าแรง (0 หน่วยวัน) · ",c("b",{children:"วันนักขัตฤกษ์"})," ได้ค่าแรงแต่ ",c("b",{children:"ไม่นำมาคิดประกันสังคม"})]})]}),v("div",{className:"bg-[var(--card)] border border-[var(--line)] rounded-[16px] p-5",children:[c("h2",{className:"text-[16px] font-bold mb-1",children:"\uD83D\uDD10 สำรองข้อมูลและล้างข้อมูล"}),c("div",{className:"text-[12.5px] text-[var(--mut)] mb-3",children:"ดาวน์โหลดไฟล์เก็บไว้เป็นสำรอง หรือล้างประวัติทั้งหมด"}),v("div",{className:"flex gap-2 flex-wrap",children:[c("button",{onClick:Jf,className:"px-4 py-2 rounded-[11px] bg-transparent border border-[var(--line)] text-[var(--mut)] text-[13px]",children:"⬇️ สำรองข้อมูล (.json)"}),c("button",{onClick:()=>Qu.current?.click(),className:"px-4 py-2 rounded-[11px] bg-transparent border border-[var(--line)] text-[var(--mut)] text-[13px]",children:"⬆️ กู้คืนข้อมูล"}),c("button",{onClick:()=>{if(!confirm("ลบประวัติทั้งหมดของบัญชีนี้? กู้คืนไม่ได้"))return;Dn([]),Y("\uD83D\uDDD1\uFE0F ล้างประวัติแล้ว")},className:"px-4 py-2 rounded-[11px] bg-gradient-to-br from-[#ff5a6e] to-[#c0392b] text-white text-[13px]",children:"\uD83D\uDDD1\uFE0F ล้างประวัติทั้งหมด"}),c("input",{ref:Qu,type:"file",accept:"application/json",className:"hidden",onChange:(f)=>{let h=f.target.files?.[0];if(!h)return;let _=new FileReader;_.onload=(L)=>{try{let Q=JSON.parse(L.target?.result);if(!Q.data||!Q.data.recs)throw 0;if(!confirm("กู้คืนข้อมูลทับของเดิม?"))return;me({...xe,...Q.data.set||{}}),Dn(Q.data.recs),Y("✅ กู้คืนข้อมูลสำเร็จ")}catch{Y("❌ ไฟล์ไม่ถูกต้อง")}},_.readAsText(h),f.target.value=""}})]})]})]})]}),c("div",{className:"h-10"})]}),Mu&&c("div",{className:"fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#1d2950] border border-[var(--line)] px-6 py-3 rounded-[12px] text-[14px] shadow-[0_14px_40px_rgba(0,0,0,.5)] z-[99] transition-all",children:Mu})]})}
+      });
 
-$f.createRoot(document.getElementById("root")).render(c(Vf.default.StrictMode,{children:c(Ou,{})}));
+      const hourRate = settings.rate / (settings.hours || 8);
+      const ssoUnpaidCut = Number((ssoUnHr * hourRate).toFixed(2));
+      const pubUnpaidCut = Number((pubUnHr * hourRate).toFixed(2));
+      const unpaidCut = Number((unHr * hourRate).toFixed(2));
+
+      // 1. ค่าแรงรายวันปกติ (ฐานคิดประกันสังคมโดยเฉพาะ เช่น 11 วัน x 412 = 4,532.00 ฿)
+      const dailyWage = Math.max(0, Number((ssoWageUnits * settings.rate - ssoUnpaidCut).toFixed(2)));
+
+      // 2. ค่าทำงานในวันหยุด 1เท่า (เช่น 412.00 ฿)
+      const holidayWorkUnits = pubW * Math.max(0, settings.holMult - 1);
+      const holidayWorkPay = Number((holidayWorkUnits * settings.rate).toFixed(2));
+
+      // 3. ค่าแรงทำงานในวันหยุดประเพณี (เช่น 412.00 ฿)
+      const pubHolidayUnits = pubW + pubO;
+      const pubHolidayPay = Math.max(0, Number((pubHolidayUnits * settings.rate - pubUnpaidCut).toFixed(2)));
+
+      // ยอดรวมค่าแรง
+      const wage = Math.max(0, Number((dailyWage + holidayWorkPay + pubHolidayPay).toFixed(2)));
+
+      const validExtras = (extras || []).filter(e => (e.amt || 0) > 0);
+      const extraSum = Number(validExtras.reduce((sum, item) => sum + Number(item.amt || 0), 0).toFixed(2));
+      const gross = Number((wage + extraSum).toFixed(2));
+
+      // 🎯 ประกันสังคม 5%: คิดจาก dailyWage เท่านั้น (4,532 ฿) ได้ 227 ฿ ไม่รวมยอดวันหยุด
+      const ssoBaseAmount = settings.ssoBase === 'all' ? Math.max(0, Number((dailyWage + extraSum).toFixed(2))) : dailyWage;
+      let sso = Math.round(ssoBaseAmount * ((settings.sso || 0) / 100));
+      if (settings.ssoCap > 0) sso = Math.min(sso, settings.ssoCap);
+
+      const tax = Number((settings.tax || 0).toFixed(2));
+      const oth = Number((settings.oth || 0).toFixed(2));
+      const ded = Number((sso + tax + oth).toFixed(2));
+      const net = Number((gross - ded).toFixed(2));
+
+      return {
+        key: period.key,
+        period,
+        settings,
+        days,
+        stats: { work, pubW, pubO, holiday, sick, personal, annual, absent, unpaid, paidDays: work + pubW + pubO + sick + personal + annual, unpaidHours: unHr, wageUnits, ssoWageUnits },
+        wage,
+        dailyWage,
+        holidayWorkPay,
+        pubHolidayPay,
+        pubWage: holidayWorkPay + pubHolidayPay,
+        unpaidCut,
+        gross,
+        sso,
+        ssoBaseAmount,
+        tax,
+        ded,
+        net,
+      };
+    }
+
+    function App() {
+      const [isDark, setIsDark] = useState(true);
+      const now = new Date();
+      const defaultMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      const [selectedMonth, setSelectedMonth] = useState(defaultMonthStr);
+      const [selectedHalf, setSelectedHalf] = useState(now.getDate() <= 15 ? 1 : 2);
+      
+      const [settings, setSettings] = useState(() => {
+        try {
+          const raw = localStorage.getItem('pst_settings');
+          return raw ? JSON.parse(raw) : DEFAULT_SETTINGS;
+        } catch { return DEFAULT_SETTINGS; }
+      });
+
+      const [currentPeriod, setCurrentPeriod] = useState(() => {
+        const [y, m] = defaultMonthStr.split('-').map(Number);
+        return generatePeriodInfo(y, m, now.getDate() <= 15 ? 1 : 2);
+      });
+
+      const [days, setDays] = useState(() => generateInitialDays(currentPeriod));
+      const [records, setRecords] = useState(() => {
+        try {
+          const raw = localStorage.getItem('pst_records');
+          return raw ? JSON.parse(raw) : [];
+        } catch { return []; }
+      });
+      const [currentTab, setCurrentTab] = useState('calc');
+      const [toast, setToast] = useState(null);
+
+      const showToast = (msg) => {
+        setToast(msg);
+        setTimeout(() => setToast(null), 3000);
+      };
+
+      useEffect(() => {
+        if (isDark) document.documentElement.classList.add('dark');
+        else document.documentElement.classList.remove('dark');
+      }, [isDark]);
+
+      const calculation = useMemo(() => {
+        return calculatePayroll(currentPeriod, days, settings, []);
+      }, [currentPeriod, days, settings]);
+
+      const handleGenerateDays = () => {
+        const [y, m] = selectedMonth.split('-').map(Number);
+        const p = generatePeriodInfo(y, m, selectedHalf);
+        setCurrentPeriod(p);
+        setDays(generateInitialDays(p));
+        showToast(`🗓️ สร้างตารางงวด ${p.label} แล้ว`);
+      };
+
+      const handleQuickPreset = (preset) => {
+        setDays(prev => prev.map(d => {
+          if (preset === 'all_work') return { ...d, type: 'work' };
+          if (preset === 'sun_holiday' && d.dow === 0) return { ...d, type: 'holiday', unpaidHours: 0 };
+          if (preset === 'sat_sun_holiday' && (d.dow === 0 || d.dow === 6)) return { ...d, type: 'holiday', unpaidHours: 0 };
+          return d;
+        }));
+        showToast('⚡ ปรับสถานะวันเรียบร้อย');
+      };
+
+      const handleSaveRecord = () => {
+        const filtered = records.filter(r => r.key !== calculation.key);
+        const updated = [calculation, ...filtered];
+        setRecords(updated);
+        localStorage.setItem('pst_records', JSON.stringify(updated));
+        showToast(`💾 บันทึกงวด ${calculation.period.label} เรียบร้อยแล้ว`);
+      };
+
+      // เป้าหมายรายได้
+      const goal = settings.incomeGoal || 0;
+      const pct = goal > 0 ? Math.round((calculation.net / goal) * 1000) / 10 : 0;
+      const progressWidth = goal > 0 ? Math.min(100, Math.max(0, (calculation.net / goal) * 100)) : 0;
+      const isReached = goal > 0 && calculation.net >= goal;
+
+      return (
+        <div className={`min-h-screen ${isDark ? 'bg-slate-900 text-slate-100' : 'bg-slate-50 text-slate-800'}`}>
+          {toast && (
+            <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs font-semibold shadow-2xl">
+              {toast}
+            </div>
+          )}
+
+          {/* Header */}
+          <header className={`border-b sticky top-0 z-40 backdrop-blur-md ${isDark ? 'bg-slate-900/90 border-slate-800' : 'bg-white/90 border-slate-200'}`}>
+            <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">💰</span>
+                <div>
+                  <h1 className="font-bold text-sm sm:text-base leading-tight">PaySlip Tracker</h1>
+                  <p className="text-[10px] text-slate-400">คำนวณค่าแรงรายวันและสลิปเงินเดือน</p>
+                </div>
+              </div>
+
+              <button onClick={() => setIsDark(!isDark)} className={`p-2 rounded-xl border text-xs ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-slate-100 border-slate-300'}`}>
+                {isDark ? '☀️ โหมดสว่าง' : '🌙 โหมดมืด'}
+              </button>
+            </div>
+
+            <div className="max-w-5xl mx-auto px-4 flex gap-2 border-t border-slate-800/40 py-2">
+              <button onClick={() => setCurrentTab('calc')} className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${currentTab === 'calc' ? 'bg-blue-600 text-white' : 'text-slate-400'}`}>
+                🧮 คำนวณงวดใหม่
+              </button>
+              <button onClick={() => setCurrentTab('hist')} className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${currentTab === 'hist' ? 'bg-blue-600 text-white' : 'text-slate-400'}`}>
+                📚 ประวัติ ({records.length})
+              </button>
+              <button onClick={() => setCurrentTab('set')} className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${currentTab === 'set' ? 'bg-blue-600 text-white' : 'text-slate-400'}`}>
+                ⚙️ ตั้งค่า
+              </button>
+            </div>
+          </header>
+
+          <main className="max-w-5xl mx-auto p-4 space-y-5">
+            {currentTab === 'calc' && (
+              <>
+                {/* งวดคำนวณ */}
+                <div className={`p-4 rounded-2xl border ${isDark ? 'bg-slate-800/80 border-slate-700' : 'bg-white border-slate-200'}`}>
+                  <h2 className="text-sm font-bold mb-3">1. เลือกงวดจ่ายค่าแรง</h2>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+                    <div>
+                      <label className="block text-xs text-slate-400 mb-1">เดือน / ปี (ค.ศ.)</label>
+                      <input type="month" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} className={`w-full px-3 py-2 rounded-xl border text-xs ${isDark ? 'bg-slate-900 border-slate-700' : 'bg-slate-50 border-slate-300'}`} />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-slate-400 mb-1">งวดการคำนวณ</label>
+                      <select value={selectedHalf} onChange={e => setSelectedHalf(Number(e.target.value))} className={`w-full px-3 py-2 rounded-xl border text-xs ${isDark ? 'bg-slate-900 border-slate-700' : 'bg-slate-50 border-slate-300'}`}>
+                        <option value={1}>งวดแรก (1–15) → จ่ายวันที่ 20</option>
+                        <option value={2}>งวดหลัง (16–สิ้นเดือน) → จ่ายวันที่ 5</option>
+                      </select>
+                    </div>
+                    <button onClick={handleGenerateDays} className="py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold">
+                      สร้างตารางวัน 🗓️
+                    </button>
+                  </div>
+                </div>
+
+                {/* ตารางวันทำงาน */}
+                <div className={`p-4 rounded-2xl border ${isDark ? 'bg-slate-800/80 border-slate-700' : 'bg-white border-slate-200'}`}>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+                    <h2 className="text-sm font-bold">2. บันทึกวันทำงาน ({calculation.period.label})</h2>
+                    <div className="flex gap-1 text-xs">
+                      <button onClick={() => handleQuickPreset('all_work')} className="px-2 py-1 rounded bg-slate-700/50 hover:bg-slate-700">ทั้งหมด=ทำงาน</button>
+                      <button onClick={() => handleQuickPreset('sun_holiday')} className="px-2 py-1 rounded bg-slate-700/50 hover:bg-slate-700">อาทิตย์=หยุด</button>
+                      <button onClick={() => handleQuickPreset('sat_sun_holiday')} className="px-2 py-1 rounded bg-slate-700/50 hover:bg-slate-700">เสาร์-อาทิตย์=หยุด</button>
+                    </div>
+                  </div>
+
+                  <div className={`p-3 rounded-xl border mb-3 text-xs ${isDark ? 'bg-amber-950/20 border-amber-800/50 text-amber-300' : 'bg-amber-50 border-amber-200 text-amber-800'}`}>
+                    <strong>เงื่อนไขการคำนวณ:</strong> วันหยุดประจำสัปดาห์ = <span className="underline font-bold">ไม่ได้ค่าแรง (0 หน่วยวัน / 0.00 ฿)</span> · วันนักขัตฤกษ์ = <span className="underline font-bold text-emerald-400">ได้ค่าแรงแต่ไม่นำมาคิดประกันสังคม</span>
+                  </div>
+
+                  <div className="space-y-2">
+                    {days.map((day, idx) => (
+                      <div key={day.d} className={`p-2.5 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs ${day.type === 'holiday' ? 'opacity-60 bg-slate-900/40' : ''} ${isDark ? 'border-slate-700/60 bg-slate-900/60' : 'border-slate-200 bg-white'}`}>
+                        <div className="flex items-center gap-2">
+                          <span className="w-8 font-bold text-blue-400">วันที่ {day.d}</span>
+                          <span className={`px-1.5 py-0.5 rounded text-[10px] ${day.dow === 0 || day.dow === 6 ? 'bg-rose-500/10 text-rose-400' : 'text-slate-400'}`}>{TH_DAYS[day.dow]}</span>
+                        </div>
+
+                        <div className="flex-1 flex items-center gap-2">
+                          <select 
+                            value={day.type} 
+                            onChange={e => {
+                              const next = [...days];
+                              next[idx] = { ...next[idx], type: e.target.value };
+                              setDays(next);
+                            }}
+                            className={`px-2 py-1 rounded-lg border text-xs ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-300'}`}
+                          >
+                            {Object.entries(DAY_TYPES).map(([k, v]) => (
+                              <option key={k} value={k}>{v.label}</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div>
+                          {day.type === 'holiday' && <span className="text-[11px] text-slate-400 font-semibold px-2 py-0.5 rounded bg-slate-800">🏖️ หยุดสัปดาห์ (0 หน่วยวัน)</span>}
+                          {day.type === 'work' && <span className="text-[11px] text-emerald-400 font-semibold px-2 py-0.5 rounded bg-emerald-500/10">✅ ได้เต็ม ({formatMoney(settings.rate)} ฿)</span>}
+                          {day.type === 'pubwork' && <span className="text-[11px] text-amber-400 font-semibold px-2 py-0.5 rounded bg-amber-500/10">🎌 {settings.holMult}x ({formatMoney(settings.rate * settings.holMult)} ฿ - ไม่คิด ปกส.)</span>}
+                          {day.type === 'puboff' && <span className="text-[11px] text-amber-300 font-semibold px-2 py-0.5 rounded bg-amber-500/10">🎏 หยุดขัตฤกษ์ ({formatMoney(settings.rate)} ฿ - ไม่คิด ปกส.)</span>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* สลิปสรุปผล */}
+                <div className={`p-5 rounded-2xl border ${isDark ? 'bg-slate-800/90 border-slate-700' : 'bg-white border-slate-200'}`}>
+                  <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-700/50">
+                    <div>
+                      <h2 className="text-base font-bold">รายการเงินสลิป</h2>
+                      <p className="text-xs text-slate-400">งวด {calculation.period.label} · วันจ่าย: {calculation.period.payLabel}</p>
+                    </div>
+                    <div className="flex gap-2 no-print">
+                      <button onClick={handleSaveRecord} className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold">
+                        💾 บันทึกงวดนี้
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* แถบเป้าหมายรายได้ */}
+                  {goal > 0 && (
+                    <div className={`p-3.5 rounded-xl border mb-4 ${isReached ? 'bg-emerald-950/20 border-emerald-800/40' : 'bg-slate-900/60 border-slate-700'}`}>
+                      <div className="flex justify-between text-xs mb-1.5">
+                        <span>🎯 <strong>เป้าหมายรายได้ต่อเดือน:</strong> {formatMoney(goal)} ฿</span>
+                        <span className="font-bold font-mono text-emerald-400">{pct}%</span>
+                      </div>
+                      <div className="w-full h-2.5 rounded-full bg-slate-950 overflow-hidden">
+                        <div className={`h-full rounded-full transition-all duration-500 ${isReached ? 'bg-emerald-400' : 'bg-blue-500'}`} style={{ width: `${progressWidth}%` }}></div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ตารางสลิป 2 ฝั่ง */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                    {/* รายได้ */}
+                    <div className="rounded-xl border border-slate-700/60 overflow-hidden">
+                      <div className="p-2.5 font-bold flex justify-between bg-slate-900 text-emerald-400 border-b border-slate-800">
+                        <span>รายการรายได้</span>
+                        <span>จำนวนเงิน</span>
+                      </div>
+                      <div className="p-2 space-y-2">
+                        <div className="flex justify-between">
+                          <div>
+                            <span className="font-semibold">ค่าแรงรายวัน</span>
+                            <div className="text-[10px] text-slate-400">({calculation.stats.ssoWageUnits} วัน × {formatMoney(settings.rate)} ฿)</div>
+                          </div>
+                          <span className="font-mono font-bold">{formatMoney(calculation.dailyWage)}</span>
+                        </div>
+
+                        {calculation.holidayWorkPay > 0 && (
+                          <div className="flex justify-between text-amber-300">
+                            <div>
+                              <span>ค่าทำงานในวันหยุด 1เท่า</span>
+                              <div className="text-[10px] text-slate-400">(ไม่นำมาคิดประกันสังคม)</div>
+                            </div>
+                            <span className="font-mono font-bold">{formatMoney(calculation.holidayWorkPay)}</span>
+                          </div>
+                        )}
+
+                        {calculation.pubHolidayPay > 0 && (
+                          <div className="flex justify-between text-amber-200">
+                            <div>
+                              <span>ค่าแรงทำงานในวันหยุดประเพณี</span>
+                              <div className="text-[10px] text-slate-400">(ไม่นำมาคิดประกันสังคม)</div>
+                            </div>
+                            <span className="font-mono font-bold">{formatMoney(calculation.pubHolidayPay)}</span>
+                          </div>
+                        )}
+
+                        <div className="pt-2 border-t border-slate-800 flex justify-between font-bold text-sm text-emerald-400">
+                          <span>รวมรายได้</span>
+                          <span className="font-mono">{formatMoney(calculation.gross)}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* รายการหัก */}
+                    <div className="rounded-xl border border-slate-700/60 overflow-hidden">
+                      <div className="p-2.5 font-bold flex justify-between bg-slate-900 text-rose-400 border-b border-slate-800">
+                        <span>รายการหัก</span>
+                        <span>จำนวนเงิน</span>
+                      </div>
+                      <div className="p-2 space-y-2">
+                        <div className="flex justify-between">
+                          <div>
+                            <span className="font-semibold">ประกันสังคม ({settings.sso}%)</span>
+                            <div className="text-[10px] text-slate-400">คิดจากค่าแรงรายวัน: {formatMoney(calculation.ssoBaseAmount)} ฿</div>
+                          </div>
+                          <span className="font-mono font-bold text-rose-400">-{formatMoney(calculation.sso)}</span>
+                        </div>
+
+                        <div className="flex justify-between text-slate-400">
+                          <span>ภาษี</span>
+                          <span className="font-mono">0.00</span>
+                        </div>
+
+                        <div className="pt-2 border-t border-slate-800 flex justify-between font-bold text-sm text-rose-400">
+                          <span>รวมเงินหัก</span>
+                          <span className="font-mono">-{formatMoney(calculation.ded)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* เงินสุทธิ */}
+                  <div className="mt-4 p-4 rounded-xl border border-emerald-800/40 bg-emerald-950/30 flex justify-between items-center">
+                    <div>
+                      <span className="text-xs text-emerald-400 font-bold block">เงินสุทธิ</span>
+                      <span className="text-[11px] text-slate-400">ยอดเงินรับจริง</span>
+                    </div>
+                    <div className="text-2xl font-bold font-mono text-emerald-400">
+                      {formatMoney(calculation.net)} ฿
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {currentTab === 'hist' && (
+              <div className={`p-4 rounded-2xl border ${isDark ? 'bg-slate-800/80 border-slate-700' : 'bg-white border-slate-200'}`}>
+                <h2 className="text-sm font-bold mb-3">ประวัติการบันทึก ({records.length} รายการ)</h2>
+                {records.length === 0 ? <p className="text-xs text-slate-400">ยังไม่มีข้อมูล</p> : (
+                  <div className="space-y-2 text-xs">
+                    {records.map(r => (
+                      <div key={r.key} className="p-3 rounded-xl border border-slate-700 flex justify-between items-center">
+                        <div>
+                          <strong>{r.period.label}</strong>
+                          <div className="text-[11px] text-slate-400">รายได้: {formatMoney(r.gross)} ฿ · หัก: {formatMoney(r.ded)} ฿</div>
+                        </div>
+                        <div className="font-mono font-bold text-emerald-400 text-sm">{formatMoney(r.net)} ฿</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {currentTab === 'set' && (
+              <div className={`p-4 rounded-2xl border ${isDark ? 'bg-slate-800/80 border-slate-700' : 'bg-white border-slate-200'}`}>
+                <h2 className="text-sm font-bold mb-3">ตั้งค่าอัตราการคำนวณ</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                  <div>
+                    <label className="block text-slate-400 mb-1">ค่าแรงต่อวัน (บาท)</label>
+                    <input type="number" value={settings.rate} onChange={e => setSettings({ ...settings, rate: parseFloat(e.target.value) || 0 })} className="w-full p-2 rounded-lg border bg-slate-900 border-slate-700 font-mono" />
+                  </div>
+                  <div>
+                    <label className="block text-slate-400 mb-1">เป้าหมายรายได้ต่อเดือน (บาท)</label>
+                    <input type="number" value={settings.incomeGoal} onChange={e => setSettings({ ...settings, incomeGoal: parseFloat(e.target.value) || 0 })} className="w-full p-2 rounded-lg border bg-slate-900 border-slate-700 font-mono" />
+                  </div>
+                </div>
+                <button onClick={() => { localStorage.setItem('pst_settings', JSON.stringify(settings)); showToast('บันทึกการตั้งค่าแล้ว'); }} className="mt-4 px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-semibold">
+                  บันทึก
+                </button>
+              </div>
+            )}
+          </main>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
   </script>
 </body>
 </html>
