@@ -55,6 +55,8 @@
     const TH_DAYS = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
     const TH_MONTHS = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
     const TH_MONTHS_FULL = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+    const TH_DAYS_SHORT = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'];
+    const WEEK_ORDER = [1, 2, 3, 4, 5, 6, 0]; // เรียง จันทร์ → อาทิตย์
 
     const DAY_TYPES = {
       work: { label: '✅ วันทำงานปกติ', pay: 1 },
@@ -113,11 +115,17 @@
       };
     }
 
-    function generateInitialDays(period) {
+    function generateInitialDays(period, offDays = []) {
       const days = [];
       for (let d = period.startDay; d <= period.endDay; d++) {
         const dt = new Date(period.y, period.m - 1, d);
-        days.push({ d, dow: dt.getDay(), dateStr: `${period.y}-${pad(period.m)}-${pad(d)}`, type: 'work', unpaidHours: 0 });
+        const dow = dt.getDay();
+        days.push({
+          d, dow,
+          dateStr: `${period.y}-${pad(period.m)}-${pad(d)}`,
+          type: offDays.includes(dow) ? 'holiday' : 'work',
+          unpaidHours: 0,
+        });
       }
       return days;
     }
@@ -191,7 +199,7 @@
       download: 'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3',
       upload: 'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12',
       trash: 'M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6',
-      gear: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z',
+      gear: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.830 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z',
       user: 'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z',
       sun: 'M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10zM12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42',
       moon: 'M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z',
@@ -364,7 +372,16 @@
         const [y, m] = defaultMonthStr.split('-').map(Number);
         return generatePeriodInfo(y, m, defaultHalf);
       });
-      const [days, setDays] = useState(() => generateInitialDays(currentPeriod));
+
+      // ===== วันหยุดประจำสัปดาห์ (0=อาทิตย์ ... 6=เสาร์) =====
+      const [weeklyOff, setWeeklyOff] = useState(() => {
+        try {
+          const raw = localStorage.getItem('pst_weekly_off');
+          return raw ? JSON.parse(raw) : [];
+        } catch { return []; }
+      });
+
+      const [days, setDays] = useState(() => generateInitialDays(currentPeriod, weeklyOff));
       const [extras, setExtras] = useState([]);
       const [records, setRecords] = useState(() => {
         try {
@@ -422,20 +439,40 @@
           setExtras((existing.extras || []).map(e => ({ id: uid(), name: e.name, amt: String(e.amt) })));
           showToast(`📂 โหลดข้อมูลงวด ${p.label} ที่บันทึกไว้แล้ว`);
         } else {
-          setDays(generateInitialDays(p));
+          setDays(generateInitialDays(p, weeklyOff));
           setExtras([]);
           showToast(`🗓️ สร้างตารางงวด ${p.label} แล้ว`);
         }
       };
 
-      const handleQuickPreset = (preset) => {
+      // กดเลือก/ยกเลิกวันหยุดประจำสัปดาห์
+      const toggleWeeklyOff = (dow) => {
+        const isOff = weeklyOff.includes(dow);
+        const next = isOff ? weeklyOff.filter(x => x !== dow) : [...weeklyOff, dow];
+        setWeeklyOff(next);
+        localStorage.setItem('pst_weekly_off', JSON.stringify(next));
+
         setDays(prev => prev.map(d => {
-          if (preset === 'all_work') return { ...d, type: 'work' };
-          if (preset === 'sun_holiday' && d.dow === 0) return { ...d, type: 'holiday', unpaidHours: 0 };
-          if (preset === 'sat_sun_holiday' && (d.dow === 0 || d.dow === 6)) return { ...d, type: 'holiday', unpaidHours: 0 };
+          if (d.dow !== dow) return d;
+          // เปิดวันหยุด → เปลี่ยนเฉพาะวันทำงานปกติ (ไม่ทับวันลา/นักขัตฤกษ์)
+          if (!isOff && d.type === 'work') return { ...d, type: 'holiday', unpaidHours: 0 };
+          // ปิดวันหยุด → คืนเป็นวันทำงาน
+          if (isOff && d.type === 'holiday') return { ...d, type: 'work' };
           return d;
         }));
-        showToast('⚡ ปรับสถานะวันเรียบร้อย');
+
+        showToast(`${isOff ? '✅ ยกเลิก' : '🏖️ ตั้ง'}วัน${TH_DAYS[dow]}เป็นวันหยุด`);
+      };
+
+      // รีเซ็ตตารางทั้งหมดตามวันหยุดที่เลือก
+      const resetDaysToWeeklyOff = () => {
+        if (!confirm('รีเซ็ตตารางวัน? สถานะวันลา/นักขัตฤกษ์และชั่วโมงหักจะถูกล้าง')) return;
+        setDays(prev => prev.map(d => ({
+          ...d,
+          type: weeklyOff.includes(d.dow) ? 'holiday' : 'work',
+          unpaidHours: 0,
+        })));
+        showToast('🔄 รีเซ็ตตารางตามวันหยุดที่เลือกแล้ว');
       };
 
       const updateDay = (idx, patch) => {
@@ -487,7 +524,7 @@
       };
 
       const handleBackup = () => {
-        const blob = new Blob([JSON.stringify({ app: 'PaySlipTracker', version: 2, exportedAt: new Date().toISOString(), settings, records }, null, 2)], { type: 'application/json' });
+        const blob = new Blob([JSON.stringify({ app: 'PaySlipTracker', version: 3, exportedAt: new Date().toISOString(), settings, records, weeklyOff }, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -509,6 +546,10 @@
               const s = { ...DEFAULT_SETTINGS, ...data.settings };
               setSettings(s);
               localStorage.setItem('pst_settings', JSON.stringify(s));
+            }
+            if (Array.isArray(data.weeklyOff)) {
+              setWeeklyOff(data.weeklyOff);
+              localStorage.setItem('pst_weekly_off', JSON.stringify(data.weeklyOff));
             }
             showToast(`⬆️ กู้คืนข้อมูลสำเร็จ (${(data.records || []).length} งวด)`);
           } catch {
@@ -660,11 +701,41 @@
 
                 {/* 2. ตารางวัน */}
                 <div className={`${CARD} no-print`}>
-                  <SectionHead num="2" title={`บันทึกวันทำงาน`} pill={<Pill>{calculation.period.label}</Pill>} />
-                  <div className="flex flex-wrap gap-2 text-xs mb-3">
-                    <button onClick={() => handleQuickPreset('all_work')} className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-700/50 dark:hover:bg-slate-700">ทั้งหมด=ทำงาน</button>
-                    <button onClick={() => handleQuickPreset('sun_holiday')} className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-700/50 dark:hover:bg-slate-700">อาทิตย์=หยุด</button>
-                    <button onClick={() => handleQuickPreset('sat_sun_holiday')} className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-700/50 dark:hover:bg-slate-700">เสาร์-อาทิตย์=หยุด</button>
+                  <SectionHead num="2" title="บันทึกวันทำงาน" pill={<Pill>{calculation.period.label}</Pill>} />
+
+                  {/* ===== เลือกวันหยุดประจำสัปดาห์ ===== */}
+                  <div className="mb-3">
+                    <div className="flex items-center justify-between mb-2 gap-2">
+                      <span className="text-sm text-slate-500 dark:text-slate-400">🏖️ เลือกวันหยุดประจำสัปดาห์</span>
+                      <button onClick={resetDaysToWeeklyOff}
+                        className="text-xs px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-700/50 dark:hover:bg-slate-700 whitespace-nowrap">
+                        🔄 รีเซ็ตตาราง
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
+                      {WEEK_ORDER.map(dow => {
+                        const active = weeklyOff.includes(dow);
+                        const weekend = dow === 0 || dow === 6;
+                        return (
+                          <button key={dow} onClick={() => toggleWeeklyOff(dow)} title={`วัน${TH_DAYS[dow]}`}
+                            className={`py-2.5 rounded-xl border text-sm font-bold transition active:scale-95 ${
+                              active
+                                ? 'bg-rose-500 border-rose-500 text-white shadow-lg shadow-rose-500/30'
+                                : `bg-slate-100 border-slate-200 hover:bg-slate-200 dark:bg-slate-800 dark:border-slate-700 dark:hover:bg-slate-700 ${weekend ? 'text-rose-500 dark:text-rose-400' : 'text-slate-600 dark:text-slate-300'}`
+                            }`}>
+                            {TH_DAYS_SHORT[dow]}
+                            <div className={`text-[9px] font-normal mt-0.5 ${active ? 'text-white/80' : 'text-slate-400'}`}>
+                              {active ? 'หยุด' : 'ทำงาน'}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <p className="text-[11px] text-slate-400 mt-2">
+                      {weeklyOff.length === 0
+                        ? 'ยังไม่ได้เลือกวันหยุด — ทุกวันเป็นวันทำงาน'
+                        : `หยุดทุกวัน: ${WEEK_ORDER.filter(d => weeklyOff.includes(d)).map(d => TH_DAYS[d]).join(', ')}`}
+                    </p>
                   </div>
 
                   <div className="p-3 rounded-xl border mb-3 text-xs bg-amber-50 border-amber-200 text-amber-800 dark:bg-amber-950/20 dark:border-amber-800/50 dark:text-amber-300">
@@ -678,7 +749,7 @@
                         <div key={day.d} className={`p-2.5 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs border-slate-200 bg-slate-50 dark:border-slate-700/60 dark:bg-slate-900/60 ${day.type === 'holiday' ? 'opacity-60' : ''}`}>
                           <div className="flex items-center gap-2 sm:w-36">
                             <span className="font-bold text-blue-500 dark:text-blue-400 whitespace-nowrap">วันที่ {day.d}</span>
-                            <span className={`px-1.5 py-0.5 rounded text-[10px] ${day.dow === 0 || day.dow === 6 ? 'bg-rose-500/10 text-rose-500 dark:text-rose-400' : 'text-slate-400'}`}>{TH_DAYS[day.dow]}</span>
+                            <span className={`px-1.5 py-0.5 rounded text-[10px] ${weeklyOff.includes(day.dow) ? 'bg-rose-500/10 text-rose-500 dark:text-rose-400' : 'text-slate-400'}`}>{TH_DAYS[day.dow]}</span>
                           </div>
                           <div className="flex-1 flex items-center gap-2">
                             <select value={day.type}
