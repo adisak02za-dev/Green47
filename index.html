@@ -506,11 +506,13 @@
         return 'work';
       };
 
-      const buildDaysFromParsed = (rows) => {
-        // rows = [{day: number, dateStr: '04/10/2569', typeText: 'วันทำงาน', late: '0:02', early: '', checkIn: true}]
+            const buildDaysFromParsed = (rows) => {
+        const start = currentPeriod.startDay;
+        const end = currentPeriod.endDay;
         const map = {};
         rows.forEach(r=>{
           if(!r.day) return;
+          if(r.day < start || r.day > end) return;
           map[r.day] = r;
         });
         const newDays = days.map(d=>{
@@ -519,21 +521,6 @@
           const type = detectDayTypeFromText(found.typeText, found.checkIn);
           const unpaid = parseTimeToHours(found.late) + parseTimeToHours(found.early);
           return { ...d, type, unpaidHours: unpaid };
-        });
-        // ถ้าไฟล์มีวันที่อยู่นอกช่วง period ปัจจุบัน ให้เพิ่มเข้าไปด้วย
-        const existingDays = new Set(newDays.map(x=>x.d));
-        Object.values(map).forEach(r=>{
-          if(!existingDays.has(r.day)){
-            const dt = new Date(currentPeriod.y, currentPeriod.m - 1, r.day);
-            if(!isNaN(dt)){
-              newDays.push({
-                d: r.day, dow: dt.getDay(),
-                dateStr: `${currentPeriod.y}-${pad(currentPeriod.m)}-${pad(r.day)}`,
-                type: detectDayTypeFromText(r.typeText, r.checkIn),
-                unpaidHours: parseTimeToHours(r.late) + parseTimeToHours(r.early)
-              });
-            }
-          }
         });
         newDays.sort((a,b)=>a.d-b.d);
         return newDays;
@@ -777,7 +764,8 @@
           }
           const newDays = buildDaysFromParsed(parsed);
           setDays(newDays);
-          setImportLog(`✅ นำเข้า ${parsed.length} วัน: ${parsed.map(r=>`${r.day}(${r.typeText||'ทำงาน'})`).join(', ')}`);
+          const filteredForLog = parsed.filter(r=> r.day >= currentPeriod.startDay && r.day <= currentPeriod.endDay);
+          setImportLog(`✅ นำเข้า ${filteredForLog.length} วัน (งวด ${currentPeriod.startDay}-${currentPeriod.endDay}) : ${filteredForLog.map(r=>`${r.day}(${r.typeText||'ทำงาน'})`).join(', ')}${parsed.length!==filteredForLog.length?` | ตัด ${parsed.length-filteredForLog.length} วันนอกงวดทิ้ง`:''}`);
           showToast(`📥 นำเข้า ${parsed.length} วันจาก ${file.name} สำเร็จ กำลังคำนวณ...`);
           setTimeout(()=>{ slipRef.current && slipRef.current.scrollIntoView({behavior:'smooth'}); }, 400);
         }catch(err){
