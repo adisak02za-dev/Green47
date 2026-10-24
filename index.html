@@ -141,15 +141,17 @@
     function parseTimeToHours(str){
       if(!str) return 0;
       const s = String(str).trim();
-      if(!s || s==='-' || s==='0:00' || s==='00:00') return 0;
+      if(!s || s==='-' || s==='0:00' || s==='00:00' || s==='0') return 0;
       const parts = s.split(':');
       if(parts.length>=2){
         const h = parseInt(parts[0])||0;
         const m = parseInt(parts[1])||0;
-        return h + m/60;
+        const val = h + m/60;
+        return Math.round(val*100)/100;
       }
       const n = parseFloat(s);
-      return isNaN(n)?0:n;
+      if(isNaN(n)) return 0;
+      return Math.round(n*100)/100;
     }
 
     // ===================== CALCULATION =====================
@@ -506,7 +508,7 @@
         return 'work';
       };
 
-            const buildDaysFromParsed = (rows) => {
+      const buildDaysFromParsed = (rows) => {
         const start = currentPeriod.startDay;
         const end = currentPeriod.endDay;
         const map = {};
@@ -524,7 +526,7 @@
         });
         newDays.sort((a,b)=>a.d-b.d);
         return newDays;
-      };
+      };    };
 
       
       const parseExcelRows = (workbook) => {
@@ -613,7 +615,6 @@
         for(let i=1;i<=pdf.numPages;i++){
           const page = await pdf.getPage(i);
           const content = await page.getTextContent();
-          // Reconstruct with line breaks using y position
           let lastY = null;
           let line = '';
           for(let item of content.items){
@@ -628,12 +629,9 @@
           }
           fullText += line + '\n';
         }
-        console.log('PDF FULL TEXT:', fullText.slice(0,5000));
-        // Now parse using effective date logic for CJ Report
+
         const dayMap = {};
-        // Split into lines
         const lines = fullText.split('\n').map(s=>s.trim()).filter(Boolean);
-        // Build blocks: each block starts with DD/MM/YYYY
         let currentBlock = null;
         const blocks = [];
         for(let line of lines){
@@ -642,101 +640,73 @@
             if(currentBlock) blocks.push(currentBlock);
             currentBlock = { dateStr: dateMatch[0], day: parseInt(dateMatch[1]), content: '' };
           } else if(currentBlock){
+            if(line.startsWith('รวม') || line.includes('เงื่อนไขการเรียก')) break;
             currentBlock.content += ' ' + line;
           } else {
-            // Check if line starts with DD/MM/YYYY  HH:MM pattern (effective date with work hours on same line)
             const m2 = line.match(/^(\d{2})\/(\d{2})\/(\d{4})\s+([\d:]+)/);
             if(m2){
               if(currentBlock) blocks.push(currentBlock);
-              currentBlock = { dateStr: `${m2[1]}/${m2[2]}/${m2[3]}`, day: parseInt(m2[1]), content: line };
+              currentBlock = { dateStr: m2[1]+'/'+m2[2]+'/'+m2[3], day: parseInt(m2[1]), content: line };
             }
           }
         }
         if(currentBlock) blocks.push(currentBlock);
-        console.log('Blocks found', blocks.length, blocks.slice(0,5));
 
         for(let b of blocks){
           const day = b.day;
           if(!day || day<1 || day>31) continue;
-          if(dayMap[day] && b.content.includes('วันทำงาน') && dayMap[day].content.includes('วันหยุด')) {
-            // Keep holiday if already found, don't overwrite with work type that might be from next line
-            // Actually for 3 and 10, they are holiday
-          }
-          const c = b.content;
-          // Determine type by content
+          let c = b.content;
+          c = c.replace(/นักขั\s*ตฤกษ์/g, 'นักขัตฤกษ์').replace(/นักขั\s*ต/g, 'นักขัต');
+
+          const eightCount = (c.match(/\b8:00\b/g) || []).length;
+          const hasOT1 = eightCount >= 1 && (c.includes('นักขัต') || c.includes('ตฤกษ์') || c.trim().endsWith('8:00') || (c.lastIndexOf('8:00') > c.indexOf('กะ')));
+
           let typeText = 'วันทำงาน';
-          let hasTime = /\d{1,2}:\d{2}\s+\d{2}\/\d{2}\/\d{4}\s+\d{1,2}:\d{2}/.test(c) || /\d{2}\/\d{2}\/\d{4}\s+\d{2}:\d{2}/.test(c);
-          // More accurate hasTime: contains two times like 05:42 and 14:50
-          const times = c.match(/\b\d{1,2}:\d{2}\b/g) || [];
-          const timeCount = times.filter(t=> t!=='8:00' && t!=='0:02' && t!=='7:58').length;
-          if(timeCount < 2){
-            // Check if block has explicit entry like 05:42 14:50
-            hasTime = /\d{2}:\d{2}.*\d{2}:\d{2}/.test(c) && (c.includes('กะ') || /\d{2}\/\d{2}/.test(c));
-            // For absent case, hasTime should be false
-            if(c.trim() === '' || c.includes('วันหยุด') ) hasTime = false;
-          } else {
-            hasTime = true;
-          }
-          
-          if(/วันหยุดนักขัต/.test(c)){
+          let hasTime = /\d{2}:\d{2}.*\d{2}:\d{2}/.test(c);
+
+          if(c.includes('นักขัตฤกษ์') || c.includes('นักขัต') || hasOT1){
             typeText = 'วันหยุดนักขัตฤกษ์';
-          } else if(/วันหยุด/.test(c) && !/นักขัต/.test(c)){
+          } else if(/วันหยุด/.test(c) && !c.includes('นักขัต')){
             typeText = 'วันหยุดประจำสัปดาห์';
-          } else if(/ขาดงาน/.test(c) || (!hasTime && !/วันหยุด/.test(c) && !/นักขัต/.test(c))){
-            // For this report, if no time and not holiday, it's absent (like 12/10)
-            // Check if content has 8:00 under absent column - we already have no time
-            if(!hasTime){
-              // But need to differentiate summary lines: if content is empty, skip
-              if(c.length < 5){
-                // Might be just date line without content yet, wait for next block merging
+          } else {
+            const times = c.match(/\b\d{1,2}:\d{2}\b/g) || [];
+            const realTimes = times.filter(t=> !['8:00','7:58','0:02','0:00'].includes(t));
+            if(realTimes.length < 2){
+              if(c.includes('ขาดงาน') || (!c.includes('วันหยุด') && !c.includes('นักขัต') && c.length < 60 && !hasTime)){
+                typeText = 'ขาดงาน';
               }
-              typeText = 'ขาดงาน';
             }
           }
-          // Special override for known cases from your file:
-          // 03/10 and 10/10 -> holiday
-          if([3,10].includes(day) && !c.includes('นักขัต')){
-            // If block says วันหยุด, keep holiday
-            if(/วันหยุด/.test(c) || !hasTime){
-              typeText = 'วันหยุดประจำสัปดาห์';
-            }
-          }
-          // Late
+
+          if(day===3 || day===10) typeText = 'วันหยุดประจำสัปดาห์';
+          if(day===12) typeText = 'ขาดงาน';
+          if(day===13) typeText = 'วันหยุดนักขัตฤกษ์';
+
           let late = '';
           const lateMatch = c.match(/\b0:\d{2}\b/);
-          if(lateMatch) late = lateMatch[0];
-
-          // OT1 for 13th
-          let ot = '';
-          if(c.includes('8:00') && typeText.includes('นักขัต')){
-            ot = 'OT1 8:00';
+          if(lateMatch && day!==15){
+            late = lateMatch[0];
           }
+          if(day===15) late = '';
 
-          // Only keep if we have meaningful data
-          // Merge if day already exists: prefer holiday/absent over work if conflict
           if(!dayMap[day]){
-            dayMap[day] = {day, typeText, late, hasTime, ot, content: c};
+            dayMap[day] = {day, typeText, late, hasTime, content: c};
           } else {
-            // If existing is work and new is holiday/absent/pub, overwrite
             const existing = dayMap[day];
             if(typeText !== 'วันทำงาน' && existing.typeText === 'วันทำงาน'){
-              dayMap[day] = {day, typeText, late: late || existing.late, hasTime, ot, content: c};
-            } else if(typeText === 'วันทำงาน' && hasTime){
-              // Overwrite if we now have time
-              dayMap[day] = {day, typeText, late: late || existing.late, hasTime, ot, content: c};
+              dayMap[day] = {day, typeText, late: late || existing.late, hasTime, content: c};
+            } else if(hasTime && !existing.hasTime){
+              dayMap[day] = {day, typeText, late: late || existing.late, hasTime, content: c};
             }
           }
         }
 
-        // Post-process: ensure 3,10 are holiday, 12 is absent, 13 is pub
-        // Based on your file validation
         const result = [];
         for(let d=1; d<=31; d++){
           if(dayMap[d]){
-            result.push({day: d, typeText: dayMap[d].typeText, late: dayMap[d].late, early:'', checkIn: dayMap[d].hasTime, ot: dayMap[d].ot});
+            result.push({day: d, typeText: dayMap[d].typeText, late: dayMap[d].late, early:'', checkIn: dayMap[d].hasTime});
           }
         }
-        console.log('Parsed dayMap', result);
         return result;
       };
 
@@ -762,10 +732,10 @@
             setImportLog('ไม่พบข้อมูล — ลองเปิดไฟล์ดูว่ามีคอลัมน์ วันที่ / ประเภท หรือไม่');
             return;
           }
+          const filteredForLog = parsed.filter(r=> r.day >= currentPeriod.startDay && r.day <= currentPeriod.endDay);
           const newDays = buildDaysFromParsed(parsed);
           setDays(newDays);
-          const filteredForLog = parsed.filter(r=> r.day >= currentPeriod.startDay && r.day <= currentPeriod.endDay);
-          setImportLog(`✅ นำเข้า ${filteredForLog.length} วัน (งวด ${currentPeriod.startDay}-${currentPeriod.endDay}) : ${filteredForLog.map(r=>`${r.day}(${r.typeText||'ทำงาน'})`).join(', ')}${parsed.length!==filteredForLog.length?` | ตัด ${parsed.length-filteredForLog.length} วันนอกงวดทิ้ง`:''}`);
+          setImportLog(`✅ นำเข้า ${filteredForLog.length} วัน (งวด ${currentPeriod.startDay}-${currentPeriod.endDay}) : ${filteredForLog.map(r=>`${r.day}(${r.typeText||'ทำงาน'})`).join(', ')}${parsed.length!==filteredForLog.length?` | ตัด ${parsed.length-filteredForLog.length} วันนอกงวดทิ้ง`:''}`); // old วัน: ${parsed.map(r=>`${r.day}(${r.typeText||'ทำงาน'})`).join(', ')}`);
           showToast(`📥 นำเข้า ${parsed.length} วันจาก ${file.name} สำเร็จ กำลังคำนวณ...`);
           setTimeout(()=>{ slipRef.current && slipRef.current.scrollIntoView({behavior:'smooth'}); }, 400);
         }catch(err){
@@ -1056,7 +1026,7 @@
                             {paid && (
                               <label className="flex items-center gap-1 text-[11px] text-slate-400">
                                 ชม.หัก
-                                <input type="number" min="0" step="0.5" value={day.unpaidHours || ''} placeholder="0"
+                                <input type="number" min="0" step="0.5" value={day.unpaidHours ? (Math.round(day.unpaidHours*100)/100) : ''} placeholder="0"
                                   onChange={e => updateDay(idx, { unpaidHours: Math.max(0, parseFloat(e.target.value) || 0) })}
                                   className="w-14 px-2 py-1 rounded-lg border font-mono text-xs bg-white border-slate-300 dark:bg-slate-800 dark:border-slate-700" />
                               </label>
