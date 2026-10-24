@@ -1,13 +1,32 @@
-<!DOCTYPE html>
-<html lang="th" class="dark">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PaySlip Tracker — ระบบคำนวณค่าแรงรายวันและสลิปเงินเดือน</title>
+<html lang="th" class="dark"><style>* { -webkit-text-size-adjust: 86.33333333333333% !important; }</style><head><style>
+@font-face {
+  font-family: "Optimistic";
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url("/fonts/OptimisticAI_VF_Optimized.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Optimistic Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/OptimisticMono_W_TextRegular.woff2") format("woff2");
+}
+:where(html) {
+  font-family: "Optimistic", system-ui, sans-serif;
+}
+:where(code, pre, kbd, samp) {
+  font-family: "Optimistic Mono", ui-monospace, monospace;
+}
+</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PaySlip Tracker — ระบบคำนวณค่าแรงรายวันและสลิปเงินเดือน (Auto Import)</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -24,10 +43,14 @@
     }
   </script>
 
-  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script crossorigin="" src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin="" src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <!-- Added libraries for auto import -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script>if(window.pdfjsLib){ pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'; }</script>
 
   <style>
     @media print {
@@ -56,7 +79,7 @@
     const TH_MONTHS = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
     const TH_MONTHS_FULL = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
     const TH_DAYS_SHORT = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'];
-    const WEEK_ORDER = [1, 2, 3, 4, 5, 6, 0]; // เรียง จันทร์ → อาทิตย์
+    const WEEK_ORDER = [1, 2, 3, 4, 5, 6, 0];
 
     const DAY_TYPES = {
       work: { label: '✅ วันทำงานปกติ', pay: 1 },
@@ -71,34 +94,21 @@
     };
 
     const DEFAULT_SETTINGS = {
-      rate: 412,
-      hours: 8,
-      holMult: 2,
-      sso: 5,
-      ssoCap: 750,
-      ssoBase: 'wage',
-      tax: 0,
-      othName: 'หักอื่นๆ',
-      oth: 0,
-      quickName: 'Incentive Audit',
-      quickAmt: 250,
-      incomeGoal: 15000,
+      rate: 412, hours: 8, holMult: 2, sso: 5, ssoCap: 750, ssoBase: 'wage', tax: 0,
+      othName: 'หักอื่นๆ', oth: 0, quickName: 'Incentive Audit', quickAmt: 250, incomeGoal: 15000,
     };
     const NUMERIC_KEYS = ['rate', 'hours', 'holMult', 'sso', 'ssoCap', 'tax', 'oth', 'quickAmt', 'incomeGoal'];
 
     // ===================== HELPERS =====================
     const uid = () => Math.random().toString(36).slice(2, 10);
     const pad = (n) => String(n).padStart(2, '0');
-
     function formatMoney(val) {
       const n = typeof val === 'number' && !isNaN(val) ? val : Number(val) || 0;
       return n.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
-
     function shortLabel(p) {
       return `${p.half === 1 ? 'ต้น' : 'ปลาย'} ${TH_MONTHS[p.m - 1]}${String(p.y + 543).slice(-2)}`;
     }
-
     function generatePeriodInfo(year, month, half) {
       const lastDay = new Date(year, month, 0).getDate();
       const startDay = half === 1 ? 1 : 16;
@@ -114,7 +124,6 @@
         payLabel: `${payDateObj.getDate()} ${TH_MONTHS[payMonth - 1]} ${payYear + 543}`,
       };
     }
-
     function generateInitialDays(period, offDays = []) {
       const days = [];
       for (let d = period.startDay; d <= period.endDay; d++) {
@@ -128,6 +137,19 @@
         });
       }
       return days;
+    }
+    function parseTimeToHours(str){
+      if(!str) return 0;
+      const s = String(str).trim();
+      if(!s || s==='-' || s==='0:00' || s==='00:00') return 0;
+      const parts = s.split(':');
+      if(parts.length>=2){
+        const h = parseInt(parts[0])||0;
+        const m = parseInt(parts[1])||0;
+        return h + m/60;
+      }
+      const n = parseFloat(s);
+      return isNaN(n)?0:n;
     }
 
     // ===================== CALCULATION =====================
@@ -155,11 +177,8 @@
       const pubUnpaidCut = Number((pubUnHr * hourRate).toFixed(2));
       const unpaidCut = Number((unHr * hourRate).toFixed(2));
 
-      // 1. ค่าแรงรายวันปกติ (ฐานประกันสังคม)
       const dailyWage = Math.max(0, Number((ssoWageUnits * settings.rate - ssoUnpaidCut).toFixed(2)));
-      // 2. ค่าทำงานในวันหยุด (ส่วนเกิน 1 เท่า)
       const holidayWorkPay = Number((pubW * Math.max(0, settings.holMult - 1) * settings.rate).toFixed(2));
-      // 3. ค่าแรงวันหยุดประเพณี
       const pubHolidayPay = Math.max(0, Number(((pubW + pubO) * settings.rate - pubUnpaidCut).toFixed(2)));
 
       const wage = Math.max(0, Number((dailyWage + holidayWorkPay + pubHolidayPay).toFixed(2)));
@@ -268,7 +287,6 @@
       };
     }
 
-    // ---------- 1) Doughnut ----------
     function DistributionChart({ calc, isDark }) {
       const c = themeColors(isDark);
       const labels = ['เงินได้สุทธิ (Net)', 'ประกันสังคม (SSO)', 'ภาษีหัก ณ ที่จ่าย'];
@@ -291,7 +309,6 @@
       );
     }
 
-    // ---------- 2) Bar day types ----------
     function DayTypeChart({ calc, isDark }) {
       const c = themeColors(isDark);
       const s = calc.stats;
@@ -314,7 +331,6 @@
       );
     }
 
-    // ---------- 3) Trend line ----------
     function TrendChart({ list, isDark, title = 'แนวโน้มรายได้ย้อนหลัง' }) {
       const c = themeColors(isDark);
       return (
@@ -373,7 +389,6 @@
         return generatePeriodInfo(y, m, defaultHalf);
       });
 
-      // ===== วันหยุดประจำสัปดาห์ (0=อาทิตย์ ... 6=เสาร์) =====
       const [weeklyOff, setWeeklyOff] = useState(() => {
         try {
           const raw = localStorage.getItem('pst_weekly_off');
@@ -394,6 +409,8 @@
       const [flash, setFlash] = useState(false);
       const slipRef = useRef(null);
       const fileRef = useRef(null);
+      const timeFileRef = useRef(null);
+      const [importLog, setImportLog] = useState('');
 
       const [cmpA, setCmpA] = useState('');
       const [cmpB, setCmpB] = useState('');
@@ -401,7 +418,7 @@
       const showToast = (msg) => {
         setToast(msg);
         clearTimeout(window.__toastT);
-        window.__toastT = setTimeout(() => setToast(null), 3000);
+        window.__toastT = setTimeout(() => setToast(null), 3500);
       };
 
       useEffect(() => {
@@ -420,7 +437,6 @@
         [currentPeriod, days, settings, extras]
       );
 
-      // แนวโน้ม: ประวัติ + งวดปัจจุบัน (preview)
       const trendList = useMemo(() => {
         const map = {};
         records.forEach(r => { map[r.key] = r; });
@@ -428,7 +444,6 @@
         return Object.values(map).sort((a, b) => a.key.localeCompare(b.key)).slice(-12);
       }, [records, calculation]);
 
-      // ===== handlers =====
       const handleGenerateDays = () => {
         const [y, m] = selectedMonth.split('-').map(Number);
         const p = generatePeriodInfo(y, m, selectedHalf);
@@ -445,26 +460,20 @@
         }
       };
 
-      // กดเลือก/ยกเลิกวันหยุดประจำสัปดาห์
       const toggleWeeklyOff = (dow) => {
         const isOff = weeklyOff.includes(dow);
         const next = isOff ? weeklyOff.filter(x => x !== dow) : [...weeklyOff, dow];
         setWeeklyOff(next);
         localStorage.setItem('pst_weekly_off', JSON.stringify(next));
-
         setDays(prev => prev.map(d => {
           if (d.dow !== dow) return d;
-          // เปิดวันหยุด → เปลี่ยนเฉพาะวันทำงานปกติ (ไม่ทับวันลา/นักขัตฤกษ์)
           if (!isOff && d.type === 'work') return { ...d, type: 'holiday', unpaidHours: 0 };
-          // ปิดวันหยุด → คืนเป็นวันทำงาน
           if (isOff && d.type === 'holiday') return { ...d, type: 'work' };
           return d;
         }));
-
         showToast(`${isOff ? '✅ ยกเลิก' : '🏖️ ตั้ง'}วัน${TH_DAYS[dow]}เป็นวันหยุด`);
       };
 
-      // รีเซ็ตตารางทั้งหมดตามวันหยุดที่เลือก
       const resetDaysToWeeklyOff = () => {
         if (!confirm('รีเซ็ตตารางวัน? สถานะวันลา/นักขัตฤกษ์และชั่วโมงหักจะถูกล้าง')) return;
         setDays(prev => prev.map(d => ({
@@ -482,6 +491,178 @@
       const addExtra = (name = '', amt = '') => setExtras(prev => [...prev, { id: uid(), name, amt: String(amt) }]);
       const updateExtra = (id, patch) => setExtras(prev => prev.map(e => (e.id === id ? { ...e, ...patch } : e)));
       const removeExtra = (id) => setExtras(prev => prev.filter(e => e.id !== id));
+
+      // ===== NEW: AUTO IMPORT LOGIC =====
+      const detectDayTypeFromText = (txt, hasCheckIn) => {
+        const t = (txt||'').toLowerCase();
+        if(t.includes('นักขัต')) return hasCheckIn ? 'pubwork' : 'puboff';
+        if(t.includes('หยุดประจำสัปดาห์') || t.includes('วันหยุด') && !t.includes('นักขัต')) return 'holiday';
+        if(t.includes('ลาป่วย') || t.includes('ป่วย')) return 'sick';
+        if(t.includes('ลากิจ') || t.includes('กิจ')) return 'personal';
+        if(t.includes('พักร้อน') || t.includes('ลาพัก')) return 'annual';
+        if(t.includes('ขาดงาน') || t.includes('ขาด')) return 'absent';
+        if(t.includes('ไม่รับค่าจ้าง') || t.includes('ลาไม่รับ')) return 'unpaid';
+        if(t.includes('ทำงาน') || t.includes('ปกติ') || t.trim()==='') return 'work';
+        return 'work';
+      };
+
+      const buildDaysFromParsed = (rows) => {
+        // rows = [{day: number, dateStr: '04/10/2569', typeText: 'วันทำงาน', late: '0:02', early: '', checkIn: true}]
+        const map = {};
+        rows.forEach(r=>{
+          if(!r.day) return;
+          map[r.day] = r;
+        });
+        const newDays = days.map(d=>{
+          const found = map[d.d];
+          if(!found) return d;
+          const type = detectDayTypeFromText(found.typeText, found.checkIn);
+          const unpaid = parseTimeToHours(found.late) + parseTimeToHours(found.early);
+          return { ...d, type, unpaidHours: unpaid };
+        });
+        // ถ้าไฟล์มีวันที่อยู่นอกช่วง period ปัจจุบัน ให้เพิ่มเข้าไปด้วย
+        const existingDays = new Set(newDays.map(x=>x.d));
+        Object.values(map).forEach(r=>{
+          if(!existingDays.has(r.day)){
+            const dt = new Date(currentPeriod.y, currentPeriod.m - 1, r.day);
+            if(!isNaN(dt)){
+              newDays.push({
+                d: r.day, dow: dt.getDay(),
+                dateStr: `${currentPeriod.y}-${pad(currentPeriod.m)}-${pad(r.day)}`,
+                type: detectDayTypeFromText(r.typeText, r.checkIn),
+                unpaidHours: parseTimeToHours(r.late) + parseTimeToHours(r.early)
+              });
+            }
+          }
+        });
+        newDays.sort((a,b)=>a.d-b.d);
+        return newDays;
+      };
+
+      const parseExcelRows = (workbook) => {
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+        const json = XLSX.utils.sheet_to_json(sheet, {header:1, raw:false});
+        // หา header row ที่มีคำว่า วันที่ / ประเภท / มาสาย
+        let headerIdx = -1;
+        for(let i=0;i<Math.min(10, json.length); i++){
+          const rowStr = (json[i]||[]).join(' ').toLowerCase();
+          if(rowStr.includes('วันที่') || rowStr.includes('ประเภท') || rowStr.includes('วัน')){
+            headerIdx = i; break;
+          }
+        }
+        if(headerIdx<0) headerIdx = 0;
+        const headers = (json[headerIdx]||[]).map(h=>String(h).toLowerCase().trim());
+        const findCol = (keys) => {
+          for(let k of keys){
+            const idx = headers.findIndex(h=>h.includes(k));
+            if(idx>=0) return idx;
+          }
+          return -1;
+        };
+        const dateCol = findCol(['วันที่','date','วัน']);
+        const typeCol = findCol(['ประเภท','type','สถานะ']);
+        const lateCol = findCol(['มาสาย','สาย','late']);
+        const earlyCol = findCol(['กลับก่อน','ออกก่อน','early']);
+        const inCol = findCol(['เข้า','in','เวลาเข้า']);
+        
+        const rows = [];
+        for(let i=headerIdx+1;i<json.length;i++){
+          const r = json[i];
+          if(!r || r.length===0) continue;
+          const dateCell = dateCol>=0 ? r[dateCol] : r[0];
+          if(!dateCell) continue;
+          // พยายามแยกวันจากวันที่
+          let dayNum = null;
+          const ds = String(dateCell);
+          const m1 = ds.match(/(\d{1,2})\/\d{1,2}\/\d{2,4}/);
+          if(m1) dayNum = parseInt(m1[1]);
+          else if(!isNaN(parseInt(ds)) && parseInt(ds)>=1 && parseInt(ds)<=31) dayNum = parseInt(ds);
+          if(!dayNum) continue;
+          rows.push({
+            day: dayNum,
+            typeText: typeCol>=0 ? String(r[typeCol]||'') : '',
+            late: lateCol>=0 ? String(r[lateCol]||'') : '',
+            early: earlyCol>=0 ? String(r[earlyCol]||'') : '',
+            checkIn: inCol>=0 ? !!r[inCol] : true
+          });
+        }
+        return rows;
+      };
+
+      const parsePdfText = async (file) => {
+        const buf = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({data: buf}).promise;
+        let fullText = '';
+        for(let i=1;i<=pdf.numPages;i++){
+          const page = await pdf.getPage(i);
+          const content = await page.getTextContent();
+          const strings = content.items.map(it=>it.str);
+          fullText += strings.join(' ') + '\n';
+        }
+        // ตัวอย่างบรรทัด: 04/10/2569 05:42 04/10/2569 14:50 04/10/2569 กะเช้า ... วันทำงาน 8:00
+        const rows = [];
+        const regex = /(\d{2})\/\d{2}\/\d{4}.*?(\d{2}\/\d{2}\/\d{4}).*?(วันทำงาน|วันหยุด|นักขัตฤกษ์|ลาป่วย|ลากิจ|ขาดงาน|ลาพักร้อน|ลาไม่รับค่าจ้าง|หยุดประจำสัปดาห์)/g;
+        // fallback แบบง่าย: หา pattern วันที่ + ประเภท
+        const lines = fullText.split('\n');
+        lines.forEach(line=>{
+          const dateMatch = line.match(/(\d{1,2})\/\d{1,2}\/\d{4}/);
+          if(!dateMatch) return;
+          const day = parseInt(dateMatch[1]);
+          let typeText = 'วันทำงาน';
+          if(line.includes('นักขัต')) typeText='นักขัตฤกษ์';
+          if(line.includes('หยุดประจำสัปดาห์') || line.includes('วันหยุด')) typeText='วันหยุดประจำสัปดาห์';
+          if(line.includes('ลาป่วย')) typeText='ลาป่วย';
+          if(line.includes('ขาดงาน')) typeText='ขาดงาน';
+          // มาสาย
+          let late = '';
+          const lateMatch = line.match(/(\d+:\d+)\s*$/);
+          // ในไฟล์คุณ คอลัมน์มาสายเป็น 0:02
+          const lateSimple = line.match(/(\d+:\d{2})\s+(\d+:\d{2})/);
+          // เอาแบบง่าย
+          const mLate = line.match(/\s(\d+:\d{2})\s*$/);
+          if(mLate) late = mLate[1];
+          if(late==='8:00' || late==='8:15') late=''; // อันนี้คือเวลาทำงาน ไม่ใช่มาสาย
+          rows.push({day, typeText, late, early:'', checkIn:true});
+        });
+        // กรองซ้ำ เอาวันเดียวกันอันสุดท้าย
+        const uniq = {};
+        rows.forEach(r=>{ uniq[r.day]=r; });
+        return Object.values(uniq);
+      };
+
+      const handleImportTimeFile = async (e) => {
+        const file = e.target.files && e.target.files[0];
+        if(!file) return;
+        try{
+          let parsed = [];
+          const ext = file.name.split('.').pop().toLowerCase();
+          if(ext==='xlsx' || ext==='xls' || ext==='csv'){
+            const buf = await file.arrayBuffer();
+            const wb = XLSX.read(buf, {type:'array'});
+            parsed = parseExcelRows(wb);
+          }else if(ext==='pdf'){
+            parsed = await parsePdfText(file);
+          }else{
+            showToast('⚠️ รองรับ .xlsx, .csv, .pdf เท่านั้น');
+            return;
+          }
+          if(parsed.length===0){
+            showToast('⚠️ อ่านไฟล์ได้แต่ไม่พบข้อมูลวันที่ ลองใช้ไฟล์ Excel แบบ Export ดิบ');
+            setImportLog('ไม่พบข้อมูล — ลองเปิดไฟล์ดูว่ามีคอลัมน์ วันที่ / ประเภท หรือไม่');
+            return;
+          }
+          const newDays = buildDaysFromParsed(parsed);
+          setDays(newDays);
+          setImportLog(`✅ นำเข้า ${parsed.length} วัน: ${parsed.map(r=>`${r.day}(${r.typeText||'ทำงาน'})`).join(', ')}`);
+          showToast(`📥 นำเข้า ${parsed.length} วันจาก ${file.name} สำเร็จ กำลังคำนวณ...`);
+          setTimeout(()=>{ slipRef.current && slipRef.current.scrollIntoView({behavior:'smooth'}); }, 400);
+        }catch(err){
+          console.error(err);
+          showToast('⚠️ อ่านไฟล์ไม่สำเร็จ: ' + err.message);
+        }
+        e.target.value='';
+      };
 
       const handleCalculate = () => {
         setFlash(true);
@@ -524,7 +705,7 @@
       };
 
       const handleBackup = () => {
-        const blob = new Blob([JSON.stringify({ app: 'PaySlipTracker', version: 3, exportedAt: new Date().toISOString(), settings, records, weeklyOff }, null, 2)], { type: 'application/json' });
+        const blob = new Blob([JSON.stringify({ app: 'PaySlipTracker', version: 4, exportedAt: new Date().toISOString(), settings, records, weeklyOff }, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -566,7 +747,6 @@
         showToast('🗑️ ล้างประวัติทั้งหมดแล้ว');
       };
 
-      // ===== เป้าหมายรายเดือน =====
       const goal = settings.incomeGoal || 0;
       const otherHalfNet = records
         .filter(r => r.period.y === currentPeriod.y && r.period.m === currentPeriod.m && r.key !== calculation.key)
@@ -576,7 +756,6 @@
       const progressWidth = goal > 0 ? Math.min(100, Math.max(0, (monthNet / goal) * 100)) : 0;
       const isReached = goal > 0 && monthNet >= goal;
 
-      // ===== ประวัติรายเดือน =====
       const monthGroups = useMemo(() => {
         const g = {};
         records.forEach(r => {
@@ -593,7 +772,6 @@
         }));
       }, [records]);
 
-      // ===== เปรียบเทียบ =====
       useEffect(() => {
         if (records.length >= 2) {
           if (!records.find(r => r.key === cmpA)) setCmpA(records[1].key);
@@ -643,14 +821,13 @@
             </div>
           )}
 
-          {/* ===== HEADER ===== */}
           <header className="no-print sticky top-0 z-40 backdrop-blur-md border-b bg-white/90 border-slate-200 dark:bg-slate-900/90 dark:border-slate-800">
             <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-2">
               <div className="flex items-center gap-3 min-w-0">
                 <span className="w-11 h-11 rounded-2xl grid place-items-center text-2xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg shadow-blue-600/30">💰</span>
                 <div className="min-w-0">
-                  <h1 className="font-bold text-base sm:text-lg leading-tight truncate">PaySlip Tracker</h1>
-                  <p className="hidden sm:block text-[11px] text-slate-400">คำนวณค่าแรงรายวันและสลิปเงินเดือน</p>
+                  <h1 className="font-bold text-base sm:text-lg leading-tight truncate">PaySlip Tracker + Auto Import</h1>
+                  <p className="hidden sm:block text-[11px] text-slate-400">อัปโหลดไฟล์ลงเวลา → คำนวณเงินอัตโนมัติ</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -675,12 +852,10 @@
           </header>
 
           <main className="flex-1 w-full max-w-5xl mx-auto p-4 space-y-5">
-            {/* ========================= TAB: CALC ========================= */}
             {currentTab === 'calc' && (
               <>
-                {/* 1. เลือกงวด */}
                 <div className={`${CARD} no-print`}>
-                  <SectionHead num="1" title="เลือกงวดจ่ายค่าแรง" />
+                  <SectionHead num="1" title="เลือกงวดจ่ายค่าแรง + นำเข้าไฟล์ลงเวลา" desc="วิธีใหม่: แค่เพิ่มไฟล์ Excel/PDF จากเครื่องสแกนนิ้ว ระบบจะเติมวันทำงานให้อัตโนมัติ" />
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
                     <div>
                       <label className={LABEL}>เดือน / ปี (ค.ศ.)</label>
@@ -697,13 +872,28 @@
                       สร้างตารางวัน 🗓️
                     </button>
                   </div>
+
+                  {/* NEW IMPORT BOX */}
+                  <div className="mt-4 p-4 rounded-2xl border-2 border-dashed border-emerald-300 bg-emerald-50 dark:bg-emerald-950/20 dark:border-emerald-800">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                      <div>
+                        <div className="font-bold text-emerald-700 dark:text-emerald-400 text-sm">📁 อัปโหลดไฟล์ลงเวลา (Auto)</div>
+                        <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">รองรับ .xlsx, .csv, .pdf แบบรายงานผลประมวลเวลาที่คุณมี — ระบบจะอ่าน วันที่ / ประเภท / มาสาย อัตโนมัติ</div>
+                        {importLog && <div className="text-[11px] mt-2 p-2 rounded-lg bg-white dark:bg-slate-900 border">{importLog}</div>}
+                      </div>
+                      <div className="flex gap-2">
+                        <input ref={timeFileRef} type="file" accept=".xlsx,.xls,.csv,.pdf" className="hidden" onChange={handleImportTimeFile} />
+                        <button onClick={()=>timeFileRef.current && timeFileRef.current.click()} className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold shadow">
+                          เลือกไฟล์
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
-                {/* 2. ตารางวัน */}
                 <div className={`${CARD} no-print`}>
                   <SectionHead num="2" title="บันทึกวันทำงาน" pill={<Pill>{calculation.period.label}</Pill>} />
 
-                  {/* ===== เลือกวันหยุดประจำสัปดาห์ ===== */}
                   <div className="mb-3">
                     <div className="flex items-center justify-between mb-2 gap-2">
                       <span className="text-sm text-slate-500 dark:text-slate-400">🏖️ เลือกวันหยุดประจำสัปดาห์</span>
@@ -731,15 +921,10 @@
                         );
                       })}
                     </div>
-                    <p className="text-[11px] text-slate-400 mt-2">
-                      {weeklyOff.length === 0
-                        ? 'ยังไม่ได้เลือกวันหยุด — ทุกวันเป็นวันทำงาน'
-                        : `หยุดทุกวัน: ${WEEK_ORDER.filter(d => weeklyOff.includes(d)).map(d => TH_DAYS[d]).join(', ')}`}
-                    </p>
                   </div>
 
                   <div className="p-3 rounded-xl border mb-3 text-xs bg-amber-50 border-amber-200 text-amber-800 dark:bg-amber-950/20 dark:border-amber-800/50 dark:text-amber-300">
-                    <strong>เงื่อนไขการคำนวณ:</strong> วันหยุดประจำสัปดาห์ = <span className="underline font-bold">ไม่ได้ค่าแรง (0.00 ฿)</span> · วันนักขัตฤกษ์ = <span className="underline font-bold text-emerald-600 dark:text-emerald-400">ได้ค่าแรงแต่ไม่นำมาคิดประกันสังคม</span> · ช่อง "ชม.หัก" = ชั่วโมงที่ไม่ได้รับค่าจ้าง (มาสาย/ออกก่อน)
+                    <strong>เงื่อนไขการคำนวณ:</strong> วันหยุดประจำสัปดาห์ = <span className="underline font-bold">ไม่ได้ค่าแรง (0.00 ฿)</span> · วันนักขัตฤกษ์ = <span className="underline font-bold text-emerald-600 dark:text-emerald-400">ได้ค่าแรงแต่ไม่นำมาคิดประกันสังคม</span> · ช่อง "ชม.หัก" = ชั่วโมงที่ไม่ได้รับค่าจ้าง (มาสาย/ออกก่อน) — <b>ไฟล์ลงเวลาจะเติมช่องนี้ให้อัตโนมัติ</b>
                   </div>
 
                   <div className="space-y-2">
@@ -779,7 +964,6 @@
                   </div>
                 </div>
 
-                {/* 3. สรุปวัน */}
                 <div className={`${CARD} no-print`}>
                   <SectionHead num="3" title="สรุปจำนวนวันในงวด" pill={<Pill color="blue">{calculation.stats.paidDays} วันจ่ายเงิน</Pill>} />
                   <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-center">
@@ -798,7 +982,6 @@
                   </div>
                 </div>
 
-                {/* 4. รายได้เพิ่มเติมประจำงวด */}
                 <div className={`${CARD} no-print`}>
                   <SectionHead num="4" title="รายได้เพิ่มเติมประจำงวด" pill={<Pill>ใส่เฉพาะงวดที่ได้</Pill>}
                     desc="เช่น Incentive Audit, เบี้ยขยัน, ค่ากะ, ค่าเดินทาง — หากงวดไหนไม่มีก็ปล่อยว่างไว้ได้" />
@@ -848,7 +1031,6 @@
                   </button>
                 </div>
 
-                {/* ===== สลิป ===== */}
                 <div ref={slipRef} className={`${CARD} scroll-mt-32 transition ${flash ? 'ring-2 ring-blue-500' : ''}`}>
                   <div className="flex flex-wrap items-center justify-between gap-2 pb-3 mb-4 border-b border-slate-200 dark:border-slate-700/50">
                     <div>
@@ -879,7 +1061,6 @@
                   )}
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                    {/* รายได้ */}
                     <div className="rounded-2xl border border-slate-200 dark:border-slate-700/60 overflow-hidden">
                       <div className="p-2.5 font-bold flex justify-between bg-slate-100 dark:bg-slate-900 text-emerald-600 dark:text-emerald-400">
                         <span>รายการรายได้</span><span>จำนวนเงิน</span>
@@ -916,7 +1097,6 @@
                       </div>
                     </div>
 
-                    {/* หัก */}
                     <div className="rounded-2xl border border-slate-200 dark:border-slate-700/60 overflow-hidden">
                       <div className="p-2.5 font-bold flex justify-between bg-slate-100 dark:bg-slate-900 text-rose-500 dark:text-rose-400">
                         <span>รายการหัก</span><span>จำนวนเงิน</span>
@@ -953,7 +1133,6 @@
                   </div>
                 </div>
 
-                {/* ===== กราฟ ===== */}
                 <div className="no-print space-y-5">
                   <DistributionChart calc={calculation} isDark={isDark} />
                   <DayTypeChart calc={calculation} isDark={isDark} />
@@ -962,7 +1141,6 @@
               </>
             )}
 
-            {/* ========================= TAB: HISTORY ========================= */}
             {currentTab === 'hist' && (
               <div className={CARD}>
                 <SectionHead icon="📚" title="ประวัติรายเดือน" pill={<Pill color="blue">{records.length} งวด</Pill>} desc="รวมยอดแต่ละเดือนจากทั้ง 2 งวด · กดที่งวดเพื่อเปิดแก้ไข" />
@@ -1000,7 +1178,6 @@
               </div>
             )}
 
-            {/* ========================= TAB: COMPARE ========================= */}
             {currentTab === 'cmp' && (
               <>
                 <div className={CARD}>
@@ -1083,7 +1260,6 @@
               </>
             )}
 
-            {/* ========================= TAB: SETTINGS ========================= */}
             {currentTab === 'set' && (
               <>
                 <div className={CARD}>
@@ -1136,7 +1312,7 @@
           </main>
 
           <footer className="no-print mt-8 py-5 border-t border-slate-200 dark:border-slate-800 text-center text-xs text-slate-400 px-4">
-            PaySlip Tracker © {new Date().getFullYear()} · คำนวณค่าแรงรายวัน พร้อมกราฟสรุป Real-time และ Dark Mode
+            PaySlip Tracker v4 Auto Import © {new Date().getFullYear()} · อัปโหลดไฟล์ลงเวลาแล้วคำนวณอัตโนมัติ
           </footer>
         </div>
       );
@@ -1144,5 +1320,6 @@
 
     ReactDOM.createRoot(document.getElementById('root')).render(<App />);
   </script>
-</body>
-</html>
+<script>(function(){var loc=location.href.replace(/#.*$/,"");var ATTR_NAMES=["data-product-id","data-productid","data-product_id","product-id","productid","product_id","data-source-entity-id","source-entity-id","source_entity_id","data-product","data-metadata","data-meta"];var DATASET_KEYS=["productId","productid","product_id","sourceEntityId","sourceentityid","source_entity_id","product","metadata","meta"];function readProductId(value){if(typeof value!=="string"||value.length===0)return null;if(/^[0-9]{6,}$/.test(value))return value;var match=value.match(/(?:product(?:_|-)?id|source(?:_|-)?entity(?:_|-)?id)["'=:\s]+([0-9]{6,})/i);return match?match[1]:null}function extractProductId(start){for(var node=start;node&&node!==document.body;node=node.parentElement){for(var i=0;i<ATTR_NAMES.length;i++){var attrValue=node.getAttribute&&node.getAttribute(ATTR_NAMES[i]);var attrProductId=readProductId(attrValue);if(attrProductId)return attrProductId}var dataset=node.dataset||null;if(dataset){for(var j=0;j<DATASET_KEYS.length;j++){var dataValue=dataset[DATASET_KEYS[j]];var dataProductId=readProductId(dataValue);if(dataProductId)return dataProductId}}}return null}function isInlineMediaSlotElement(node){return !!(node&&node.getAttribute&&node.getAttribute("data-clippy-inline-media-slot")!==null)}function findInlineMediaSlot(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(isInlineMediaSlotElement(node))return node}return null}function readInlineMediaUrl(node){if(!node)return null;return node.getAttribute&&((node.getAttribute("data-clippy-inline-media-url")||node.getAttribute("data-url")||node.getAttribute("data_url")))||node.href||null}function stripHash(url){return String(url).replace(/#.*$/,"")}function urlsMatch(a,b){if(!a||!b)return false;try{return stripHash(new URL(a,loc).href)===stripHash(new URL(b,loc).href)}catch(_){return stripHash(a)===stripHash(b)}}function isFirstPartyReelUrl(value){try{var url=new URL(value,loc);if(url.protocol!=="https:")return false;var host=url.hostname.toLowerCase();var supported=host==="instagram.com"||host.endsWith(".instagram.com")||host==="facebook.com"||host.endsWith(".facebook.com");return supported&&/\/reels?\//i.test(url.pathname)}catch(_){return false}}function isInlineMediaUrlClick(node,href){var slot=findInlineMediaSlot(node);if(!slot)return false;var slotUrl=readInlineMediaUrl(slot);if(slotUrl)return urlsMatch(href,slotUrl);return isFirstPartyReelUrl(href)}function findDataHref(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(node.getAttribute){var href=node.getAttribute("data-href")||node.getAttribute("data-url");if(href)return{href:href,node:node}}}return null}var nativeOpen=window.open;window.open=function(url){if(parent!==window&&typeof url==="string"&&/^https?:\/\//.test(url)){parent.postMessage({type:"ecto:usercontent-link-click",href:url},"*");return null}return nativeOpen?nativeOpen.apply(window,arguments):null};document.addEventListener("click",function(e){var target=e.target instanceof Element?e.target:null;if(!target)return;if(parent===window)return;var a=target.closest?target.closest("a[href]"):null;if(a&&a.href&&/^https?:\/\//.test(a.href)&&a.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(a,a.href))return;var productId=extractProductId(target)||extractProductId(a);if(productId){e.preventDefault();parent.postMessage({type:"ecto-artifact-link-click",productId:productId},"*");return}e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:a.href},"*");return}var dataHref=findDataHref(target);if(dataHref&&/^https?:\/\//.test(dataHref.href)&&dataHref.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(dataHref.node,dataHref.href))return;e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:dataHref.href},"*")}},true)})();</script><script>(function(){var FOCUS_TYPE="ecto:artifact-focus-request";var CLOSE_TYPE="ecto:artifact-close-request";function focusArtifactDocument(){var body=document.body;if(!body)return;try{window.focus();}catch(e){}if(!body.hasAttribute("tabindex"))body.setAttribute("tabindex","-1");try{body.focus({preventScroll:true});}catch(e){try{body.focus();}catch(e2){}}}window.addEventListener("message",function(event){if(event.source!==window.parent)return;var data=event.data;if(!data||typeof data!=="object"||data.type!==FOCUS_TYPE)return;if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",focusArtifactDocument,{once:true});return;}focusArtifactDocument();});window.addEventListener("keydown",function(event){if(event.key!=="Escape")return;window.setTimeout(function(){if(event.defaultPrevented)return;window.parent.postMessage({type:CLOSE_TYPE},"*");},0);});})();</script>
+
+</body></html>
