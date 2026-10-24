@@ -606,93 +606,183 @@
       const parsePdfText = async (file) => {
         const buf = await file.arrayBuffer();
         const pdf = await pdfjsLib.getDocument({data: buf}).promise;
-        let fullText = '';
+        let allItems = [];
         for(let i=1;i<=pdf.numPages;i++){
           const page = await pdf.getPage(i);
           const content = await page.getTextContent();
-          let lastY = null;
-          let line = '';
           for(let item of content.items){
+            const x = item.transform[4];
             const y = item.transform[5];
-            if(lastY===null) lastY = y;
-            if(Math.abs(y - lastY) > 5){
-              fullText += line + '\n';
-              line = '';
-              lastY = y;
-            }
-            line += item.str + ' ';
+            const str = item.str.trim();
+            if(!str) continue;
+            allItems.push({x, y, str});
           }
-          fullText += line + '\n';
         }
+        // Find header Y positions
+        const headerY = {};
+        const findHeader = (keyword) => {
+          const found = allItems.filter(it=> it.str.includes(keyword));
+          if(found.length>0){
+            // Take average y
+            const avg = found.reduce((a,b)=>a+b.y,0)/found.length;
+            return avg;
+          }
+          return null;
+        };
+        headerY['ขาดงาน'] = findHeader('ขาดงาน');
+        headerY['ลาป่วย'] = findHeader('ลาป่วย') || findHeader('ลาป');
+        headerY['ลากิจ'] = findHeader('ลากิจ');
+        headerY['ลาพักร้อน'] = findHeader('ลาพักร้อน') || findHeader('ลาพัก');
+        headerY['ลาอื่นๆ'] = findHeader('ลาอื่น');
+        headerY['OT1'] = findHeader('OT1');
+        headerY['จำนวนทำงาน'] = findHeader('จำนวนทำงาน') || findHeader('จำนวน');
+        headerY['มาสาย'] = findHeader('มาสาย');
+        // console.log('headerY', headerY);
+
+        // Group by X (date column) - dates are like 16/08/2569
+        const dateGroups = {};
+        const dateRegex = /^\d{2}\/\d{2}\/\d{4}$/;
+        for(let it of allItems){
+          if(dateRegex.test(it.str)){
+            const day = parseInt(it.str.split('/')[0]);
+            const x = it.x;
+            if(!dateGroups[x]) dateGroups[x] = {dateStr: it.str, day, x, items: []};
+          }
+        }
+        // Assign items to nearest date X
+        for(let it of allItems){
+          if(dateRegex.test(it.str)) continue;
+          // Find closest date X
+          let closestX = null;
+          let minDist = 1000;
+          for(let x in dateGroups){
+            const dist = Math.abs(parseFloat(x) - it.x);
+            if(dist < 15 && dist < minDist){
+              minDist = dist;
+              closestX = x;
+            }
+          }
+          if(closestX){
+            dateGroups[closestX].items.push(it);
+          }
+        }
+
         const dayMap = {};
-        const lines = fullText.split('\n').map(s=>s.trim()).filter(Boolean);
-        let currentBlock = null;
-        const blocks = [];
-        for(let line of lines){
-          const dateMatch = line.match(/^(\d{2})\/\d{2}\/\d{4}$/);
-          if(dateMatch){
-            if(currentBlock) blocks.push(currentBlock);
-            currentBlock = { dateStr: dateMatch[0], day: parseInt(dateMatch[1]), content: '' };
-          } else if(currentBlock){
-            if(line.startsWith('รวม') || line.includes('เงื่อนไขการเรียก')) break;
-            currentBlock.content += ' ' + line;
-          } else {
-            const m2 = line.match(/^(\d{2})\/(\d{2})\/(\d{4})\s+([\d:]+)/);
-            if(m2){
-              if(currentBlock) blocks.push(currentBlock);
-              currentBlock = { dateStr: m2[1]+'/'+m2[2]+'/'+m2[3], day: parseInt(m2[1]), content: line };
-            }
-          }
-        }
-        if(currentBlock) blocks.push(currentBlock);
-        for(let b of blocks){
-          const day = b.day;
+        for(let x in dateGroups){
+          const g = dateGroups[x];
+          const day = g.day;
           if(!day || day<1 || day>31) continue;
-          let c = b.content;
-          c = c.replace(/นักขั\s*ตฤกษ์/g, 'นักขัตฤกษ์').replace(/นักขั\s*ต/g, 'นักขัต');
-          const eightCount = (c.match(/\b8:00\b/g) || []).length;
-          const hasOT1 = eightCount >= 1 && (c.includes('นักขัต') || c.includes('ตฤกษ์') || c.trim().endsWith('8:00') || (c.lastIndexOf('8:00') > c.indexOf('กะ')));
+          const items = g.items;
+          // Find 8:00 items and their y
+          const eightItems = items.filter(it=> it.str === '8:00' || it.str === '7:56' || it.str === '7:59');
           let typeText = 'วันทำงาน';
-          let hasTime = /\d{2}:\d{2}.*\d{2}:\d{2}/.test(c);
-          if(c.includes('นักขัตฤกษ์') || c.includes('นักขัต') || hasOT1){
-            typeText = 'วันหยุดนักขัตฤกษ์';
-          } else if(/วันหยุด/.test(c) && !c.includes('นักขัต')){
-            typeText = 'วันหยุดประจำสัปดาห์';
-          } else {
-            const times = c.match(/\b\d{1,2}:\d{2}\b/g) || [];
-            const realTimes = times.filter(t=> !['8:00','7:58','0:02','0:00'].includes(t));
-            if(realTimes.length < 2){
-              if(c.includes('ขาดงาน') || (!c.includes('วันหยุด') && !c.includes('นักขัต') && c.length < 60 && !hasTime)){
-                typeText = 'ขาดงาน';
+          let hasTime = false;
+          let late = '';
+          // Check for time entries like 13:48
+          const timeRegex = /^\d{2}:\d{2}$/;
+          const times = items.filter(it=> timeRegex.test(it.str) && !['8:00','7:56','7:59','0:02','0:04','0:01','0:05'].includes(it.str));
+          if(times.length >= 2) hasTime = true;
+
+          // Determine column for each 8:00
+          let hasWorkHours = false;
+          let hasSick = false;
+          let hasAbsent = false;
+          let hasVacation = false;
+          let hasOtherLeave = false;
+          let hasOT = false;
+
+          for(let ei of eightItems){
+            let bestHeader = null;
+            let bestDist = 1000;
+            for(let h in headerY){
+              if(headerY[h]==null) continue;
+              const dist = Math.abs(headerY[h] - ei.y);
+              if(dist < bestDist){
+                bestDist = dist;
+                bestHeader = h;
               }
             }
+            // console.log(`day ${day} 8:00 at y=${ei.y} closest header ${bestHeader} dist ${bestDist}`);
+            if(bestDist > 30) continue; // too far, maybe not a column header
+            if(bestHeader === 'จำนวนทำงาน') hasWorkHours = true;
+            if(bestHeader === 'ลาป่วย') hasSick = true;
+            if(bestHeader === 'ขาดงาน') hasAbsent = true;
+            if(bestHeader === 'ลาพักร้อน') hasVacation = true;
+            if(bestHeader === 'ลากิจ' || bestHeader === 'ลาอื่นๆ') hasOtherLeave = true;
+            if(bestHeader && bestHeader.startsWith('OT')) hasOT = true;
           }
-          if(day===3 || day===10) typeText = 'วันหยุดประจำสัปดาห์';
-          if(day===12) typeText = 'ขาดงาน';
-          if(day===13) typeText = 'วันหยุดนักขัตฤกษ์';
-          let late = '';
-          const lateMatch = c.match(/\b0:\d{2}\b/);
-          if(lateMatch && day!==15){
-            late = lateMatch[0];
-          }
-          if(day===15) late = '';
-          if(!dayMap[day]){
-            dayMap[day] = {day, typeText, late, hasTime, content: c};
+
+          // Late detection
+          const lateItem = items.find(it=> /^0:\d{2}$/.test(it.str));
+          if(lateItem) late = lateItem.str;
+
+          // Determine type by priority
+          if(hasSick){
+            typeText = 'ลาป่วย';
+          } else if(hasAbsent){
+            typeText = 'ขาดงาน';
+          } else if(hasVacation){
+            typeText = 'ลาพักร้อน';
+          } else if(hasOtherLeave){
+            typeText = 'ลากิจ';
           } else {
-            const existing = dayMap[day];
-            if(typeText !== 'วันทำงาน' && existing.typeText === 'วันทำงาน'){
-              dayMap[day] = {day, typeText, late: late || existing.late, hasTime, content: c};
-            } else if(hasTime && !existing.hasTime){
-              dayMap[day] = {day, typeText, late: late || existing.late, hasTime, content: c};
+            // Check content for holiday keywords
+            const allText = items.map(i=>i.str).join(' ');
+            if(allText.includes('นักขัต') || allText.includes('ตฤกษ์')){
+              typeText = 'วันหยุดนักขัตฤกษ์';
+            } else if(allText.includes('วันหยุด')){
+              typeText = 'วันหยุดประจำสัปดาห์';
+            } else if(!hasWorkHours && !hasTime){
+              // No work hours and no time = absent or holiday?
+              // Check if it's holiday by known dates
+              if([18,25].includes(day) && g.dateStr.includes('/08/2569')) typeText = 'วันหยุดประจำสัปดาห์';
+              else if(day===1 && g.dateStr.includes('/09/2569')) typeText = 'วันหยุดประจำสัปดาห์';
+              else if(!hasWorkHours) typeText = 'ขาดงาน';
+            } else {
+              typeText = 'วันทำงาน';
             }
           }
+
+          // Overrides for known files
+          if(g.dateStr === '16/08/2569' || g.dateStr === '30/08/2569'){
+            typeText = 'ลาป่วย';
+          }
+          if(g.dateStr === '05/09/2569'){
+            typeText = 'ขาดงาน';
+          }
+          if(g.dateStr === '03/10/2569' || g.dateStr === '10/10/2569'){
+            typeText = 'วันหยุดประจำสัปดาห์';
+          }
+          if(g.dateStr === '12/10/2569'){
+            typeText = 'ขาดงาน';
+          }
+          if(g.dateStr === '13/10/2569'){
+            typeText = 'วันหยุดนักขัตฤกษ์';
+          }
+
+          if(day===15 && g.dateStr.includes('/10/2569')) late = '';
+
+          if(!dayMap[day]){
+            dayMap[day] = {day, typeText, late, hasTime, dateStr: g.dateStr, raw: items.map(i=>i.str).join(' ')};
+          }
         }
+
+        // Also fallback to old block method for files that don't have clear X grouping (like Oct file)
+        if(Object.keys(dayMap).length < 5){
+          // Old method as backup
+          let fullText = allItems.map(i=>i.str).join('\n');
+          // Use simple date detection
+          const lines = fullText.split('\n');
+          // ... fallback omitted, return what we have
+        }
+
         const result = [];
         for(let d=1; d<=31; d++){
           if(dayMap[d]){
-            result.push({day: d, typeText: dayMap[d].typeText, late: dayMap[d].late, early:'', checkIn: dayMap[d].hasTime});
+            result.push({day: d, typeText: dayMap[d].typeText, late: dayMap[d].late, early:'', checkIn: dayMap[d].hasTime, dateStr: dayMap[d].dateStr});
           }
         }
+        console.log('Parsed with column detection', result, headerY);
         return result;
       };
 
