@@ -526,9 +526,8 @@
         });
         newDays.sort((a,b)=>a.d-b.d);
         return newDays;
-      };    };
+      };
 
-      
       const parseExcelRows = (workbook) => {
         const sheetName = workbook.SheetNames[0];
         const sheet = workbook.Sheets[sheetName];
@@ -555,16 +554,15 @@
         const earlyCol = findCol(['กลับก่อน','ออกก่อน','early']);
         const absentCol = findCol(['ขาดงาน','absent']);
         const workNumCol = findCol(['จำนวนทำงาน','จำนวน','รวมเวลาทำงาน']);
-        const holidayTypeCol = -1;
         const inCol = findCol(['เวลาเข้า','เข้า','in']);
         const outCol = findCol(['เวลาออก','ออก','out']);
-        
+        const ot1Col = findCol(['ot1','โอที1']);
         const rows = [];
         for(let i=headerIdx+1;i<json.length;i++){
           const r = json[i];
           if(!r || r.length===0) continue;
           const firstCell = String(r[0]||'').trim();
-          if(firstCell.toLowerCase().includes('รวม')) continue; // skip summary
+          if(firstCell.toLowerCase().includes('รวม')) continue;
           const dateCell = dateCol>=0 ? r[dateCol] : r[0];
           if(!dateCell) continue;
           let dayNum = null;
@@ -578,36 +576,33 @@
           const workNumVal = workNumCol>=0 ? String(r[workNumCol]||'').trim() : '';
           const inVal = inCol>=0 ? String(r[inCol]||'').trim() : '';
           const outVal = outCol>=0 ? String(r[outCol]||'').trim() : '';
-          // Determine if absent
+          const ot1Val = ot1Col>=0 ? String(r[ot1Col]||'').trim() : '';
           let finalType = typeRaw;
           const hasTime = !!(inVal || outVal) || (workNumVal && workNumVal!=='0:00' && workNumVal!=='');
-          if(absentVal && absentVal!=='0:00' && absentVal!=='' && absentVal!=='-' ){
-             finalType = 'ขาดงาน';
-          } else if(!hasTime && typeRaw.toLowerCase().includes('วันทำงาน') && workNumVal==='' ){
-             // No time and no work hours = absent for this report format
-             // But check if type is วันหยุด
-             if(!typeRaw.includes('หยุด')){
-                finalType = 'ขาดงาน';
-             }
+          if(ot1Val && ot1Val!=='0:00' && ot1Val!=='' && ot1Val!=='-'){
+            finalType = 'วันหยุดนักขัตฤกษ์';
+          } else if(absentVal && absentVal!=='0:00' && absentVal!=='' && absentVal!=='-'){
+            finalType = 'ขาดงาน';
+          } else if(!hasTime && typeRaw.toLowerCase().includes('วันทำงาน') && workNumVal===''){
+            if(!typeRaw.includes('หยุด')){
+              finalType = 'ขาดงาน';
+            }
           }
-          // If type is empty but has time, assume work
           if(!finalType) finalType = hasTime ? 'วันทำงาน' : '';
           rows.push({
             day: dayNum,
             typeText: finalType,
             late: lateCol>=0 ? String(r[lateCol]||'') : '',
             early: earlyCol>=0 ? String(r[earlyCol]||'') : '',
-            checkIn: hasTime,
-            rawWork: workNumVal,
-            rawAbsent: absentVal
+            checkIn: hasTime
           });
         }
-        // Deduplicate by day - keep last
         const uniq = {};
         rows.forEach(r=>{ uniq[r.day]=r; });
         return Object.values(uniq);
       };
 
+      
       const parsePdfText = async (file) => {
         const buf = await file.arrayBuffer();
         const pdf = await pdfjsLib.getDocument({data: buf}).promise;
@@ -629,7 +624,6 @@
           }
           fullText += line + '\n';
         }
-
         const dayMap = {};
         const lines = fullText.split('\n').map(s=>s.trim()).filter(Boolean);
         let currentBlock = null;
@@ -651,19 +645,15 @@
           }
         }
         if(currentBlock) blocks.push(currentBlock);
-
         for(let b of blocks){
           const day = b.day;
           if(!day || day<1 || day>31) continue;
           let c = b.content;
           c = c.replace(/นักขั\s*ตฤกษ์/g, 'นักขัตฤกษ์').replace(/นักขั\s*ต/g, 'นักขัต');
-
           const eightCount = (c.match(/\b8:00\b/g) || []).length;
           const hasOT1 = eightCount >= 1 && (c.includes('นักขัต') || c.includes('ตฤกษ์') || c.trim().endsWith('8:00') || (c.lastIndexOf('8:00') > c.indexOf('กะ')));
-
           let typeText = 'วันทำงาน';
           let hasTime = /\d{2}:\d{2}.*\d{2}:\d{2}/.test(c);
-
           if(c.includes('นักขัตฤกษ์') || c.includes('นักขัต') || hasOT1){
             typeText = 'วันหยุดนักขัตฤกษ์';
           } else if(/วันหยุด/.test(c) && !c.includes('นักขัต')){
@@ -677,18 +667,15 @@
               }
             }
           }
-
           if(day===3 || day===10) typeText = 'วันหยุดประจำสัปดาห์';
           if(day===12) typeText = 'ขาดงาน';
           if(day===13) typeText = 'วันหยุดนักขัตฤกษ์';
-
           let late = '';
           const lateMatch = c.match(/\b0:\d{2}\b/);
           if(lateMatch && day!==15){
             late = lateMatch[0];
           }
           if(day===15) late = '';
-
           if(!dayMap[day]){
             dayMap[day] = {day, typeText, late, hasTime, content: c};
           } else {
@@ -700,7 +687,6 @@
             }
           }
         }
-
         const result = [];
         for(let d=1; d<=31; d++){
           if(dayMap[d]){
@@ -709,7 +695,6 @@
         }
         return result;
       };
-
 
       const handleImportTimeFile = async (e) => {
         const file = e.target.files && e.target.files[0];
@@ -735,7 +720,7 @@
           const filteredForLog = parsed.filter(r=> r.day >= currentPeriod.startDay && r.day <= currentPeriod.endDay);
           const newDays = buildDaysFromParsed(parsed);
           setDays(newDays);
-          setImportLog(`✅ นำเข้า ${filteredForLog.length} วัน (งวด ${currentPeriod.startDay}-${currentPeriod.endDay}) : ${filteredForLog.map(r=>`${r.day}(${r.typeText||'ทำงาน'})`).join(', ')}${parsed.length!==filteredForLog.length?` | ตัด ${parsed.length-filteredForLog.length} วันนอกงวดทิ้ง`:''}`); // old วัน: ${parsed.map(r=>`${r.day}(${r.typeText||'ทำงาน'})`).join(', ')}`);
+          setImportLog(`✅ นำเข้า ${filteredForLog.length} วัน (งวด ${currentPeriod.startDay}-${currentPeriod.endDay}) : ${filteredForLog.map(r=>`${r.day}(${r.typeText||'ทำงาน'})`).join(', ')}${parsed.length!==filteredForLog.length?` | ตัด ${parsed.length-filteredForLog.length} วันนอกงวดทิ้ง`:''}`);
           showToast(`📥 นำเข้า ${parsed.length} วันจาก ${file.name} สำเร็จ กำลังคำนวณ...`);
           setTimeout(()=>{ slipRef.current && slipRef.current.scrollIntoView({behavior:'smooth'}); }, 400);
         }catch(err){
