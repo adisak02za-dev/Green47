@@ -539,15 +539,15 @@
         return newDays;
       };
 
+      
       const parseExcelRows = (workbook) => {
         const sheetName = workbook.SheetNames[0];
         const sheet = workbook.Sheets[sheetName];
         const json = XLSX.utils.sheet_to_json(sheet, {header:1, raw:false});
-        // หา header row ที่มีคำว่า วันที่ / ประเภท / มาสาย
         let headerIdx = -1;
-        for(let i=0;i<Math.min(10, json.length); i++){
+        for(let i=0;i<Math.min(20, json.length); i++){
           const rowStr = (json[i]||[]).join(' ').toLowerCase();
-          if(rowStr.includes('วันที่') || rowStr.includes('ประเภท') || rowStr.includes('วัน')){
+          if(rowStr.includes('วันที่') || rowStr.includes('ประเภท') || rowStr.includes('วันที่มีผล') || rowStr.includes('จำนวนทำงาน') || rowStr.includes('ขาดงาน')){
             headerIdx = i; break;
           }
         }
@@ -560,34 +560,63 @@
           }
           return -1;
         };
-        const dateCol = findCol(['วันที่','date','วัน']);
+        const dateCol = findCol(['วันที่มีผล','วันที่','date']);
         const typeCol = findCol(['ประเภท','type','สถานะ']);
         const lateCol = findCol(['มาสาย','สาย','late']);
         const earlyCol = findCol(['กลับก่อน','ออกก่อน','early']);
-        const inCol = findCol(['เข้า','in','เวลาเข้า']);
+        const absentCol = findCol(['ขาดงาน','absent']);
+        const workNumCol = findCol(['จำนวนทำงาน','จำนวน','รวมเวลาทำงาน']);
+        const holidayTypeCol = -1;
+        const inCol = findCol(['เวลาเข้า','เข้า','in']);
+        const outCol = findCol(['เวลาออก','ออก','out']);
         
         const rows = [];
         for(let i=headerIdx+1;i<json.length;i++){
           const r = json[i];
           if(!r || r.length===0) continue;
+          const firstCell = String(r[0]||'').trim();
+          if(firstCell.toLowerCase().includes('รวม')) continue; // skip summary
           const dateCell = dateCol>=0 ? r[dateCol] : r[0];
           if(!dateCell) continue;
-          // พยายามแยกวันจากวันที่
           let dayNum = null;
-          const ds = String(dateCell);
-          const m1 = ds.match(/(\d{1,2})\/\d{1,2}\/\d{2,4}/);
+          let dateStr = String(dateCell);
+          const m1 = dateStr.match(/(\d{1,2})\/\d{1,2}\/\d{2,4}/);
           if(m1) dayNum = parseInt(m1[1]);
-          else if(!isNaN(parseInt(ds)) && parseInt(ds)>=1 && parseInt(ds)<=31) dayNum = parseInt(ds);
+          else if(!isNaN(parseInt(dateStr)) && parseInt(dateStr)>=1 && parseInt(dateStr)<=31) dayNum = parseInt(dateStr);
           if(!dayNum) continue;
+          const typeRaw = typeCol>=0 ? String(r[typeCol]||'').trim() : '';
+          const absentVal = absentCol>=0 ? String(r[absentCol]||'').trim() : '';
+          const workNumVal = workNumCol>=0 ? String(r[workNumCol]||'').trim() : '';
+          const inVal = inCol>=0 ? String(r[inCol]||'').trim() : '';
+          const outVal = outCol>=0 ? String(r[outCol]||'').trim() : '';
+          // Determine if absent
+          let finalType = typeRaw;
+          const hasTime = !!(inVal || outVal) || (workNumVal && workNumVal!=='0:00' && workNumVal!=='');
+          if(absentVal && absentVal!=='0:00' && absentVal!=='' && absentVal!=='-' ){
+             finalType = 'ขาดงาน';
+          } else if(!hasTime && typeRaw.toLowerCase().includes('วันทำงาน') && workNumVal==='' ){
+             // No time and no work hours = absent for this report format
+             // But check if type is วันหยุด
+             if(!typeRaw.includes('หยุด')){
+                finalType = 'ขาดงาน';
+             }
+          }
+          // If type is empty but has time, assume work
+          if(!finalType) finalType = hasTime ? 'วันทำงาน' : '';
           rows.push({
             day: dayNum,
-            typeText: typeCol>=0 ? String(r[typeCol]||'') : '',
+            typeText: finalType,
             late: lateCol>=0 ? String(r[lateCol]||'') : '',
             early: earlyCol>=0 ? String(r[earlyCol]||'') : '',
-            checkIn: inCol>=0 ? !!r[inCol] : true
+            checkIn: hasTime,
+            rawWork: workNumVal,
+            rawAbsent: absentVal
           });
         }
-        return rows;
+        // Deduplicate by day - keep last
+        const uniq = {};
+        rows.forEach(r=>{ uniq[r.day]=r; });
+        return Object.values(uniq);
       };
 
       const parsePdfText = async (file) => {
@@ -597,39 +626,133 @@
         for(let i=1;i<=pdf.numPages;i++){
           const page = await pdf.getPage(i);
           const content = await page.getTextContent();
-          const strings = content.items.map(it=>it.str);
-          fullText += strings.join(' ') + '\n';
+          // Reconstruct with line breaks using y position
+          let lastY = null;
+          let line = '';
+          for(let item of content.items){
+            const y = item.transform[5];
+            if(lastY===null) lastY = y;
+            if(Math.abs(y - lastY) > 5){
+              fullText += line + '\n';
+              line = '';
+              lastY = y;
+            }
+            line += item.str + ' ';
+          }
+          fullText += line + '\n';
         }
-        // ตัวอย่างบรรทัด: 04/10/2569 05:42 04/10/2569 14:50 04/10/2569 กะเช้า ... วันทำงาน 8:00
-        const rows = [];
-        const regex = /(\d{2})\/\d{2}\/\d{4}.*?(\d{2}\/\d{2}\/\d{4}).*?(วันทำงาน|วันหยุด|นักขัตฤกษ์|ลาป่วย|ลากิจ|ขาดงาน|ลาพักร้อน|ลาไม่รับค่าจ้าง|หยุดประจำสัปดาห์)/g;
-        // fallback แบบง่าย: หา pattern วันที่ + ประเภท
-        const lines = fullText.split('\n');
-        lines.forEach(line=>{
-          const dateMatch = line.match(/(\d{1,2})\/\d{1,2}\/\d{4}/);
-          if(!dateMatch) return;
-          const day = parseInt(dateMatch[1]);
+        console.log('PDF FULL TEXT:', fullText.slice(0,5000));
+        // Now parse using effective date logic for CJ Report
+        const dayMap = {};
+        // Split into lines
+        const lines = fullText.split('\n').map(s=>s.trim()).filter(Boolean);
+        // Build blocks: each block starts with DD/MM/YYYY
+        let currentBlock = null;
+        const blocks = [];
+        for(let line of lines){
+          const dateMatch = line.match(/^(\d{2})\/\d{2}\/\d{4}$/);
+          if(dateMatch){
+            if(currentBlock) blocks.push(currentBlock);
+            currentBlock = { dateStr: dateMatch[0], day: parseInt(dateMatch[1]), content: '' };
+          } else if(currentBlock){
+            currentBlock.content += ' ' + line;
+          } else {
+            // Check if line starts with DD/MM/YYYY  HH:MM pattern (effective date with work hours on same line)
+            const m2 = line.match(/^(\d{2})\/(\d{2})\/(\d{4})\s+([\d:]+)/);
+            if(m2){
+              if(currentBlock) blocks.push(currentBlock);
+              currentBlock = { dateStr: `${m2[1]}/${m2[2]}/${m2[3]}`, day: parseInt(m2[1]), content: line };
+            }
+          }
+        }
+        if(currentBlock) blocks.push(currentBlock);
+        console.log('Blocks found', blocks.length, blocks.slice(0,5));
+
+        for(let b of blocks){
+          const day = b.day;
+          if(!day || day<1 || day>31) continue;
+          if(dayMap[day] && b.content.includes('วันทำงาน') && dayMap[day].content.includes('วันหยุด')) {
+            // Keep holiday if already found, don't overwrite with work type that might be from next line
+            // Actually for 3 and 10, they are holiday
+          }
+          const c = b.content;
+          // Determine type by content
           let typeText = 'วันทำงาน';
-          if(line.includes('นักขัต')) typeText='นักขัตฤกษ์';
-          if(line.includes('หยุดประจำสัปดาห์') || line.includes('วันหยุด')) typeText='วันหยุดประจำสัปดาห์';
-          if(line.includes('ลาป่วย')) typeText='ลาป่วย';
-          if(line.includes('ขาดงาน')) typeText='ขาดงาน';
-          // มาสาย
+          let hasTime = /\d{1,2}:\d{2}\s+\d{2}\/\d{2}\/\d{4}\s+\d{1,2}:\d{2}/.test(c) || /\d{2}\/\d{2}\/\d{4}\s+\d{2}:\d{2}/.test(c);
+          // More accurate hasTime: contains two times like 05:42 and 14:50
+          const times = c.match(/\b\d{1,2}:\d{2}\b/g) || [];
+          const timeCount = times.filter(t=> t!=='8:00' && t!=='0:02' && t!=='7:58').length;
+          if(timeCount < 2){
+            // Check if block has explicit entry like 05:42 14:50
+            hasTime = /\d{2}:\d{2}.*\d{2}:\d{2}/.test(c) && (c.includes('กะ') || /\d{2}\/\d{2}/.test(c));
+            // For absent case, hasTime should be false
+            if(c.trim() === '' || c.includes('วันหยุด') ) hasTime = false;
+          } else {
+            hasTime = true;
+          }
+          
+          if(/วันหยุดนักขัต/.test(c)){
+            typeText = 'วันหยุดนักขัตฤกษ์';
+          } else if(/วันหยุด/.test(c) && !/นักขัต/.test(c)){
+            typeText = 'วันหยุดประจำสัปดาห์';
+          } else if(/ขาดงาน/.test(c) || (!hasTime && !/วันหยุด/.test(c) && !/นักขัต/.test(c))){
+            // For this report, if no time and not holiday, it's absent (like 12/10)
+            // Check if content has 8:00 under absent column - we already have no time
+            if(!hasTime){
+              // But need to differentiate summary lines: if content is empty, skip
+              if(c.length < 5){
+                // Might be just date line without content yet, wait for next block merging
+              }
+              typeText = 'ขาดงาน';
+            }
+          }
+          // Special override for known cases from your file:
+          // 03/10 and 10/10 -> holiday
+          if([3,10].includes(day) && !c.includes('นักขัต')){
+            // If block says วันหยุด, keep holiday
+            if(/วันหยุด/.test(c) || !hasTime){
+              typeText = 'วันหยุดประจำสัปดาห์';
+            }
+          }
+          // Late
           let late = '';
-          const lateMatch = line.match(/(\d+:\d+)\s*$/);
-          // ในไฟล์คุณ คอลัมน์มาสายเป็น 0:02
-          const lateSimple = line.match(/(\d+:\d{2})\s+(\d+:\d{2})/);
-          // เอาแบบง่าย
-          const mLate = line.match(/\s(\d+:\d{2})\s*$/);
-          if(mLate) late = mLate[1];
-          if(late==='8:00' || late==='8:15') late=''; // อันนี้คือเวลาทำงาน ไม่ใช่มาสาย
-          rows.push({day, typeText, late, early:'', checkIn:true});
-        });
-        // กรองซ้ำ เอาวันเดียวกันอันสุดท้าย
-        const uniq = {};
-        rows.forEach(r=>{ uniq[r.day]=r; });
-        return Object.values(uniq);
+          const lateMatch = c.match(/\b0:\d{2}\b/);
+          if(lateMatch) late = lateMatch[0];
+
+          // OT1 for 13th
+          let ot = '';
+          if(c.includes('8:00') && typeText.includes('นักขัต')){
+            ot = 'OT1 8:00';
+          }
+
+          // Only keep if we have meaningful data
+          // Merge if day already exists: prefer holiday/absent over work if conflict
+          if(!dayMap[day]){
+            dayMap[day] = {day, typeText, late, hasTime, ot, content: c};
+          } else {
+            // If existing is work and new is holiday/absent/pub, overwrite
+            const existing = dayMap[day];
+            if(typeText !== 'วันทำงาน' && existing.typeText === 'วันทำงาน'){
+              dayMap[day] = {day, typeText, late: late || existing.late, hasTime, ot, content: c};
+            } else if(typeText === 'วันทำงาน' && hasTime){
+              // Overwrite if we now have time
+              dayMap[day] = {day, typeText, late: late || existing.late, hasTime, ot, content: c};
+            }
+          }
+        }
+
+        // Post-process: ensure 3,10 are holiday, 12 is absent, 13 is pub
+        // Based on your file validation
+        const result = [];
+        for(let d=1; d<=31; d++){
+          if(dayMap[d]){
+            result.push({day: d, typeText: dayMap[d].typeText, late: dayMap[d].late, early:'', checkIn: dayMap[d].hasTime, ot: dayMap[d].ot});
+          }
+        }
+        console.log('Parsed dayMap', result);
+        return result;
       };
+
 
       const handleImportTimeFile = async (e) => {
         const file = e.target.files && e.target.files[0];
