@@ -60,7 +60,6 @@
     const TH_MONTHS = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
     const TH_MONTHS_FULL = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
     const TH_DAYS_SHORT = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'];
-    const WEEK_ORDER = [1, 2, 3, 4, 5, 6, 0];
 
     const DAY_TYPES = {
       work: { label: '✅ วันทำงานปกติ', pay: 1 },
@@ -126,85 +125,32 @@
       }
       return days;
     }
-    // ===================== WEEKLY HELPERS =====================
-    // [label, key, ทิศทางที่ดี (1 = มากดี, -1 = น้อยดี, 0 = กลาง), รูปแบบ]
-    const WEEK_ROWS = [
-      ['✅ วันทำงานปกติ', 'work', 1],
-      ['🎌 นักขัตฤกษ์/OT1 มาทำงาน (2 แรง)', 'pubwork', 1],
-      ['🎏 นักขัตฤกษ์ หยุด (1 แรง)', 'puboff', 0],
-      ['🏖️ วันหยุด (ไม่ได้ค่าจ้าง)', 'holiday', 0],
-      ['🤒 ลาป่วย', 'sick', 0],
-      ['📄 ลากิจ', 'personal', 0],
-      ['🌴 ลาพักร้อน', 'annual', 0],
-      ['📋 รวมวันลา (ได้เงิน)', 'leave', 0],
-      ['❌ ขาดงาน', 'absent', -1],
-      ['⛔ ลาไม่รับค่าจ้าง', 'unpaid', -1],
-      ['💰 วันได้รับค่าจ้าง', 'paidDays', 1],
-      ['⏱️ ชม.ถูกหัก', 'unpaidHours', -1, 'hm'],
-      ['💵 ค่าแรงโดยประมาณ', 'estWage', 1, 'money'],
-    ];
-    const WEEK_SERIES = [
-      { k: 'work', label: 'ทำงาน', color: '#4f7fef' },
-      { k: 'pubwork', label: 'นักขัตฯ มาทำ', color: '#f59e0b' },
-      { k: 'puboff', label: 'นักขัตฯ หยุด', color: '#fcd34d' },
-      { k: 'holiday', label: 'วันหยุด 0฿', color: '#94a3b8' },
-      { k: 'sick', label: 'ลาป่วย', color: '#a855f7' },
-      { k: 'personal', label: 'ลากิจ', color: '#ec4899' },
-      { k: 'annual', label: 'พักร้อน', color: '#14b8a6' },
-      { k: 'absent', label: 'ขาดงาน', color: '#ef4444' },
-      { k: 'unpaid', label: 'ลาไม่รับเงิน', color: '#7f1d1d' },
+
+    // ===================== DAILY COMPARISON HELPERS =====================
+    // เปรียบเทียบรายวัน: ใช้ day (1-31) เป็น key หลักในการเทียบชนกันระหว่าง 2 งวด
+    const DAILY_ROWS = [
+      ['ประเภทวัน', 'typeText', 0],
+      ['จำนวนทำงาน (ชม.)', 'work', 1, 'hm'],
+      ['มาสาย (ชม.)', 'late', -1, 'hm'],
+      ['กลับก่อน (ชม.)', 'early', -1, 'hm'],
+      ['ขาดงาน (ชม.)', 'absent', -1, 'hm'],
+      ['ลาป่วย (ชม.)', 'sick', 0, 'hm'],
+      ['ลากิจ (ชม.)', 'personal', 0, 'hm'],
+      ['พักร้อน (ชม.)', 'annual', 0, 'hm'],
+      ['OT รวม (ชม.)', 'otTotal', 1, 'hm'],
+      ['ชั่วโมงไม่ได้รับค่าจ้าง', 'unpaidHours', -1, 'hm'],
     ];
 
-    function weekStartStr(dateStr) {
-      const [y, m, d] = dateStr.split('-').map(Number);
-      const dt = new Date(y, m - 1, d);
-      dt.setDate(dt.getDate() - ((dt.getDay() + 6) % 7)); // ถอยไปวันจันทร์
-      return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`;
-    }
-    function weekLabel(startStr) {
-      const [y, m, d] = startStr.split('-').map(Number);
-      const s = new Date(y, m - 1, d);
-      const e = new Date(y, m - 1, d + 6);
-      const yy = String(e.getFullYear() + 543).slice(-2);
-      return s.getMonth() === e.getMonth()
-        ? `${s.getDate()}–${e.getDate()} ${TH_MONTHS[e.getMonth()]}${yy}`
-        : `${s.getDate()} ${TH_MONTHS[s.getMonth()]} – ${e.getDate()} ${TH_MONTHS[e.getMonth()]}${yy}`;
-    }
-    const weekOptionLabel = (w) =>
-      `${w.label}${w.days < 7 ? ` (มีข้อมูล ${w.days}/7 วัน)` : ''}${w.hasPreview ? ' *' : ''}`;
-
-    function buildWeeklyStats(dayList, settings) {
-      const rate = Number(settings.rate) || 0;
-      const hrs = Number(settings.hours) || 8;
-      const mult = Number(settings.holMult) || 0;
+    function getDayRecordMap(record) {
       const map = {};
-      dayList.forEach(day => {
-        if (!day.dateStr) return;
-        const k = weekStartStr(day.dateStr);
-        if (!map[k]) map[k] = {
-          key: k, label: weekLabel(k), days: 0, hasPreview: false,
-          work: 0, pubwork: 0, puboff: 0, holiday: 0, sick: 0, personal: 0, annual: 0, absent: 0, unpaid: 0,
-          unpaidHours: 0, units: 0,
-        };
-        const w = map[k];
-        w.days++;
-        if (w[day.type] != null) w[day.type]++;
-        if (day._preview) w.hasPreview = true;
-        if (DAY_TYPES[day.type]?.pay) {
-          w.unpaidHours += Math.max(0, Number(day.unpaidHours) || 0);
-          w.units += day.type === 'pubwork' ? mult : 1;
-        }
+      if (!record || !record.days) return map;
+      record.days.forEach(d => {
+        // ดึงวันที (เช่น 1, 2, ... 31) เป็น key
+        map[d.d] = d;
       });
-      return Object.values(map)
-        .sort((a, b) => a.key.localeCompare(b.key))
-        .map(w => ({
-          ...w,
-          leave: w.sick + w.personal + w.annual,
-          paidDays: w.work + w.pubwork + w.puboff + w.sick + w.personal + w.annual,
-          unpaidHours: Math.round(w.unpaidHours * 100) / 100,
-          estWage: Math.max(0, Number((w.units * rate - w.unpaidHours * (rate / hrs)).toFixed(2))),
-        }));
+      return map;
     }
+
     // ===================== IMPORT HELPERS =====================
     const median = (arr) => {
       const s = [...arr].sort((a, b) => a - b);
@@ -219,9 +165,7 @@
       return `${Math.floor(mins / 60)}:${pad(mins % 60)}`;
     }
     const hmOrDash = (h) => (h > 0.001 ? fmtHM(h) : '-');
-    // มาสายน้อยกว่าค่านี้ (นาที) = ไม่หัก · ตั้งแต่ค่านี้ขึ้นไป = หักตามเวลาที่สายจริง
-const LATE_GRACE_MIN = 30;
-
+    const LATE_GRACE_MIN = 30;
 
     const PUA_MAP = {
       '\uF700': '\u0E10', '\uF701': '\u0E34', '\uF702': '\u0E35', '\uF703': '\u0E36', '\uF704': '\u0E37',
@@ -297,11 +241,9 @@ const LATE_GRACE_MIN = 30;
     }
     function parseDateCell(rawV, textV) {
       if (rawV instanceof Date && !isNaN(rawV)) {
-        // ปัด +12 ชม. กันวันที่เลื่อนจากเขตเวลา
         const t = new Date(rawV.getTime() + 12 * 3600 * 1000);
         return fixYear(t.getFullYear(), t.getMonth() + 1, t.getDate());
       }
-      // Excel serial number (รองรับปี พ.ศ. ที่เก็บเป็นวันที่จริงด้วย)
       if (typeof rawV === 'number' && rawV > 20000 && rawV < 400000 && window.XLSX) {
         try {
           const o = XLSX.SSF.parse_date_code(rawV);
@@ -365,17 +307,15 @@ const LATE_GRACE_MIN = 30;
       const absentH = r.absent || 0;
       const otVal = Math.max(r.ot1 || 0, r.otTotal || 0, r.ot15 || 0, r.ot2 || 0, r.ot3 || 0);
 
-      // ===== เกณฑ์มาสาย =====
       const lateMin = Math.round((r.late || 0) * 60);
       const lateForgiven = lateMin > 0 && lateMin < LATE_GRACE_MIN;
       const lateCut = lateForgiven ? 0 : (r.late || 0);
       const directCut = lateCut + (r.early || 0) + absentH;
       const calcUnpaid = (withWork) => {
         if (!withWork) return round4(Math.min(directCut, stdHours));
-        // ชม.ทำงานที่ขาดไปเพราะสายที่ได้รับยกเว้น ไม่ต้องนับหัก
         const forgiven = lateForgiven ? (r.late || 0) : 0;
         let missing = Math.max(0, stdHours - work - forgiven);
-        missing = Math.round(missing * 60) / 60; // ปัดเป็นนาที กันเศษทศนิยม
+        missing = Math.round(missing * 60) / 60;
         return round4(Math.min(Math.max(directCut, missing), stdHours));
       };
       const lateNote = lateForgiven ? ` (สาย ${lateMin} นาที · ไม่หัก)` : '';
@@ -383,7 +323,6 @@ const LATE_GRACE_MIN = 30;
       const otValid = (cols.has('ot1') && cols.has('otTotal')) ? (r.ot1 > 0 && r.otTotal > 0) : otVal > 0;
       const otWarn = (cols.has('ot1') && cols.has('otTotal') && otVal > 0 && !(r.ot1 > 0 && r.otTotal > 0)) ? 'มีค่า OT แค่ช่องเดียว โปรดตรวจสอบ' : '';
 
-      // 1) นักขัตฤกษ์
       if (isPub) {
         if (r.hasTime || hasWork || otValid) {
           return { type: 'pubwork', unpaidHours: calcUnpaid(false), note: `นักขัตฤกษ์ มาทำงาน${otValid ? ` (OT ${fmtHM(otVal)})` : ''} → 2 แรง${lateNote}`, warn: '' };
@@ -391,18 +330,15 @@ const LATE_GRACE_MIN = 30;
         return { type: 'puboff', unpaidHours: 0, note: 'นักขัตฤกษ์ ไม่ได้มาทำงาน → 1 แรง', warn: otWarn };
       }
 
-      // 2) OT ล้วน
       if (otValid && !hasWork && !isHolidayType) {
         return { type: 'pubwork', unpaidHours: 0, note: `OT ${fmtHM(otVal)} ล้วน → 2 แรง`, warn: r.hasTime ? '' : 'ไม่มีเวลาสแกนเข้า-ออก' };
       }
 
-      // 3) ลาต่างๆ
       if (r.sick > 0) return { type: 'sick', unpaidHours: 0, note: `ลาป่วย ${fmtHM(r.sick)}`, warn: '' };
       if (r.personal > 0) return { type: 'personal', unpaidHours: 0, note: `ลากิจ ${fmtHM(r.personal)}`, warn: '' };
       if (r.annual > 0) return { type: 'annual', unpaidHours: 0, note: `ลาพักร้อน ${fmtHM(r.annual)}`, warn: '' };
       if (r.otherLeave > 0) return { type: 'personal', unpaidHours: 0, note: `ลาอื่นๆ ${fmtHM(r.otherLeave)} (คิดเป็นลากิจ)`, warn: '' };
 
-      // 4) วันหยุด
       if (isHolidayType) {
         if (hasWork || r.hasTime) {
           return { type: 'work', unpaidHours: calcUnpaid(hasWork), note: `วันหยุดแต่มาทำงาน ${hasWork ? fmtHM(work) : 'มีสแกน'} → 1 แรง${lateNote}`, warn: '' };
@@ -410,7 +346,6 @@ const LATE_GRACE_MIN = 30;
         return { type: 'holiday', unpaidHours: 0, note: 'วันหยุด ไม่มีชั่วโมงทำงาน → 0 บาท', warn: otWarn };
       }
 
-      // 5) วันทำงานปกติ มีชั่วโมงทำงาน
       if (hasWork) {
         const unpaid = calcUnpaid(true);
         let note = `ทำงาน ${fmtHM(work)}`;
@@ -424,17 +359,14 @@ const LATE_GRACE_MIN = 30;
         return { type: 'work', unpaidHours: unpaid, note, warn };
       }
 
-      // 6) มีสแกน แต่อ่านจำนวนทำงานไม่ได้
       if (r.hasTime) {
         return { type: 'work', unpaidHours: calcUnpaid(false), note: `มีสแกน ${r.timeTxt || 'เข้า-ออก'} → วันทำงาน${lateNote}`, warn: 'อ่านช่องจำนวนทำงานไม่ได้' };
       }
 
-      // 7) ไม่มีชั่วโมง ไม่มีสแกน → ขาดงาน
       const isAbsentMarked = absentH > 0 || /ขาด/.test(t);
       return { type: 'absent', unpaidHours: 0, note: isAbsentMarked ? `ขาดงาน ${fmtHM(absentH)}` : 'ไม่มีชั่วโมง/สแกน → ขาดงาน', warn: otWarn || (isWorkType ? 'ไม่มีเวลาสแกนเข้า-ออก' : '') };
     }
 
-    // ===== อ่าน Excel / CSV =====
     function parseExcelFile(wb) {
       for (const name of wb.SheetNames) {
         const sheet = wb.Sheets[name];
@@ -460,7 +392,6 @@ const LATE_GRACE_MIN = 30;
         }
         if (hIdx < 0 || cols.date == null) continue;
 
-        // หัวตาราง 2 ชั้น (ถ้ามี) — รวมเฉพาะเมื่อแถวถัดไปเป็นหัวตารางจริง
         const nextTxt = txt[hIdx + 1];
         if (nextTxt) {
           const testDt = parseDateCell((raw[hIdx + 1] || [])[cols.date], nextTxt[cols.date]);
@@ -513,10 +444,9 @@ const LATE_GRACE_MIN = 30;
           return { rows: list, info: `ชีต "${name}" · แถวหัว ${hIdx + 1} · พบคอลัมน์: ${colNames} · อ่านได้ ${list.length} วัน` };
         }
       }
-      return { rows: [], info: 'ไม่พบหัวตาราง (วันที่ / ประเภท / จำนวนทำงาน) ในไฟล์ — ตรวจสอบว่าเป็นไฟล์ รายงานผลประมวลเวลา หรือไม่' };
+      return { rows: [], info: 'ไม่พบหัวตาราง (วันที่ / ประเภท / จำนวนทำงาน) ในไฟล์' };
     }
 
-    // ===== อ่าน PDF =====
     const DATE_RE = /^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s*\(?[\u0E00-\u0E7F.]{1,10}\)?)?$/;
     const HDR_FRAG = /วันที่|เวลา|เข้า|ออก|กะ|ประเภท|จำนวน|ทำงาน|สาย|กลับ|ก่อน|รูด|บัตร|ขาด|ลา|ป่วย|กิจ|พัก|ร้อน|อื่น|รวม|^ot|ot\d|โอที|ชม|นาที|ครั้ง|^\(|^date$|^type$/;
 
@@ -639,7 +569,6 @@ const LATE_GRACE_MIN = 30;
       return { rows, info };
     }
 
-    // ===================== CALCULATION =====================
     function calculatePayroll(period, days, settings, extras) {
       let work = 0, pubW = 0, pubO = 0, holiday = 0, sick = 0, personal = 0, annual = 0, absent = 0, unpaid = 0;
       let unHr = 0, ssoUnHr = 0, pubUnHr = 0, wageUnits = 0, ssoWageUnits = 0;
@@ -698,7 +627,6 @@ const LATE_GRACE_MIN = 30;
       };
     }
 
-    // ===================== ICONS =====================
     const ICONS = {
       plus: 'M12 5v14M5 12h14',
       zap: 'M13 2 3 14h9l-1 8 10-12h-9l1-8z',
@@ -851,7 +779,6 @@ const LATE_GRACE_MIN = 30;
       );
     }
 
-    // ===================== APP =====================
     function App() {
       const [isDark, setIsDark] = useState(() => localStorage.getItem('pst_theme') !== 'light');
       const now = new Date();
@@ -992,7 +919,6 @@ const LATE_GRACE_MIN = 30;
       const updateExtra = (id, patch) => setExtras(prev => prev.map(e => (e.id === id ? { ...e, ...patch } : e)));
       const removeExtra = (id) => setExtras(prev => prev.filter(e => e.id !== id));
 
-      // ===== นำเข้าไฟล์ลงเวลา =====
       const handleImportTimeFile = async (e) => {
         const file = e.target.files && e.target.files[0];
         e.target.value = '';
@@ -1063,13 +989,11 @@ const LATE_GRACE_MIN = 30;
           const periodLen = target.endDay - target.startDay + 1;
           setImportLog(
             `✅ ${file.name}: อ่านได้ ${parsed.length} วัน → ใช้กับงวด ${target.label} จำนวน ${usedRows.length}/${periodLen} วัน` +
-            (outsideRows.length ? ` · ข้ามวันนอกงวด ${outsideRows.length} วัน (${outsideRows.map(r => `${pad(r.d)}/${pad(r.m)}`).join(', ')})` : '') +
+            (outsideRows.length ? ` · ข้ามวันนอกงวด ${outsideRows.length} วัน` : '') +
             (switched ? ' · เลือกงวดให้อัตโนมัติ' : '') +
             ` | ${result.info}`
           );
-          showToast(warnCount
-            ? `📥 นำเข้า ${usedRows.length} วัน · ⚠️ มี ${warnCount} วันควรตรวจสอบ`
-            : `📥 นำเข้า ${usedRows.length} วันสำเร็จ`);
+          showToast(warnCount ? `📥 นำเข้า ${usedRows.length} วัน · ⚠️ มี ${warnCount} วันควรตรวจสอบ` : `📥 นำเข้า ${usedRows.length} วันสำเร็จ`);
         } catch (err) {
           console.error(err);
           showToast('⚠️ อ่านไฟล์ไม่สำเร็จ: ' + err.message);
@@ -1188,54 +1112,43 @@ const LATE_GRACE_MIN = 30;
         }));
       }, [records]);
 
-      useEffect(() => {
-        if (records.length >= 2) {
-          if (!records.find(r => r.key === cmpA)) setCmpA(records[1].key);
-          if (!records.find(r => r.key === cmpB)) setCmpB(records[0].key);
-        }
-      }, [records]);
-      const recA = records.find(r => r.key === cmpA);
-      const recB = records.find(r => r.key === cmpB);
-      const CMP_ROWS = [
-        ['วันจ่ายเงิน (วัน)', r => r.stats.paidDays, false, true],
-        ['ค่าแรงรายวัน', r => r.dailyWage],
-        ['ค่าวันหยุด/นักขัตฤกษ์', r => r.pubWage || 0],
-        ['รายได้เพิ่มเติม', r => r.extraSum || 0],
-        ['รวมรายได้', r => r.gross],
-        ['ประกันสังคม', r => r.sso, true],
-        ['รวมเงินหัก', r => r.ded, true],
-        ['เงินสุทธิ', r => r.net],
-      ];
-      // ===== รายสัปดาห์ =====
-      const [includeCurrent, setIncludeCurrent] = useState(true);
-      const [wkA, setWkA] = useState('');
-      const [wkB, setWkB] = useState('');
+      // ===== จัดการเปรียบเทียบรายวัน =====
+      const [includeCurrentDaily, setIncludeCurrentDaily] = useState(true);
+      const [cmpDailyA, setCmpDailyA] = useState('');
+      const [cmpDailyB, setCmpDailyB] = useState('');
 
-      const weeklyStats = useMemo(() => {
-        const byDate = {};
-        [...records].sort((a, b) => a.key.localeCompare(b.key)).forEach(r => {
-          (r.days || []).forEach(d => { if (d.dateStr) byDate[d.dateStr] = d; });
-        });
-        if (includeCurrent) {
+      const allDailyOptions = useMemo(() => {
+        const list = [...records].sort((a, b) => a.key.localeCompare(b.key));
+        if (includeCurrentDaily) {
           const saved = records.some(r => r.key === calculation.key);
-          days.forEach(d => { if (d.dateStr) byDate[d.dateStr] = { ...d, _preview: !saved }; });
+          if (!saved) list.push({ ...calculation, _preview: true });
         }
-        return buildWeeklyStats(Object.values(byDate), settings);
-      }, [records, days, includeCurrent, calculation.key, settings]);
+        return list;
+      }, [records, calculation, includeCurrentDaily]);
 
       useEffect(() => {
-        if (!weeklyStats.length) return;
-        const keys = weeklyStats.map(w => w.key);
-        if (!keys.includes(wkB)) setWkB(keys[keys.length - 1]);
-        if (!keys.includes(wkA)) setWkA(keys[Math.max(0, keys.length - 2)]);
-      }, [weeklyStats]);
+        if (!allDailyOptions.length) return;
+        const keys = allDailyOptions.map(r => r.key);
+        if (!keys.includes(cmpDailyB)) setCmpDailyB(keys[keys.length - 1]);
+        if (!keys.includes(cmpDailyA)) setCmpDailyA(keys[Math.max(0, keys.length - 2)]);
+      }, [allDailyOptions]);
 
-      const wkAData = weeklyStats.find(w => w.key === wkA);
-      const wkBData = weeklyStats.find(w => w.key === wkB);
+      const recordDailyA = allDailyOptions.find(r => r.key === cmpDailyA);
+      const recordDailyB = allDailyOptions.find(r => r.key === cmpDailyB);
+
+      const dailyMapA = useMemo(() => getDayRecordMap(recordDailyA), [recordDailyA]);
+      const dailyMapB = useMemo(() => getDayRecordMap(recordDailyB), [recordDailyB]);
+
+      // รวมรายชื่อวัน (1-31) ที่มีอยู่ในฝั่งใดฝั่งหนึ่ง
+      const allDaysUnion = useMemo(() => {
+        const setDays = new Set([...Object.keys(dailyMapA), ...Object.keys(dailyMapB)].map(Number));
+        return Array.from(setDays).sort((a, b) => a - b);
+      }, [dailyMapA, dailyMapB]);
+
       const TABS = [
         ['calc', '🧮 คำนวณงวดใหม่'],
         ['hist', '📚 ประวัติรายเดือน'],
-        ['cmp', '📊 เปรียบเทียบงวด'],
+        ['cmpDaily', '📅 เปรียบเทียบรายวัน'],
         ['set', '⚙️ ตั้งค่า'],
       ];
 
@@ -1396,7 +1309,7 @@ const LATE_GRACE_MIN = 30;
                       </button>
                     </div>
                     <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
-                      {WEEK_ORDER.map(dow => {
+                      {['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'].map((dName, dow) => {
                         const active = weeklyOff.includes(dow);
                         const weekend = dow === 0 || dow === 6;
                         return (
@@ -1406,7 +1319,7 @@ const LATE_GRACE_MIN = 30;
                                 ? 'bg-rose-500 border-rose-500 text-white shadow-lg shadow-rose-500/30'
                                 : `bg-slate-100 border-slate-200 hover:bg-slate-200 dark:bg-slate-800 dark:border-slate-700 dark:hover:bg-slate-700 ${weekend ? 'text-rose-500 dark:text-rose-400' : 'text-slate-600 dark:text-slate-300'}`
                             }`}>
-                            {TH_DAYS_SHORT[dow]}
+                            {dName}
                             <div className={`text-[9px] font-normal mt-0.5 ${active ? 'text-white/80' : 'text-slate-400'}`}>
                               {active ? 'หยุด' : 'ทำงาน'}
                             </div>
@@ -1414,15 +1327,6 @@ const LATE_GRACE_MIN = 30;
                         );
                       })}
                     </div>
-                  </div>
-
-                  <div className="p-3 rounded-xl border mb-3 text-xs bg-amber-50 border-amber-200 text-amber-800 dark:bg-amber-950/20 dark:border-amber-800/50 dark:text-amber-300 space-y-1">
-                    <div><strong>กติกาการอ่านไฟล์ รายงานผลประมวลเวลา:</strong></div>
-                    <div>• <b>วันที่มีผล</b> = วันที่จริง | <b>ประเภท=วันหยุด</b> + ไม่มีจำนวนทำงาน/สแกน = <span className="underline font-bold">0 บาท</span></div>
-                    <div>• <b>ประเภท=วันทำงาน</b> + <b>จำนวนทำงาน=8:00</b> = วันทำงานปกติ 1 แรง</div>
-                    <div>• <b>วันทำงาน</b> + ไม่มีสแกน/ไม่มีชั่วโมง = <b>ขาดงาน</b></div>
-                    <div>• ชั่วโมงหัก = ค่ามากกว่าระหว่าง (8 ชม. − ชม.ทำงานจริง) กับ (สาย + กลับก่อน + ขาด) เช่น 7:58 + สาย 0:02 → หัก 0:02 | 5:45 → หัก 2:15</div>
-                    <div>• <b>OT</b> รองรับ OT1/OT1.5/OT2/OT3/รวม OT — ถ้ามีแต่ OT ล้วน (ไม่มีชั่วโมงปกติ) = 2 แรง</div>
                   </div>
 
                   <div className="space-y-2">
@@ -1452,7 +1356,7 @@ const LATE_GRACE_MIN = 30;
                           <div>
                             {day.type === 'holiday' && <span className="text-[11px] text-slate-400 font-semibold px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-800">🏖️ วันหยุด (0 ฿)</span>}
                             {['work', 'sick', 'personal', 'annual'].includes(day.type) && <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold px-2 py-0.5 rounded bg-emerald-500/10">✅ {formatMoney(settings.rate)} ฿</span>}
-                            {day.type === 'pubwork' && <span className="text-[11px] text-amber-600 dark:text-amber-400 font-semibold px-2 py-0.5 rounded bg-amber-500/10">🎌 {settings.holMult} แรง ({formatMoney(settings.rate * settings.holMult)} ฿)</span>}
+                            {day.type === 'pubwork' && <span className="text-[11px] text-amber-600 dark:text-amber-400 font-semibold px-2 py-0.5 rounded bg-amber-500/10">🎌 {settings.holMult} แรง</span>}
                             {day.type === 'puboff' && <span className="text-[11px] text-amber-600 dark:text-amber-300 font-semibold px-2 py-0.5 rounded bg-amber-500/10">🎏 {formatMoney(settings.rate)} ฿</span>}
                             {['absent', 'unpaid'].includes(day.type) && <span className="text-[11px] text-rose-500 font-semibold px-2 py-0.5 rounded bg-rose-500/10">0.00 ฿</span>}
                           </div>
@@ -1482,51 +1386,32 @@ const LATE_GRACE_MIN = 30;
                 </div>
 
                 <div className={`${CARD} no-print`}>
-                  <SectionHead num="4" title="รายได้เพิ่มเติมประจำงวด" pill={<Pill>ใส่เฉพาะงวดที่ได้</Pill>}
-                    desc="เช่น Incentive Audit, เบี้ยขยัน, ค่ากะ, ค่าเดินทาง" />
-
+                  <SectionHead num="4" title="รายได้เพิ่มเติมประจำงวด" pill={<Pill>ใส่เฉพาะงวดที่ได้</Pill>} />
                   {extras.length === 0 ? (
-                    <div className="py-6 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 text-center text-sm text-slate-400">
-                      ยังไม่มีรายการรายได้เพิ่มเติมในงวดนี้
-                    </div>
+                    <div className="py-6 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 text-center text-sm text-slate-400">ยังไม่มีรายการรายได้เพิ่มเติม</div>
                   ) : (
                     <div className="space-y-2">
                       {extras.map(e => (
                         <div key={e.id} className="flex items-center gap-2">
-                          <input type="text" value={e.name} placeholder="ชื่อรายการ เช่น เบี้ยขยัน"
-                            onChange={ev => updateExtra(e.id, { name: ev.target.value })}
-                            className={`${INPUT} flex-1`} />
-                          <input type="number" inputMode="decimal" value={e.amt} placeholder="0.00"
-                            onChange={ev => updateExtra(e.id, { amt: ev.target.value })}
-                            className={`${INPUT} !w-32 sm:!w-40 font-mono text-right`} />
-                          <button onClick={() => removeExtra(e.id)} title="ลบ"
-                            className="w-11 h-11 shrink-0 grid place-items-center rounded-2xl border border-rose-300 text-rose-500 hover:bg-rose-500/10 dark:border-rose-800/60">
-                            <Ico name="x" />
-                          </button>
+                          <input type="text" value={e.name} placeholder="ชื่อรายการ" onChange={ev => updateExtra(e.id, { name: ev.target.value })} className={`${INPUT} flex-1`} />
+                          <input type="number" inputMode="decimal" value={e.amt} placeholder="0.00" onChange={ev => updateExtra(e.id, { amt: ev.target.value })} className={`${INPUT} !w-32 sm:!w-40 font-mono text-right`} />
+                          <button onClick={() => removeExtra(e.id)} className="w-11 h-11 shrink-0 grid place-items-center rounded-2xl border border-rose-300 text-rose-500 hover:bg-rose-500/10"><Ico name="x" /></button>
                         </div>
                       ))}
-                      <div className="flex justify-between text-sm pt-1 px-1">
-                        <span className="text-slate-400">รวมรายได้เพิ่มเติม</span>
-                        <span className="font-mono font-bold text-amber-500">+{formatMoney(calculation.extraSum)} ฿</span>
-                      </div>
                     </div>
                   )}
-
                   <div className="flex flex-wrap gap-3 mt-4">
-                    <button onClick={() => addExtra()} className={BTN_OUTLINE}>
-                      <Ico name="plus" /> เพิ่มรายการ
-                    </button>
+                    <button onClick={() => addExtra()} className={BTN_OUTLINE}><Ico name="plus" /> เพิ่มรายการ</button>
                     {settings.quickName && Number(settings.quickAmt) > 0 && (
-                      <button onClick={() => { addExtra(settings.quickName, settings.quickAmt); showToast(`⚡ เพิ่ม ${settings.quickName} +${formatMoney(settings.quickAmt)} ฿`); }}
-                        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl border text-sm font-semibold border-amber-500/50 bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 dark:text-amber-400 transition">
+                      <button onClick={() => { addExtra(settings.quickName, settings.quickAmt); showToast(`⚡ เพิ่ม ${settings.quickName}`); }}
+                        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl border text-sm font-semibold border-amber-500/50 bg-amber-500/10 text-amber-600 dark:text-amber-400">
                         <Ico name="zap" /> {settings.quickName} +{formatMoney(settings.quickAmt)} ฿
                       </button>
                     )}
                   </div>
-
                   <button onClick={handleCalculate}
-                    className="mt-5 w-full py-4 rounded-2xl text-white font-bold text-sm sm:text-base flex items-center justify-center gap-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 shadow-lg shadow-blue-600/30 transition active:scale-[0.99]">
-                    <Ico name="calc" className="w-5 h-5" /> คำนวณเงินงวดนี้ &amp; อัปเดตกราฟ Real-time
+                    className="mt-5 w-full py-4 rounded-2xl text-white font-bold text-sm sm:text-base flex items-center justify-center gap-3 bg-gradient-to-r from-blue-600 to-indigo-600 shadow-lg">
+                    <Ico name="calc" className="w-5 h-5" /> คำนวณเงินงวดนี้
                   </button>
                 </div>
 
@@ -1537,92 +1422,10 @@ const LATE_GRACE_MIN = 30;
                       <p className="text-xs text-slate-400">งวด {calculation.period.label} · วันจ่าย: {calculation.period.payLabel}</p>
                     </div>
                     <div className="flex gap-2 no-print">
-                      <button onClick={() => window.print()} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-semibold border-slate-300 dark:border-slate-600">
-                        <Ico name="printer" /> พิมพ์
-                      </button>
-                      <button onClick={handleSaveRecord} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold">
-                        <Ico name="save" /> บันทึกงวดนี้
-                      </button>
+                      <button onClick={() => window.print()} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-semibold"><Ico name="printer" /> พิมพ์</button>
+                      <button onClick={handleSaveRecord} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold"><Ico name="save" /> บันทึกงวดนี้</button>
                     </div>
                   </div>
-
-                  {goal > 0 && (
-                    <div className={`p-3.5 rounded-2xl border mb-4 ${isReached ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-slate-50 border-slate-200 dark:bg-slate-900/60 dark:border-slate-700'}`}>
-                      <div className="flex justify-between text-xs mb-1.5 gap-2">
-                        <span>🎯 <strong>เป้าหมายเดือนนี้:</strong> {formatMoney(monthNet)} / {formatMoney(goal)} ฿</span>
-                        <span className="font-bold font-mono text-emerald-500">{pct}%{isReached ? ' 🎉' : ''}</span>
-                      </div>
-                      <div className="w-full h-2.5 rounded-full bg-slate-200 dark:bg-slate-950 overflow-hidden">
-                        <div className={`h-full rounded-full transition-all duration-500 ${isReached ? 'bg-emerald-400' : 'bg-blue-500'}`} style={{ width: `${progressWidth}%` }}></div>
-                      </div>
-                      {otherHalfNet > 0 && <p className="text-[10px] text-slate-400 mt-1">รวมงวดอื่นในเดือนเดียวกันที่บันทึกไว้ {formatMoney(otherHalfNet)} ฿</p>}
-                    </div>
-                  )}
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                    <div className="rounded-2xl border border-slate-200 dark:border-slate-700/60 overflow-hidden">
-                      <div className="p-2.5 font-bold flex justify-between bg-slate-100 dark:bg-slate-900 text-emerald-600 dark:text-emerald-400">
-                        <span>รายการรายได้</span><span>จำนวนเงิน</span>
-                      </div>
-                      <div className="p-3 space-y-2.5">
-                        <div className="flex justify-between">
-                          <div>
-                            <span className="font-semibold">ค่าแรงรายวัน</span>
-                            <div className="text-[10px] text-slate-400">({calculation.stats.ssoWageUnits} วัน × {formatMoney(settings.rate)} ฿{calculation.unpaidCut > 0 ? ' − หักชั่วโมง' : ''})</div>
-                          </div>
-                          <span className="font-mono font-bold">{formatMoney(calculation.dailyWage)}</span>
-                        </div>
-                        {calculation.holidayWorkPay > 0 && (
-                          <div className="flex justify-between text-amber-600 dark:text-amber-300">
-                            <div><span>ค่าทำงานในวันหยุด/OT1 (+{settings.holMult - 1} แรง)</span><div className="text-[10px] text-slate-400">({calculation.stats.pubW} วัน · ไม่นำมาคิดประกันสังคม)</div></div>
-                            <span className="font-mono font-bold">{formatMoney(calculation.holidayWorkPay)}</span>
-                          </div>
-                        )}
-                        {calculation.pubHolidayPay > 0 && (
-                          <div className="flex justify-between text-amber-600 dark:text-amber-200">
-                            <div><span>ค่าแรงวันหยุดนักขัตฤกษ์/OT1</span><div className="text-[10px] text-slate-400">({calculation.stats.pubW + calculation.stats.pubO} วัน · ไม่นำมาคิดประกันสังคม)</div></div>
-                            <span className="font-mono font-bold">{formatMoney(calculation.pubHolidayPay)}</span>
-                          </div>
-                        )}
-                        {calculation.extras.map((e, i) => (
-                          <div key={i} className="flex justify-between text-sky-600 dark:text-sky-300">
-                            <div><span>{e.name}</span><div className="text-[10px] text-slate-400">(รายได้เพิ่มเติม{settings.ssoBase === 'all' ? ' · คิด ปกส.' : ''})</div></div>
-                            <span className="font-mono font-bold">{formatMoney(e.amt)}</span>
-                          </div>
-                        ))}
-                        <div className="pt-2 border-t border-slate-200 dark:border-slate-800 flex justify-between font-bold text-sm text-emerald-600 dark:text-emerald-400">
-                          <span>รวมรายได้</span><span className="font-mono">{formatMoney(calculation.gross)}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="rounded-2xl border border-slate-200 dark:border-slate-700/60 overflow-hidden">
-                      <div className="p-2.5 font-bold flex justify-between bg-slate-100 dark:bg-slate-900 text-rose-500 dark:text-rose-400">
-                        <span>รายการหัก</span><span>จำนวนเงิน</span>
-                      </div>
-                      <div className="p-3 space-y-2.5">
-                        <div className="flex justify-between">
-                          <div>
-                            <span className="font-semibold">ประกันสังคม ({settings.sso}%)</span>
-                            <div className="text-[10px] text-slate-400">ฐาน: {formatMoney(calculation.ssoBaseAmount)} ฿ · เพดาน {formatMoney(settings.ssoCap)} ฿</div>
-                          </div>
-                          <span className="font-mono font-bold text-rose-500 dark:text-rose-400">-{formatMoney(calculation.sso)}</span>
-                        </div>
-                        <div className="flex justify-between text-slate-500 dark:text-slate-400">
-                          <span>ภาษีหัก ณ ที่จ่าย</span><span className="font-mono">{calculation.tax > 0 ? '-' : ''}{formatMoney(calculation.tax)}</span>
-                        </div>
-                        {calculation.oth > 0 && (
-                          <div className="flex justify-between text-slate-500 dark:text-slate-400">
-                            <span>{calculation.othName}</span><span className="font-mono">-{formatMoney(calculation.oth)}</span>
-                          </div>
-                        )}
-                        <div className="pt-2 border-t border-slate-200 dark:border-slate-800 flex justify-between font-bold text-sm text-rose-500 dark:text-rose-400">
-                          <span>รวมเงินหัก</span><span className="font-mono">-{formatMoney(calculation.ded)}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
                   <div className="mt-4 p-4 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 flex justify-between items-center">
                     <div>
                       <span className="text-sm text-emerald-600 dark:text-emerald-400 font-bold block">เงินสุทธิ</span>
@@ -1642,7 +1445,7 @@ const LATE_GRACE_MIN = 30;
 
             {currentTab === 'hist' && (
               <div className={CARD}>
-                <SectionHead icon="📚" title="ประวัติรายเดือน" pill={<Pill color="blue">{records.length} งวด</Pill>} desc="รวมยอดแต่ละเดือนจากทั้ง 2 งวด · กดที่งวดเพื่อเปิดแก้ไข" />
+                <SectionHead icon="📚" title="ประวัติรายเดือน" pill={<Pill color="blue">{records.length} งวด</Pill>} desc="รวมยอดแต่ละเดือนจากทั้ง 2 งวด" />
                 {monthGroups.length === 0 ? (
                   <div className="py-10 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 text-center text-sm text-slate-400">ยังไม่มีข้อมูลที่บันทึกไว้</div>
                 ) : (
@@ -1652,7 +1455,7 @@ const LATE_GRACE_MIN = 30;
                         <div className="p-3 flex flex-wrap justify-between items-center gap-2 bg-slate-100 dark:bg-slate-900/70">
                           <strong className="text-sm">{TH_MONTHS_FULL[g.m - 1]} {g.y + 543}</strong>
                           <div className="text-xs text-slate-500 dark:text-slate-400">
-                            รายได้ {formatMoney(g.gross)} · หัก {formatMoney(g.ded)} · <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-sm">สุทธิ {formatMoney(g.net)} ฿</span>
+                            สุทธิ <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-sm">{formatMoney(g.net)} ฿</span>
                           </div>
                         </div>
                         <div className="divide-y divide-slate-200 dark:divide-slate-800">
@@ -1660,11 +1463,8 @@ const LATE_GRACE_MIN = 30;
                             <div key={r.key} className="p-3 flex justify-between items-center gap-2 text-xs">
                               <button onClick={() => loadRecord(r)} className="text-left flex-1 min-w-0">
                                 <strong>{r.period.half === 1 ? 'งวดแรก' : 'งวดหลัง'} · {r.period.label}</strong>
-                                <div className="text-[11px] text-slate-400">
-                                  {r.stats.paidDays} วันจ่าย · รายได้ {formatMoney(r.gross)} ฿{r.extraSum > 0 ? ` (เพิ่มเติม ${formatMoney(r.extraSum)})` : ''} · หัก {formatMoney(r.ded)} ฿ · จ่าย {r.period.payLabel}
-                                </div>
+                                <div className="text-[11px] text-slate-400">{r.stats.paidDays} วันจ่าย · สุทธิ {formatMoney(r.net)} ฿</div>
                               </button>
-                              <div className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-sm whitespace-nowrap">{formatMoney(r.net)} ฿</div>
                               <button onClick={() => loadRecord(r)} title="แก้ไข" className="p-2 rounded-lg text-blue-500 hover:bg-blue-500/10"><Ico name="edit" /></button>
                               <button onClick={() => deleteRecord(r.key)} title="ลบ" className="p-2 rounded-lg text-rose-500 hover:bg-rose-500/10"><Ico name="trash" /></button>
                             </div>
@@ -1676,225 +1476,89 @@ const LATE_GRACE_MIN = 30;
                 )}
               </div>
             )}
-                {/* ===== เปรียบเทียบรายสัปดาห์ ===== */}
-                <div className={CARD}>
-                  <SectionHead icon="🗓️" title="เปรียบเทียบรายสัปดาห์" pill={<Pill color="blue">{weeklyStats.length} สัปดาห์</Pill>}
-                    desc="นับจำนวนวันแต่ละประเภท แยกตามสัปดาห์ (จันทร์–อาทิตย์) จากทุกงวดที่บันทึกไว้" />
-                  <label className="flex items-center gap-2 mb-4 text-xs text-slate-500 dark:text-slate-400">
-                    <input type="checkbox" checked={includeCurrent} onChange={e => setIncludeCurrent(e.target.checked)} />
-                    รวมงวดที่กำลังแก้ไข ({calculation.period.label}) แม้ยังไม่ได้บันทึก
-                  </label>
 
-                  {weeklyStats.length < 2 ? (
-                    <div className="py-10 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 text-center text-sm text-slate-400">
-                      ต้องมีข้อมูลอย่างน้อย 2 สัปดาห์จึงจะเปรียบเทียบได้
+            {/* ===== เปรียบเทียบรายวัน (Daily Comparison) ===== */}
+            {currentTab === 'cmpDaily' && (
+              <div className={CARD}>
+                <SectionHead icon="📅" title="เปรียบเทียบรายวัน (เทียบวันที่ต่อวันที่)" pill={<Pill color="blue">เปรียบเทียบวัน</Pill>}
+                  desc="เปรียบเทียบสถานะและชั่วโมงการทำงานของแต่ละวันที่ตรงกัน (เช่น วันที่ 1 ของงวด A กับงวด B)" />
+                <label className="flex items-center gap-2 mb-4 text-xs text-slate-500 dark:text-slate-400">
+                  <input type="checkbox" checked={includeCurrentDaily} onChange={e => setIncludeCurrentDaily(e.target.checked)} />
+                  รวมงวดที่กำลังแก้ไข ({calculation.period.label}) แม้ยังไม่ได้บันทึก
+                </label>
+
+                {allDailyOptions.length < 2 ? (
+                  <div className="py-10 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 text-center text-sm text-slate-400">
+                    ต้องมีข้อมูลอย่างน้อย 2 งวดจึงจะเปรียบเทียบได้
+                  </div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-2 gap-3 mb-4">
+                      {[['งวด A', cmpDailyA, setCmpDailyA], ['งวด B', cmpDailyB, setCmpDailyB]].map(([lbl, val, setter]) => (
+                        <div key={lbl}>
+                          <label className={LABEL}>{lbl}</label>
+                          <select value={val} onChange={e => setter(e.target.value)} className={INPUT}>
+                            {allDailyOptions.map(r => <option key={r.key} value={r.key}>{r.period.label + (r._preview ? ' (งวดปัจจุบัน)' : '')}</option>)}
+                          </select>
+                        </div>
+                      ))}
                     </div>
-                  ) : (
-                    <>
-                      <div className="grid grid-cols-2 gap-3 mb-4">
-                        {[['สัปดาห์ A', wkA, setWkA], ['สัปดาห์ B', wkB, setWkB]].map(([lbl, val, setter]) => (
-                          <div key={lbl}>
-                            <label className={LABEL}>{lbl}</label>
-                            <select value={val} onChange={e => setter(e.target.value)} className={INPUT}>
-                              {weeklyStats.map(w => <option key={w.key} value={w.key}>{weekOptionLabel(w)}</option>)}
-                            </select>
-                          </div>
-                        ))}
-                      </div>
 
-                      {wkAData && wkBData && (
-                        <>
-                          {(wkAData.days < 7 || wkBData.days < 7) && (
-                            <div className="mb-3 p-2.5 rounded-xl text-[11px] bg-amber-50 border border-amber-200 text-amber-700 dark:bg-amber-950/20 dark:border-amber-800/50 dark:text-amber-300">
-                              ⚠️ สัปดาห์ที่เลือกมีข้อมูลไม่ครบ 7 วัน (งวดที่อยู่ติดกันอาจยังไม่ได้บันทึก) ตัวเลขจึงอาจยังไม่ครบ
-                            </div>
-                          )}
-                          <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-700">
-                            <table className="w-full text-xs sm:text-sm">
-                              <thead className="bg-slate-100 dark:bg-slate-900/70">
-                                <tr>
-                                  <th className="p-2.5 text-left">รายการ</th>
-                                  <th className="p-2.5 text-right whitespace-nowrap">A: {wkAData.label}</th>
-                                  <th className="p-2.5 text-right whitespace-nowrap">B: {wkBData.label}</th>
-                                  <th className="p-2.5 text-right">ผลต่าง (B−A)</th>
-                                </tr>
-                              </thead>
-                              <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-                                {WEEK_ROWS.map(([label, key, dir, fmtType]) => {
-                                  const a = wkAData[key] || 0;
-                                  const b = wkBData[key] || 0;
-                                  const d = Math.round((b - a) * 100) / 100;
-                                  const color = d === 0 ? 'text-slate-400'
-                                    : dir === 0 ? 'text-blue-500'
-                                    : (dir * d > 0 ? 'text-emerald-500' : 'text-rose-500');
-                                  const fmt = (v, signed = false) => {
-                                    const sign = signed ? (v > 0 ? '+' : v < 0 ? '−' : '') : '';
-                                    const x = Math.abs(v);
-                                    const body = fmtType === 'money' ? formatMoney(x) : fmtType === 'hm' ? fmtHM(x) : x;
-                                    return sign + body;
-                                  };
-                                  const bold = ['paidDays', 'estWage'].includes(key);
-                                  return (
-                                    <tr key={key} className={bold ? 'font-bold bg-slate-50 dark:bg-slate-900/40' : ''}>
-                                      <td className="p-2.5 whitespace-nowrap">{label}</td>
-                                      <td className="p-2.5 text-right font-mono">{fmt(a)}</td>
-                                      <td className="p-2.5 text-right font-mono">{fmt(b)}</td>
-                                      <td className={`p-2.5 text-right font-mono ${color}`}>{d === 0 ? '-' : fmt(d, true)}</td>
-                                    </tr>
-                                  );
-                                })}
-                              </tbody>
-                            </table>
-                          </div>
-                          <p className="text-[10px] text-slate-400 mt-2">
-                            * ค่าแรงโดยประมาณ = (แรง × ค่าแรง) − ชม.หัก ยังไม่รวมรายได้เพิ่มเติม/ประกันสังคม · เขียว = ดีขึ้น · แดง = แย่ลง · ฟ้า = เปลี่ยนแปลง
-                          </p>
-                        </>
-                      )}
-                    </>
-                  )}
-                </div>
-
-                {weeklyStats.length > 0 && (
-                  <div className={CARD}>
-                    <SectionHead icon="📊" title="จำนวนวันแต่ละประเภท รายสัปดาห์" pill={<Pill color="purple">{Math.min(12, weeklyStats.length)} สัปดาห์ล่าสุด</Pill>} />
-                    <ChartBox type="bar" height={320} deps={[isDark]}
-                      data={{
-                        labels: weeklyStats.slice(-12).map(w => w.label + (w.hasPreview ? ' *' : '')),
-                        datasets: WEEK_SERIES.map(s => ({
-                          label: s.label,
-                          data: weeklyStats.slice(-12).map(w => w[s.k]),
-                          backgroundColor: s.color,
-                          borderRadius: 4,
-                          maxBarThickness: 48,
-                        })),
-                      }}
-                      options={{
-                        responsive: true, maintainAspectRatio: false,
-                        interaction: { mode: 'index', intersect: false },
-                        plugins: {
-                          legend: { position: 'bottom', labels: { color: themeColors(isDark).legend, boxWidth: 12, boxHeight: 12 } },
-                          tooltip: { filter: (item) => item.raw > 0, callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${ctx.raw} วัน` } },
-                        },
-                        scales: {
-                          x: { stacked: true, ticks: { color: themeColors(isDark).tick, maxRotation: 40, minRotation: 0 }, grid: { display: false } },
-                          y: { stacked: true, beginAtZero: true, max: 7, ticks: { color: themeColors(isDark).tick, stepSize: 1, precision: 0 }, grid: { color: themeColors(isDark).grid } },
-                        },
-                      }} />
-
-                    <div className="mt-5 overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-700">
-                      <table className="w-full text-[11px] sm:text-xs">
-                        <thead className="bg-slate-100 dark:bg-slate-900/70">
-                          <tr>
-                            {['สัปดาห์', 'ทำงาน', 'นักขัตฯ มาทำ', 'นักขัตฯ หยุด', 'หยุด 0฿', 'ป่วย', 'กิจ', 'พักร้อน', 'ขาด', 'ไม่รับเงิน', 'ชม.หัก', 'ค่าแรง≈'].map(h => (
-                              <th key={h} className={`p-2 whitespace-nowrap ${h === 'สัปดาห์' ? 'text-left' : 'text-center'}`}>{h}</th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-                          {[...weeklyStats].reverse().map(w => (
-                            <tr key={w.key} className={w.key === wkA || w.key === wkB ? 'bg-blue-500/5' : ''}>
-                              <td className="p-2 whitespace-nowrap">
-                                <span className="font-semibold">{w.label}</span>
-                                {w.key === wkA && <span className="ml-1 px-1.5 rounded bg-slate-500 text-white text-[9px]">A</span>}
-                                {w.key === wkB && <span className="ml-1 px-1.5 rounded bg-blue-600 text-white text-[9px]">B</span>}
-                                {w.days < 7 && <div className="text-[9px] text-amber-500">มีข้อมูล {w.days}/7 วัน</div>}
-                              </td>
-                              {WEEK_SERIES.map(s => (
-                                <td key={s.k} className={`p-2 text-center font-mono ${w[s.k] ? '' : 'text-slate-300 dark:text-slate-600'}`}>
-                                  {w[s.k] || '-'}
-                                </td>
-                              ))}
-                              <td className="p-2 text-center font-mono">{hmOrDash(w.unpaidHours)}</td>
-                              <td className="p-2 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">{formatMoney(w.estWage)}</td>
+                    {recordDailyA && recordDailyB && (
+                      <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-700 mt-4">
+                        <table className="w-full text-xs sm:text-sm">
+                          <thead className="bg-slate-100 dark:bg-slate-900/70">
+                            <tr>
+                              <th className="p-2.5 text-left whitespace-nowrap">วันที่</th>
+                              <th className="p-2.5 text-left">A: {recordDailyA.period.label}</th>
+                              <th className="p-2.5 text-left">B: {recordDailyB.period.label}</th>
+                              <th className="p-2.5 text-left">สถานะเปรียบเทียบ</th>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                    {weeklyStats.some(w => w.hasPreview) && <p className="text-[10px] text-slate-400 mt-2">* มีข้อมูลจากงวดที่ยังไม่ได้บันทึก</p>}
-                  </div>
-                )}
-            {currentTab === 'cmp' && (
-              <>
-                <div className={CARD}>
-                  <SectionHead icon="📊" title="เปรียบเทียบงวด" desc="เลือก 2 งวดที่บันทึกไว้เพื่อดูความแตกต่าง" />
-                  {records.length < 2 ? (
-                    <div className="py-10 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 text-center text-sm text-slate-400">ต้องบันทึกอย่างน้อย 2 งวดจึงจะเปรียบเทียบได้</div>
-                  ) : (
-                    <>
-                      <div className="grid grid-cols-2 gap-3 mb-4">
-                        <div>
-                          <label className={LABEL}>งวด A</label>
-                          <select value={cmpA} onChange={e => setCmpA(e.target.value)} className={INPUT}>
-                            {records.map(r => <option key={r.key} value={r.key}>{r.period.label}</option>)}
-                          </select>
-                        </div>
-                        <div>
-                          <label className={LABEL}>งวด B</label>
-                          <select value={cmpB} onChange={e => setCmpB(e.target.value)} className={INPUT}>
-                            {records.map(r => <option key={r.key} value={r.key}>{r.period.label}</option>)}
-                          </select>
-                        </div>
+                          </thead>
+                          <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+                            {allDaysUnion.map(dayNum => {
+                              const dayA = dailyMapA[dayNum];
+                              const dayB = dailyMapB[dayNum];
+                              const typeA = dayA ? DAY_TYPES[dayA.type]?.label || dayA.type : 'ไม่มีข้อมูล';
+                              const typeB = dayB ? DAY_TYPES[dayB.type]?.label || dayB.type : 'ไม่มีข้อมูล';
+                              const isSame = dayA && dayB && dayA.type === dayB.type && (dayA.unpaidHours || 0) === (dayB.unpaidHours || 0);
+
+                              return (
+                                <tr key={dayNum} className={!isSame ? 'bg-amber-500/5' : ''}>
+                                  <td className="p-2.5 font-bold whitespace-nowrap text-blue-500">วันที่ {dayNum}</td>
+                                  <td className="p-2.5">
+                                    {dayA ? (
+                                      <div>
+                                        <div className="font-semibold">{typeA}</div>
+                                        {dayA.work > 0 && <div className="text-[10px] text-slate-400">ทำงาน {fmtHM(dayA.work)}ชม.</div>}
+                                      </div>
+                                    ) : <span className="text-slate-400">-</span>}
+                                  </td>
+                                  <td className="p-2.5">
+                                    {dayB ? (
+                                      <div>
+                                        <div className="font-semibold">{typeB}</div>
+                                        {dayB.work > 0 && <div className="text-[10px] text-slate-400">ทำงาน {fmtHM(dayB.work)}ชม.</div>}
+                                      </div>
+                                    ) : <span className="text-slate-400">-</span>}
+                                  </td>
+                                  <td className="p-2.5">
+                                    {isSame ? (
+                                      <span className="text-emerald-600 dark:text-emerald-400 font-semibold">✔️ ตรงกัน</span>
+                                    ) : (
+                                      <span className="text-amber-600 dark:text-amber-400 font-semibold">⚠️ แตกต่างกัน</span>
+                                    )}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
                       </div>
-                      {recA && recB && (
-                        <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-700">
-                          <table className="w-full text-xs sm:text-sm">
-                            <thead className="bg-slate-100 dark:bg-slate-900/70">
-                              <tr>
-                                <th className="p-2.5 text-left">รายการ</th>
-                                <th className="p-2.5 text-right">A</th>
-                                <th className="p-2.5 text-right">B</th>
-                                <th className="p-2.5 text-right">ผลต่าง (B−A)</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-                              {CMP_ROWS.map(([label, fn, invert, isDay]) => {
-                                const a = fn(recA), b = fn(recB), d = b - a;
-                                const good = invert ? d < 0 : d > 0;
-                                const color = d === 0 ? 'text-slate-400' : good ? 'text-emerald-500' : 'text-rose-500';
-                                const fmt = (v) => isDay ? v : formatMoney(v);
-                                return (
-                                  <tr key={label} className={label === 'เงินสุทธิ' ? 'font-bold' : ''}>
-                                    <td className="p-2.5">{label}</td>
-                                    <td className="p-2.5 text-right font-mono">{fmt(a)}</td>
-                                    <td className="p-2.5 text-right font-mono">{fmt(b)}</td>
-                                    <td className={`p-2.5 text-right font-mono ${color}`}>{d > 0 ? '+' : ''}{fmt(isDay ? d : Number(d.toFixed(2)))}</td>
-                                  </tr>
-                                );
-                              })}
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-
-                {recA && recB && records.length >= 2 && (
-                  <div className={CARD}>
-                    <SectionHead icon="📉" title="กราฟเปรียบเทียบ A / B" />
-                    <ChartBox type="bar" height={300} deps={[isDark]}
-                      data={{
-                        labels: ['รวมรายได้', 'รวมเงินหัก', 'เงินสุทธิ'],
-                        datasets: [
-                          { label: `A: ${recA.period.label}`, data: [recA.gross, recA.ded, recA.net], backgroundColor: '#64748b', borderRadius: 6 },
-                          { label: `B: ${recB.period.label}`, data: [recB.gross, recB.ded, recB.net], backgroundColor: '#3b82f6', borderRadius: 6 },
-                        ],
-                      }}
-                      options={{
-                        responsive: true, maintainAspectRatio: false,
-                        plugins: { legend: { labels: { color: themeColors(isDark).legend } }, tooltip: { callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${formatMoney(ctx.raw)} ฿` } } },
-                        scales: {
-                          x: { ticks: { color: themeColors(isDark).tick }, grid: { display: false } },
-                          y: { beginAtZero: true, ticks: { color: themeColors(isDark).tick }, grid: { color: themeColors(isDark).grid } },
-                        },
-                      }} />
-                  </div>
+                    )}
+                  </>
                 )}
-
-                <TrendChart list={[...records].sort((a, b) => a.key.localeCompare(b.key)).slice(-12)} isDark={isDark} title="แนวโน้มทุกงวดที่บันทึก" />
-              </>
+              </div>
             )}
 
             {currentTab === 'set' && (
@@ -1905,9 +1569,7 @@ const LATE_GRACE_MIN = 30;
                       <span className="text-blue-500"><Ico name="gear" className="w-6 h-6" /></span>
                       <h2 className="text-lg font-bold">ตั้งค่าอัตราการคำนวณเงินเดือน</h2>
                     </div>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">ค่าเหล่านี้จะถูกบันทึกในเครื่องและใช้คำนวณอัตโนมัติในทุกงวด</p>
                   </div>
-
                   <div className="space-y-5">
                     {SETTING_FIELDS.map(f => (
                       <div key={f.k}>
@@ -1924,22 +1586,18 @@ const LATE_GRACE_MIN = 30;
                       </div>
                     ))}
                   </div>
-
                   <button onClick={handleSaveSettings}
-                    className="mt-6 inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold shadow-lg shadow-blue-600/30">
+                    className="mt-6 inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold shadow-lg">
                     <Ico name="save" className="w-5 h-5" /> บันทึกการตั้งค่า
                   </button>
                 </div>
-
                 <div className={CARD}>
                   <h2 className="text-lg font-bold">สำรองข้อมูลและจัดการประวัติ</h2>
-                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 mb-4">ดาวน์โหลดไฟล์สำรองเก็บไว้ในเครื่อง หรือล้างประวัติทั้งหมด</p>
-                  <div className="flex flex-wrap gap-3">
+                  <div className="flex flex-wrap gap-3 mt-4">
                     <button onClick={handleBackup} className={BTN_OUTLINE}><Ico name="download" className="w-5 h-5" /> ดาวน์โหลดไฟล์สำรอง (.json)</button>
-                    <button onClick={() => fileRef.current && fileRef.current.click()} className={BTN_OUTLINE}><Ico name="upload" className="w-5 h-5" /> กู้คืนข้อมูลจากไฟล์</button>
+                    <button onClick={() => fileRef.current && fileRef.current.click()} className={BTN_OUTLINE}><Ico name="upload" className="w-5 h-5" /> กู้คืนข้อมูล</button>
                     <input ref={fileRef} type="file" accept="application/json,.json" className="hidden" onChange={handleRestore} />
-                    <button onClick={handleClearAll}
-                      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl border text-sm font-semibold border-rose-400/60 text-rose-500 hover:bg-rose-500/10 dark:border-rose-800/70 dark:text-rose-400">
+                    <button onClick={handleClearAll} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl border text-sm font-semibold border-rose-400/60 text-rose-500">
                       <Ico name="trash" className="w-5 h-5" /> ล้างประวัติทั้งหมด
                     </button>
                   </div>
