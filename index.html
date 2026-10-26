@@ -275,8 +275,6 @@ const LATE_GRACE_MIN = 30;
         rowText: txt,
       };
     }
-
-    // ===== การจัดประเภทวันตามไฟล์รายงานผลประมวลเวลา =====
     function classifyRow(r, stdHours = 8) {
       const t = normTh(r.typeText || '').replace(/\s+/g, '');
       const isPub = /นักขัต|ขัตฤกษ์|ประเพณี/.test(t);
@@ -289,13 +287,28 @@ const LATE_GRACE_MIN = 30;
       const absentH = r.absent || 0;
       const otVal = Math.max(r.ot1 || 0, r.otTotal || 0, r.ot15 || 0, r.ot2 || 0, r.ot3 || 0);
 
+      // ===== เกณฑ์มาสาย =====
+      const lateMin = Math.round((r.late || 0) * 60);
+      const lateForgiven = lateMin > 0 && lateMin < LATE_GRACE_MIN;
+      const lateCut = lateForgiven ? 0 : (r.late || 0);
+      const directCut = lateCut + (r.early || 0) + absentH;
+      const calcUnpaid = (withWork) => {
+        if (!withWork) return round4(Math.min(directCut, stdHours));
+        // ชม.ทำงานที่ขาดไปเพราะสายที่ได้รับยกเว้น ไม่ต้องนับหัก
+        const forgiven = lateForgiven ? (r.late || 0) : 0;
+        let missing = Math.max(0, stdHours - work - forgiven);
+        missing = Math.round(missing * 60) / 60; // ปัดเป็นนาที กันเศษทศนิยม
+        return round4(Math.min(Math.max(directCut, missing), stdHours));
+      };
+      const lateNote = lateForgiven ? ` (สาย ${lateMin} นาที · ไม่หัก)` : '';
+
       const otValid = (cols.has('ot1') && cols.has('otTotal')) ? (r.ot1 > 0 && r.otTotal > 0) : otVal > 0;
       const otWarn = (cols.has('ot1') && cols.has('otTotal') && otVal > 0 && !(r.ot1 > 0 && r.otTotal > 0)) ? 'มีค่า OT แค่ช่องเดียว โปรดตรวจสอบ' : '';
 
       // 1) นักขัตฤกษ์
       if (isPub) {
         if (r.hasTime || hasWork || otValid) {
-          return { type: 'pubwork', unpaidHours: round4(Math.min(lateEarly, stdHours)), note: `นักขัตฤกษ์ มาทำงาน${otValid ? ` (OT ${fmtHM(otVal)})` : ''} → 2 แรง`, warn: '' };
+          return { type: 'pubwork', unpaidHours: calcUnpaid(false), note: `นักขัตฤกษ์ มาทำงาน${otValid ? ` (OT ${fmtHM(otVal)})` : ''} → 2 แรง${lateNote}`, warn: '' };
         }
         return { type: 'puboff', unpaidHours: 0, note: 'นักขัตฤกษ์ ไม่ได้มาทำงาน → 1 แรง', warn: otWarn };
       }
@@ -314,36 +327,28 @@ const LATE_GRACE_MIN = 30;
       // 4) วันหยุด
       if (isHolidayType) {
         if (hasWork || r.hasTime) {
-          let unpaid = 0;
-          if (hasWork) {
-            const missing = Math.max(0, stdHours - work);
-            unpaid = Math.max(lateEarly + absentH, missing);
-          } else {
-            unpaid = Math.min(lateEarly + absentH, stdHours);
-          }
-          return { type: 'work', unpaidHours: round4(Math.min(unpaid, stdHours)), note: `วันหยุดแต่มาทำงาน ${hasWork ? fmtHM(work) : 'มีสแกน'} → 1 แรง`, warn: '' };
+          return { type: 'work', unpaidHours: calcUnpaid(hasWork), note: `วันหยุดแต่มาทำงาน ${hasWork ? fmtHM(work) : 'มีสแกน'} → 1 แรง${lateNote}`, warn: '' };
         }
         return { type: 'holiday', unpaidHours: 0, note: 'วันหยุด ไม่มีชั่วโมงทำงาน → 0 บาท', warn: otWarn };
       }
 
       // 5) วันทำงานปกติ มีชั่วโมงทำงาน
       if (hasWork) {
-        const missing = Math.max(0, stdHours - work);
-        const unpaid = Math.max(lateEarly + absentH, missing);
+        const unpaid = calcUnpaid(true);
         let note = `ทำงาน ${fmtHM(work)}`;
         if (unpaid > 0.001) note += ` · หัก ${fmtHM(unpaid)}`;
         else note += ' → 1 แรง';
-        if (lateEarly > 0) note += ` (สาย ${fmtHM(r.late)} ก่อน ${fmtHM(r.early)})`;
+        if (lateForgiven) note += lateNote;
+        else if (lateEarly > 0) note += ` (สาย ${fmtHM(r.late)} ก่อน ${fmtHM(r.early)})`;
         if (r.ot1 > 0) note += ` · OT1 ${fmtHM(r.ot1)} (ยังไม่คิดเงิน OT)`;
         let warn = '';
         if (r.noIn || r.noOut) warn = `ไม่รูด ${r.noIn ? 'เข้า' : ''} ${r.noOut ? 'ออก' : ''}`.trim();
-        return { type: 'work', unpaidHours: round4(Math.min(unpaid, stdHours)), note, warn };
+        return { type: 'work', unpaidHours: unpaid, note, warn };
       }
 
       // 6) มีสแกน แต่อ่านจำนวนทำงานไม่ได้
       if (r.hasTime) {
-        const unpaid = Math.min(lateEarly + absentH, stdHours);
-        return { type: 'work', unpaidHours: round4(unpaid), note: `มีสแกน ${r.timeTxt || 'เข้า-ออก'} → วันทำงาน`, warn: 'อ่านช่องจำนวนทำงานไม่ได้' };
+        return { type: 'work', unpaidHours: calcUnpaid(false), note: `มีสแกน ${r.timeTxt || 'เข้า-ออก'} → วันทำงาน${lateNote}`, warn: 'อ่านช่องจำนวนทำงานไม่ได้' };
       }
 
       // 7) ไม่มีชั่วโมง ไม่มีสแกน → ขาดงาน
