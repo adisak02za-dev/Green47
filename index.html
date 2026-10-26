@@ -126,7 +126,85 @@
       }
       return days;
     }
+    // ===================== WEEKLY HELPERS =====================
+    // [label, key, ทิศทางที่ดี (1 = มากดี, -1 = น้อยดี, 0 = กลาง), รูปแบบ]
+    const WEEK_ROWS = [
+      ['✅ วันทำงานปกติ', 'work', 1],
+      ['🎌 นักขัตฤกษ์/OT1 มาทำงาน (2 แรง)', 'pubwork', 1],
+      ['🎏 นักขัตฤกษ์ หยุด (1 แรง)', 'puboff', 0],
+      ['🏖️ วันหยุด (ไม่ได้ค่าจ้าง)', 'holiday', 0],
+      ['🤒 ลาป่วย', 'sick', 0],
+      ['📄 ลากิจ', 'personal', 0],
+      ['🌴 ลาพักร้อน', 'annual', 0],
+      ['📋 รวมวันลา (ได้เงิน)', 'leave', 0],
+      ['❌ ขาดงาน', 'absent', -1],
+      ['⛔ ลาไม่รับค่าจ้าง', 'unpaid', -1],
+      ['💰 วันได้รับค่าจ้าง', 'paidDays', 1],
+      ['⏱️ ชม.ถูกหัก', 'unpaidHours', -1, 'hm'],
+      ['💵 ค่าแรงโดยประมาณ', 'estWage', 1, 'money'],
+    ];
+    const WEEK_SERIES = [
+      { k: 'work', label: 'ทำงาน', color: '#4f7fef' },
+      { k: 'pubwork', label: 'นักขัตฯ มาทำ', color: '#f59e0b' },
+      { k: 'puboff', label: 'นักขัตฯ หยุด', color: '#fcd34d' },
+      { k: 'holiday', label: 'วันหยุด 0฿', color: '#94a3b8' },
+      { k: 'sick', label: 'ลาป่วย', color: '#a855f7' },
+      { k: 'personal', label: 'ลากิจ', color: '#ec4899' },
+      { k: 'annual', label: 'พักร้อน', color: '#14b8a6' },
+      { k: 'absent', label: 'ขาดงาน', color: '#ef4444' },
+      { k: 'unpaid', label: 'ลาไม่รับเงิน', color: '#7f1d1d' },
+    ];
 
+    function weekStartStr(dateStr) {
+      const [y, m, d] = dateStr.split('-').map(Number);
+      const dt = new Date(y, m - 1, d);
+      dt.setDate(dt.getDate() - ((dt.getDay() + 6) % 7)); // ถอยไปวันจันทร์
+      return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`;
+    }
+    function weekLabel(startStr) {
+      const [y, m, d] = startStr.split('-').map(Number);
+      const s = new Date(y, m - 1, d);
+      const e = new Date(y, m - 1, d + 6);
+      const yy = String(e.getFullYear() + 543).slice(-2);
+      return s.getMonth() === e.getMonth()
+        ? `${s.getDate()}–${e.getDate()} ${TH_MONTHS[e.getMonth()]}${yy}`
+        : `${s.getDate()} ${TH_MONTHS[s.getMonth()]} – ${e.getDate()} ${TH_MONTHS[e.getMonth()]}${yy}`;
+    }
+    const weekOptionLabel = (w) =>
+      `${w.label}${w.days < 7 ? ` (มีข้อมูล ${w.days}/7 วัน)` : ''}${w.hasPreview ? ' *' : ''}`;
+
+    function buildWeeklyStats(dayList, settings) {
+      const rate = Number(settings.rate) || 0;
+      const hrs = Number(settings.hours) || 8;
+      const mult = Number(settings.holMult) || 0;
+      const map = {};
+      dayList.forEach(day => {
+        if (!day.dateStr) return;
+        const k = weekStartStr(day.dateStr);
+        if (!map[k]) map[k] = {
+          key: k, label: weekLabel(k), days: 0, hasPreview: false,
+          work: 0, pubwork: 0, puboff: 0, holiday: 0, sick: 0, personal: 0, annual: 0, absent: 0, unpaid: 0,
+          unpaidHours: 0, units: 0,
+        };
+        const w = map[k];
+        w.days++;
+        if (w[day.type] != null) w[day.type]++;
+        if (day._preview) w.hasPreview = true;
+        if (DAY_TYPES[day.type]?.pay) {
+          w.unpaidHours += Math.max(0, Number(day.unpaidHours) || 0);
+          w.units += day.type === 'pubwork' ? mult : 1;
+        }
+      });
+      return Object.values(map)
+        .sort((a, b) => a.key.localeCompare(b.key))
+        .map(w => ({
+          ...w,
+          leave: w.sick + w.personal + w.annual,
+          paidDays: w.work + w.pubwork + w.puboff + w.sick + w.personal + w.annual,
+          unpaidHours: Math.round(w.unpaidHours * 100) / 100,
+          estWage: Math.max(0, Number((w.units * rate - w.unpaidHours * (rate / hrs)).toFixed(2))),
+        }));
+    }
     // ===================== IMPORT HELPERS =====================
     const median = (arr) => {
       const s = [...arr].sort((a, b) => a - b);
@@ -1128,7 +1206,32 @@ const LATE_GRACE_MIN = 30;
         ['รวมเงินหัก', r => r.ded, true],
         ['เงินสุทธิ', r => r.net],
       ];
+      // ===== รายสัปดาห์ =====
+      const [includeCurrent, setIncludeCurrent] = useState(true);
+      const [wkA, setWkA] = useState('');
+      const [wkB, setWkB] = useState('');
 
+      const weeklyStats = useMemo(() => {
+        const byDate = {};
+        [...records].sort((a, b) => a.key.localeCompare(b.key)).forEach(r => {
+          (r.days || []).forEach(d => { if (d.dateStr) byDate[d.dateStr] = d; });
+        });
+        if (includeCurrent) {
+          const saved = records.some(r => r.key === calculation.key);
+          days.forEach(d => { if (d.dateStr) byDate[d.dateStr] = { ...d, _preview: !saved }; });
+        }
+        return buildWeeklyStats(Object.values(byDate), settings);
+      }, [records, days, includeCurrent, calculation.key, settings]);
+
+      useEffect(() => {
+        if (!weeklyStats.length) return;
+        const keys = weeklyStats.map(w => w.key);
+        if (!keys.includes(wkB)) setWkB(keys[keys.length - 1]);
+        if (!keys.includes(wkA)) setWkA(keys[Math.max(0, keys.length - 2)]);
+      }, [weeklyStats]);
+
+      const wkAData = weeklyStats.find(w => w.key === wkA);
+      const wkBData = weeklyStats.find(w => w.key === wkB);
       const TABS = [
         ['calc', '🧮 คำนวณงวดใหม่'],
         ['hist', '📚 ประวัติรายเดือน'],
@@ -1573,7 +1676,145 @@ const LATE_GRACE_MIN = 30;
                 )}
               </div>
             )}
+                {/* ===== เปรียบเทียบรายสัปดาห์ ===== */}
+                <div className={CARD}>
+                  <SectionHead icon="🗓️" title="เปรียบเทียบรายสัปดาห์" pill={<Pill color="blue">{weeklyStats.length} สัปดาห์</Pill>}
+                    desc="นับจำนวนวันแต่ละประเภท แยกตามสัปดาห์ (จันทร์–อาทิตย์) จากทุกงวดที่บันทึกไว้" />
+                  <label className="flex items-center gap-2 mb-4 text-xs text-slate-500 dark:text-slate-400">
+                    <input type="checkbox" checked={includeCurrent} onChange={e => setIncludeCurrent(e.target.checked)} />
+                    รวมงวดที่กำลังแก้ไข ({calculation.period.label}) แม้ยังไม่ได้บันทึก
+                  </label>
 
+                  {weeklyStats.length < 2 ? (
+                    <div className="py-10 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 text-center text-sm text-slate-400">
+                      ต้องมีข้อมูลอย่างน้อย 2 สัปดาห์จึงจะเปรียบเทียบได้
+                    </div>
+                  ) : (
+                    <>
+                      <div className="grid grid-cols-2 gap-3 mb-4">
+                        {[['สัปดาห์ A', wkA, setWkA], ['สัปดาห์ B', wkB, setWkB]].map(([lbl, val, setter]) => (
+                          <div key={lbl}>
+                            <label className={LABEL}>{lbl}</label>
+                            <select value={val} onChange={e => setter(e.target.value)} className={INPUT}>
+                              {weeklyStats.map(w => <option key={w.key} value={w.key}>{weekOptionLabel(w)}</option>)}
+                            </select>
+                          </div>
+                        ))}
+                      </div>
+
+                      {wkAData && wkBData && (
+                        <>
+                          {(wkAData.days < 7 || wkBData.days < 7) && (
+                            <div className="mb-3 p-2.5 rounded-xl text-[11px] bg-amber-50 border border-amber-200 text-amber-700 dark:bg-amber-950/20 dark:border-amber-800/50 dark:text-amber-300">
+                              ⚠️ สัปดาห์ที่เลือกมีข้อมูลไม่ครบ 7 วัน (งวดที่อยู่ติดกันอาจยังไม่ได้บันทึก) ตัวเลขจึงอาจยังไม่ครบ
+                            </div>
+                          )}
+                          <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-700">
+                            <table className="w-full text-xs sm:text-sm">
+                              <thead className="bg-slate-100 dark:bg-slate-900/70">
+                                <tr>
+                                  <th className="p-2.5 text-left">รายการ</th>
+                                  <th className="p-2.5 text-right whitespace-nowrap">A: {wkAData.label}</th>
+                                  <th className="p-2.5 text-right whitespace-nowrap">B: {wkBData.label}</th>
+                                  <th className="p-2.5 text-right">ผลต่าง (B−A)</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+                                {WEEK_ROWS.map(([label, key, dir, fmtType]) => {
+                                  const a = wkAData[key] || 0;
+                                  const b = wkBData[key] || 0;
+                                  const d = Math.round((b - a) * 100) / 100;
+                                  const color = d === 0 ? 'text-slate-400'
+                                    : dir === 0 ? 'text-blue-500'
+                                    : (dir * d > 0 ? 'text-emerald-500' : 'text-rose-500');
+                                  const fmt = (v, signed = false) => {
+                                    const sign = signed ? (v > 0 ? '+' : v < 0 ? '−' : '') : '';
+                                    const x = Math.abs(v);
+                                    const body = fmtType === 'money' ? formatMoney(x) : fmtType === 'hm' ? fmtHM(x) : x;
+                                    return sign + body;
+                                  };
+                                  const bold = ['paidDays', 'estWage'].includes(key);
+                                  return (
+                                    <tr key={key} className={bold ? 'font-bold bg-slate-50 dark:bg-slate-900/40' : ''}>
+                                      <td className="p-2.5 whitespace-nowrap">{label}</td>
+                                      <td className="p-2.5 text-right font-mono">{fmt(a)}</td>
+                                      <td className="p-2.5 text-right font-mono">{fmt(b)}</td>
+                                      <td className={`p-2.5 text-right font-mono ${color}`}>{d === 0 ? '-' : fmt(d, true)}</td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                          <p className="text-[10px] text-slate-400 mt-2">
+                            * ค่าแรงโดยประมาณ = (แรง × ค่าแรง) − ชม.หัก ยังไม่รวมรายได้เพิ่มเติม/ประกันสังคม · เขียว = ดีขึ้น · แดง = แย่ลง · ฟ้า = เปลี่ยนแปลง
+                          </p>
+                        </>
+                      )}
+                    </>
+                  )}
+                </div>
+
+                {weeklyStats.length > 0 && (
+                  <div className={CARD}>
+                    <SectionHead icon="📊" title="จำนวนวันแต่ละประเภท รายสัปดาห์" pill={<Pill color="purple">{Math.min(12, weeklyStats.length)} สัปดาห์ล่าสุด</Pill>} />
+                    <ChartBox type="bar" height={320} deps={[isDark]}
+                      data={{
+                        labels: weeklyStats.slice(-12).map(w => w.label + (w.hasPreview ? ' *' : '')),
+                        datasets: WEEK_SERIES.map(s => ({
+                          label: s.label,
+                          data: weeklyStats.slice(-12).map(w => w[s.k]),
+                          backgroundColor: s.color,
+                          borderRadius: 4,
+                          maxBarThickness: 48,
+                        })),
+                      }}
+                      options={{
+                        responsive: true, maintainAspectRatio: false,
+                        interaction: { mode: 'index', intersect: false },
+                        plugins: {
+                          legend: { position: 'bottom', labels: { color: themeColors(isDark).legend, boxWidth: 12, boxHeight: 12 } },
+                          tooltip: { filter: (item) => item.raw > 0, callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${ctx.raw} วัน` } },
+                        },
+                        scales: {
+                          x: { stacked: true, ticks: { color: themeColors(isDark).tick, maxRotation: 40, minRotation: 0 }, grid: { display: false } },
+                          y: { stacked: true, beginAtZero: true, max: 7, ticks: { color: themeColors(isDark).tick, stepSize: 1, precision: 0 }, grid: { color: themeColors(isDark).grid } },
+                        },
+                      }} />
+
+                    <div className="mt-5 overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-700">
+                      <table className="w-full text-[11px] sm:text-xs">
+                        <thead className="bg-slate-100 dark:bg-slate-900/70">
+                          <tr>
+                            {['สัปดาห์', 'ทำงาน', 'นักขัตฯ มาทำ', 'นักขัตฯ หยุด', 'หยุด 0฿', 'ป่วย', 'กิจ', 'พักร้อน', 'ขาด', 'ไม่รับเงิน', 'ชม.หัก', 'ค่าแรง≈'].map(h => (
+                              <th key={h} className={`p-2 whitespace-nowrap ${h === 'สัปดาห์' ? 'text-left' : 'text-center'}`}>{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+                          {[...weeklyStats].reverse().map(w => (
+                            <tr key={w.key} className={w.key === wkA || w.key === wkB ? 'bg-blue-500/5' : ''}>
+                              <td className="p-2 whitespace-nowrap">
+                                <span className="font-semibold">{w.label}</span>
+                                {w.key === wkA && <span className="ml-1 px-1.5 rounded bg-slate-500 text-white text-[9px]">A</span>}
+                                {w.key === wkB && <span className="ml-1 px-1.5 rounded bg-blue-600 text-white text-[9px]">B</span>}
+                                {w.days < 7 && <div className="text-[9px] text-amber-500">มีข้อมูล {w.days}/7 วัน</div>}
+                              </td>
+                              {WEEK_SERIES.map(s => (
+                                <td key={s.k} className={`p-2 text-center font-mono ${w[s.k] ? '' : 'text-slate-300 dark:text-slate-600'}`}>
+                                  {w[s.k] || '-'}
+                                </td>
+                              ))}
+                              <td className="p-2 text-center font-mono">{hmOrDash(w.unpaidHours)}</td>
+                              <td className="p-2 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">{formatMoney(w.estWage)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    {weeklyStats.some(w => w.hasPreview) && <p className="text-[10px] text-slate-400 mt-2">* มีข้อมูลจากงวดที่ยังไม่ได้บันทึก</p>}
+                  </div>
+                )}
             {currentTab === 'cmp' && (
               <>
                 <div className={CARD}>
