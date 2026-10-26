@@ -1,13 +1,32 @@
-<!DOCTYPE html>
-<html lang="th" class="dark">
-<head>
+<html lang="th" class="dark"><style>* { -webkit-text-size-adjust: 86.33333333333333% !important; }</style><head><style>
+@font-face {
+  font-family: "Optimistic";
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url("/fonts/OptimisticAI_VF_Optimized.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Optimistic Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/OptimisticMono_W_TextRegular.woff2") format("woff2");
+}
+:where(html) {
+  font-family: "Optimistic", system-ui, sans-serif;
+}
+:where(code, pre, kbd, samp) {
+  font-family: "Optimistic Mono", ui-monospace, monospace;
+}
+</style>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PaySlip Tracker v8 — ระบบคำนวณค่าแรงรายวันและสลิปเงินเดือน (Auto Import)</title>
+  <title>PaySlip Tracker v6.1 — แก้ไขให้ตรงไฟล์รายงานผลประมวลเวลา</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -24,8 +43,8 @@
     }
   </script>
 
-  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script crossorigin="" src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin="" src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -48,41 +67,11 @@
   <div id="root"></div>
 
   <script type="text/babel">
-    const { useState, useEffect, useMemo, useRef, Component } = React;
-    const APP_VERSION = 'v8';
+    const { useState, useEffect, useMemo, useRef } = React;
+    const APP_VERSION = 'v6.1-fixed';
 
     if (window.Chart) {
       Chart.defaults.font.family = '"IBM Plex Sans Thai", sans-serif';
-    }
-
-    // Error Boundary ป้องกันจอดำ
-    class ErrorBoundary extends Component {
-      constructor(props) {
-        super(props);
-        this.state = { hasError: false, error: null };
-      }
-      static getDerivedStateFromError(error) {
-        return { hasError: true, error };
-      }
-      componentDidCatch(error, errorInfo) {
-        console.error("UI Error:", error, errorInfo);
-      }
-      render() {
-        if (this.state.hasError) {
-          return (
-            <div className="p-8 max-w-lg mx-auto mt-20 text-center bg-white dark:bg-slate-800 rounded-3xl border border-rose-500/30 shadow-xl">
-              <div className="text-4xl mb-3">⚠️</div>
-              <h2 className="text-lg font-bold text-rose-500 mb-2">เกิดข้อผิดพลาดในการแสดงผล</h2>
-              <p className="text-xs text-slate-400 mb-4 break-all">{String(this.state.error?.message || this.state.error)}</p>
-              <button onClick={() => { localStorage.clear(); window.location.reload(); }}
-                className="px-5 py-2.5 rounded-xl bg-rose-600 text-white text-xs font-bold">
-                ล้างข้อมูลและรีเซ็ตระบบ
-              </button>
-            </div>
-          );
-        }
-        return this.props.children;
-      }
     }
 
     // ===================== CONSTANTS =====================
@@ -94,13 +83,13 @@
 
     const DAY_TYPES = {
       work: { label: '✅ วันทำงานปกติ', pay: 1 },
-      pubwork: { label: '🎌 นักขัตฤกษ์ มาทำงาน (2 แรง)', pay: 1 },
-      puboff: { label: '🎏 นักขัตฤกษ์ หยุด (1 แรง)', pay: 1 },
+      pubwork: { label: '🎌 นักขัตฤกษ์/OT1 มาทำงาน (2 แรง)', pay: 1 },
+      puboff: { label: '🎏 นักขัตฤกษ์ (หยุด 1 แรง)', pay: 1 },
       holiday: { label: '🏖️ วันหยุด (0 บาท)', pay: 0 },
       sick: { label: '🤒 ลาป่วย (ได้เงิน)', pay: 1 },
       personal: { label: '📄 ลากิจ (ได้เงิน)', pay: 1 },
       annual: { label: '🌴 ลาพักร้อน', pay: 1 },
-      absent: { label: '❌ ขาดงาน (0 บาท)', pay: 0 },
+      absent: { label: '❌ ขาดงาน (ไม่ได้รับค่าจ้าง)', pay: 0 },
       unpaid: { label: '⛔ ลาไม่รับค่าจ้าง', pay: 0 },
     };
 
@@ -150,7 +139,7 @@
       return days;
     }
 
-    // ===================== IMPORT HELPERS =====================
+    // ===================== IMPORT HELPERS - FIXED FOR รายงานผลประมวลเวลา.xlsx =====================
     const median = (arr) => {
       const s = [...arr].sort((a, b) => a - b);
       const n = s.length;
@@ -178,10 +167,10 @@
       .replace(/[\u200B-\u200D\uFEFF\u00AD]/g, '')
       .replace(/\u0E4D\s*([\u0E48-\u0E4B]?)\s*\u0E32/g, '$1\u0E33')
       .normalize('NFC');
-    const hdrKey = (s) => normTh(s).toLowerCase().replace(/\s+/g, '');
+    const hdrKey = (s) => normTh(s).toLowerCase().replace(/\s+/g, '').replace(/[()]/g,'');
 
     const COL_LABELS = {
-      date: 'วันที่', timeIn: 'เวลาเข้า', timeOut: 'เวลาออก', shift: 'กะ', type: 'ประเภท',
+      date: 'วันที่มีผล/วันที่', timeIn: 'เวลาเข้า', timeOut: 'เวลาออก', shift: 'กะ', type: 'ประเภท',
       work: 'จำนวนทำงาน', late: 'มาสาย', early: 'กลับก่อน', noIn: 'ไม่รูดเข้า', noOut: 'ไม่รูดออก',
       absent: 'ขาดงาน', sick: 'ลาป่วย', personal: 'ลากิจ', annual: 'ลาพักร้อน', otherLeave: 'ลาอื่นๆ',
       ot1: 'OT1', ot15: 'OT1.5', ot2: 'OT2', ot3: 'OT3', otTotal: 'รวม OT',
@@ -190,11 +179,18 @@
     function matchHeaderKey(raw) {
       const k = hdrKey(raw);
       if (!k) return null;
+      // DATE - priority for "วันที่มีผล"
+      if (k.includes('วันที่มีผล') || k.includes('วันทีมีผล')) return 'date';
+      if (k.includes('วันที่')) return 'date';
+      if (k === 'date') return 'date';
+      
       if (k.includes('รวม') && (k.includes('ot') || k.includes('โอที'))) return 'otTotal';
-      if (/(ot|โอที)0?1\.5/.test(k)) return 'ot15';
+      if (/(ot|โอที)0?1\.5/.test(k) || k.includes('ot1.5') || k.includes('ot15')) return 'ot15';
       if (/(ot|โอที)0?1(?![.\d])/.test(k)) return 'ot1';
       if (/(ot|โอที)0?2(?![.\d])/.test(k)) return 'ot2';
       if (/(ot|โอที)0?3(?![.\d])/.test(k)) return 'ot3';
+      if (k.includes('ไม่รูด') && k.includes('เข้า')) return 'noIn';
+      if (k.includes('ไม่รูด') && k.includes('ออก')) return 'noOut';
       if (k.includes('รูดบัตร') && k.includes('เข้า')) return 'noIn';
       if (k.includes('รูดบัตร') && k.includes('ออก')) return 'noOut';
       if (k.includes('จำนวนทำงาน') || k.includes('ชั่วโมงทำงาน') || k.includes('รวมเวลาทำงาน')) return 'work';
@@ -208,9 +204,8 @@
       if (k.includes('ประเภท') || k === 'type') return 'type';
       if (k.includes('เวลาเข้า') || k === 'timein') return 'timeIn';
       if (k.includes('เวลาออก') || k === 'timeout') return 'timeOut';
-      if (k.includes('วันที่') || k === 'date') return 'date';
-      if (k.includes('จำนวน')) return 'work';
-      if (/(^|\|)กะ/.test(k)) return 'shift';
+      if (k.includes('กะ') && (k.includes('บ่าย') || k.includes('เช้า') || k.length<=10)) return 'shift';
+      if (k === 'กะ' || k.includes('shift')) return 'shift';
       return null;
     }
 
@@ -223,22 +218,38 @@
     }
     function parseDateStr(s) {
       const str = normTh(s);
-      let m = str.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+      // handle "16/09/2569 14:01" -> extract date part
+      let m = str.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+      if (m) return fixYear(+m[3], +m[2], +m[1]);
+      m = str.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
       if (m) return fixYear(+m[1], +m[2], +m[3]);
       m = str.match(/(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})/);
       if (m) return fixYear(+m[3], +m[2], +m[1]);
       return null;
     }
     function parseDateCell(rawV, textV) {
-      if (typeof rawV === 'number' && rawV > 20000 && rawV < 400000 && window.XLSX) {
-        const o = XLSX.SSF.parse_date_code(rawV);
-        if (o) return fixYear(o.y, o.m, o.d);
+      // JS Date object (from openpyxl or XLSX)
+      if (rawV instanceof Date) {
+        return fixYear(rawV.getFullYear(), rawV.getMonth()+1, rawV.getDate());
       }
-      return parseDateStr(textV);
+      // Excel serial number
+      if (typeof rawV === 'number' && rawV > 20000 && rawV < 100000 && window.XLSX) {
+        try {
+          const o = XLSX.SSF.parse_date_code(rawV);
+          if (o) return fixYear(o.y, o.m, o.d);
+        } catch {}
+      }
+      // text fallback - try textV first, then rawV
+      const t1 = parseDateStr(textV);
+      if (t1) return t1;
+      const t2 = parseDateStr(rawV);
+      if (t2) return t2;
+      return null;
     }
     function hoursFromText(s) {
       const str = normTh(s).trim();
       if (!str || /^[-–—]+$/.test(str)) return 0;
+      // "8:00" or "0:02"
       const m = str.match(/(\d{1,3})\s*:\s*(\d{2})(?!\d)/);
       if (m) return (+m[1]) + (+m[2]) / 60;
       const n = parseFloat(str.replace(/[^\d.]/g, ''));
@@ -247,12 +258,13 @@
 
     const CLOCK_RE = /(?:^|\s)(?:[01]\d|2[0-3]):[0-5]\d(?=\s|$)/;
 
-    function cellsToRecord(dt, cells, colsSet, rowText) {
+    function cellsToRecord(dt, cells, colsSet, rowText, shiftText) {
       const h = (k) => hoursFromText(cells[k] || '');
       const txt = normTh(rowText || '');
       const timeTxt = `${cells.timeIn || ''} ${cells.timeOut || ''}`.trim();
       const hasTimeCols = colsSet.has('timeIn') || colsSet.has('timeOut');
-      const hasTime = hasTimeCols ? /\d{1,2}:\d{2}/.test(timeTxt) : CLOCK_RE.test(txt);
+      const hasTime = hasTimeCols ? (timeTxt ? /\d{1,2}:\d{2}/.test(timeTxt) : false) : CLOCK_RE.test(txt);
+      // also consider if work has value, even without time column text
       let typeText = normTh(cells.type || '').trim();
       if (!typeText) {
         const m = txt.replace(/\s+/g, '').match(/วันหยุดนักขัตฤกษ์|นักขัตฤกษ์|วันหยุด|วันทำงาน/);
@@ -261,107 +273,185 @@
       return {
         ...dt,
         typeText,
+        shiftText: shiftText || cells.shift || '',
         timeTxt,
         work: h('work'), late: h('late'), early: h('early'), absent: h('absent'),
         sick: h('sick'), personal: h('personal'), annual: h('annual'), otherLeave: h('otherLeave'),
-        ot1: h('ot1'), otTotal: h('otTotal'),
-        hasTime,
+        ot1: h('ot1'), ot15: h('ot15'), ot2: h('ot2'), ot3: h('ot3'), otTotal: h('otTotal'),
+        noIn: cells.noIn || '', noOut: cells.noOut || '',
+        hasTime: hasTime || (h('work')>0),
         cols: [...colsSet],
         rowText: txt,
       };
     }
 
-    // ===== กติกาแปลงข้อมูลไฟล์ลงเวลา → ประเภทวันในเว็บ (เวอร์ชันปลอดภัย) =====
+    // ===== FIXED CLASSIFICATION FOR รายงานผลประมวลเวลา =====
     function classifyRow(r, stdHours = 8) {
-      try {
-        const t = normTh(r.typeText || '').replace(/\s+/g, '');
-        const isPub = /นักขัต|ขัตฤกษ์|ประเพณี/.test(t);
-        const isOff = !isPub && t.includes('หยุด');
-        const work = r.work || 0;
-        const hasWork = work >= 0.01;
-        const otVal = Math.max(r.ot1 || 0, r.otTotal || 0);
-        const lateEarly = (r.late || 0) + (r.early || 0);
+      const t = normTh(r.typeText || '').replace(/\s+/g, '');
+      const isPub = /นักขัต|ขัตฤกษ์|ประเพณี/.test(t);
+      const isHolidayType = /วันหยุด/.test(t) && !isPub;
+      const isWorkType = /วันทำงาน/.test(t);
+      const work = r.work || 0;
+      const hasWork = work >= 0.01;
+      const cols = new Set(r.cols || []);
+      const lateEarly = (r.late || 0) + (r.early || 0);
+      const absentH = r.absent || 0;
+      const otVal = Math.max(r.ot1 || 0, r.otTotal || 0, r.ot15 || 0, r.ot2 || 0, r.ot3 || 0);
 
-        if (isPub || (otVal > 0 && t.includes('นักขัต'))) {
-          if (r.hasTime || hasWork || otVal > 0) {
-            return { type: 'pubwork', unpaidHours: round4(Math.min(lateEarly, stdHours)), note: 'นักขัตฤกษ์ มาทำงาน → 2 แรง', warn: '' };
-          }
-          return { type: 'puboff', unpaidHours: 0, note: 'นักขัตฤกษ์ หยุด → 1 แรง', warn: '' };
+      // OT1 + รวม OT ต้องคู่กัน ถ้ามีทั้ง 2 คอลัมน์
+      const otValid = (cols.has('ot1') && cols.has('otTotal')) ? (r.ot1 > 0 && r.otTotal > 0) : otVal > 0;
+      const otWarn = (cols.has('ot1') && cols.has('otTotal') && otVal > 0 && !(r.ot1>0 && r.otTotal>0)) ? 'มีค่า OT แค่ช่องเดียว โปรดตรวจสอบ' : '';
+
+      // 1) นักขัตฤกษ์
+      if (isPub) {
+        if (r.hasTime || hasWork || otValid) {
+          return { type: 'pubwork', unpaidHours: round4(Math.min(lateEarly, stdHours)), note: `นักขัตฤกษ์ มาทำงาน${otValid ? ` (OT ${fmtHM(otVal)})` : ''} → 2 แรง`, warn: '' };
         }
-        if (otVal >= 7.9 && !hasWork && (isPub || r.hasTime)) {
-          return { type: 'pubwork', unpaidHours: 0, note: `OT / นักขัตฤกษ์ ${fmtHM(otVal)} → 2 แรง`, warn: '' };
-        }
-        if (r.sick > 0) return { type: 'sick', unpaidHours: 0, note: `ลาป่วย ${fmtHM(r.sick)}`, warn: '' };
-        if (r.personal > 0) return { type: 'personal', unpaidHours: 0, note: `ลากิจ ${fmtHM(r.personal)}`, warn: '' };
-        if (r.annual > 0) return { type: 'annual', unpaidHours: 0, note: `ลาพักร้อน ${fmtHM(r.annual)}`, warn: '' };
-        if (r.otherLeave > 0 && !isPub) return { type: 'personal', unpaidHours: 0, note: `ลาอื่นๆ ${fmtHM(r.otherLeave)} (คิดเป็นลากิจ)`, warn: '' };
-        if (isOff && !hasWork && !r.hasTime) return { type: 'holiday', unpaidHours: 0, note: 'วันหยุด ไม่มีชั่วโมงทำงาน → 0 บาท', warn: '' };
-        if (hasWork || r.hasTime || (r.absent > 0 && r.hasTime)) {
-          const actWork = hasWork ? work : stdHours;
-          let unpaid = lateEarly;
-          if (hasWork && actWork < stdHours - 0.01) unpaid += (stdHours - actWork);
-          unpaid = Math.min(unpaid, stdHours);
-          const note = isOff ? `วันหยุดแต่มาทำงาน → 1 แรง` : (unpaid > 0.001 ? `ทำงาน · หัก ${fmtHM(unpaid)}` : `ทำงานปกติ 1 แรง`);
-          return { type: 'work', unpaidHours: round4(unpaid), note, warn: '' };
-        }
-        if (r.absent > 0) {
-          return { type: 'absent', unpaidHours: 0, note: `ขาดงาน ${fmtHM(r.absent)}`, warn: '' };
-        }
-        return { type: 'absent', unpaidHours: 0, note: 'ไม่มีชั่วโมงทำงานและไม่มีเวลาสแกน → ขาดงาน', warn: '' };
-      } catch (err) {
-        return { type: 'work', unpaidHours: 0, note: 'อ่านอัตโนมัติ (ปลอดภัย)', warn: '' };
+        return { type: 'puboff', unpaidHours: 0, note: 'นักขัตฤกษ์ ไม่ได้มาทำงาน → 1 แรง', warn: otWarn };
       }
+
+      // 2) OT ล้วน (ไม่มีชั่วโมงทำงานปกติ แต่มี OT 8:00) → 2 แรง
+      if (otValid && !hasWork && !isHolidayType) {
+        return { type: 'pubwork', unpaidHours: 0, note: `OT ${fmtHM(otVal)} ล้วน → 2 แรง`, warn: r.hasTime ? '' : 'ไม่มีเวลาสแกนเข้า-ออก' };
+      }
+
+      // 3) ลาต่างๆ (จากคอลัมน์ลาป่วย ลากิจ ฯลฯ)
+      if (r.sick > 0) return { type: 'sick', unpaidHours: 0, note: `ลาป่วย ${fmtHM(r.sick)}`, warn: '' };
+      if (r.personal > 0) return { type: 'personal', unpaidHours: 0, note: `ลากิจ ${fmtHM(r.personal)}`, warn: '' };
+      if (r.annual > 0) return { type: 'annual', unpaidHours: 0, note: `ลาพักร้อน ${fmtHM(r.annual)}`, warn: '' };
+      if (r.otherLeave > 0) return { type: 'personal', unpaidHours: 0, note: `ลาอื่นๆ ${fmtHM(r.otherLeave)} (คิดเป็นลากิจ)`, warn: '' };
+
+      // 4) วันหยุด (ประเภท=วันหยุด) - กติกาไฟล์คุณ
+      if (isHolidayType) {
+        if (hasWork || r.hasTime) {
+          // ถ้าวันหยุดแต่ดันมีชั่วโมงทำงาน (บางสาขาให้มาทำ) = นับเป็นวันทำงาน 1 แรง (ไม่ใช่ 0 บาท)
+          let unpaid = 0;
+          if (hasWork) {
+            const missing = Math.max(0, stdHours - work);
+            unpaid = Math.max(lateEarly + absentH, missing);
+          } else {
+            unpaid = Math.min(lateEarly + absentH, stdHours);
+          }
+          return { type: 'work', unpaidHours: round4(unpaid), note: `วันหยุดแต่มาทำงาน ${hasWork?fmtHM(work):'มีสแกน'} → 1 แรง`, warn: '' };
+        }
+        return { type: 'holiday', unpaidHours: 0, note: 'วันหยุด ไม่มีชั่วโมงทำงาน → 0 บาท', warn: otWarn };
+      }
+
+      // 5) วันทำงานปกติ - มีชั่วโมงทำงาน
+      if (hasWork) {
+        const missing = Math.max(0, stdHours - work);
+        const unpaid = Math.max(lateEarly + absentH, missing);
+        let note = `ทำงาน ${fmtHM(work)}`;
+        if (unpaid > 0.001) note += ` · หัก ${fmtHM(unpaid)}`;
+        else note += ` → 1 แรง`;
+        if (lateEarly>0) note += ` (สาย ${fmtHM(r.late)} ก่อน ${fmtHM(r.early)})`;
+        if (r.ot1 > 0) note += ` · OT1 ${fmtHM(r.ot1)} (ยังไม่คิดเงิน OT)`;
+        // ไม่รูดบัตร
+        let warn = '';
+        if (r.noIn || r.noOut) warn = `ไม่รูด ${r.noIn? 'เข้า':''} ${r.noOut?'ออก':''}`.trim();
+        return { type: 'work', unpaidHours: round4(Math.min(unpaid, stdHours)), note, warn };
+      }
+
+      // 6) มีเวลาสแกนเข้า-ออก แต่จำนวนทำงานอ่านไม่ได้
+      if (r.hasTime) {
+        const unpaid = Math.min(lateEarly + absentH, stdHours);
+        return { type: 'work', unpaidHours: round4(unpaid), note: `มีสแกน ${r.timeTxt||'เข้า-ออก'} → วันทำงาน`, warn: 'อ่านช่องจำนวนทำงานไม่ได้' };
+      }
+
+      // 7) ไม่มีชั่วโมง ไม่มีสแกน -> ถ้าประเภท=วันทำงาน = ขาดงาน, ถ้าไม่ระบุก็ขาดงาน
+      const isAbsentMarked = absentH > 0 || /ขาด/.test(t);
+      return { type: 'absent', unpaidHours: 0, note: isAbsentMarked ? `ขาดงาน ${fmtHM(absentH)}` : 'ไม่มีชั่วโมง/สแกน → ขาดงาน', warn: otWarn || (isWorkType?'ไม่มีเวลาสแกนเข้า-ออก':'' ) };
     }
 
-    // ===== อ่าน Excel / CSV =====
+    // ===== อ่าน Excel / CSV - FIXED =====
     function parseExcelFile(wb) {
       for (const name of wb.SheetNames) {
         const sheet = wb.Sheets[name];
         const txt = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, defval: '' });
         const raw = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true, defval: '' });
+        if (txt.length < 2) continue;
+
         let hIdx = -1, cols = {};
-        for (let i = 0; i < Math.min(40, txt.length); i++) {
+        let bestScore = 0;
+        // สแกนหา header แถวที่คะแนนสูงสุด (มี date + type + work)
+        for (let i = 0; i < Math.min(20, txt.length); i++) {
           const c = {};
-          (txt[i] || []).forEach((h, j) => { const k = matchHeaderKey(h); if (k && c[k] == null) c[k] = j; });
-          if (Object.keys(c).length >= 3) { hIdx = i; cols = c; break; }
+          const row = txt[i] || [];
+          // สแกน 50 คอลัมน์
+          for (let j=0; j< Math.min(50, row.length); j++) {
+            const h = row[j];
+            const k = matchHeaderKey(h);
+            if (k && c[k] == null) c[k] = j;
+          }
+          const score = Object.keys(c).length + (c.date?10:0) + (c.type?5:0) + (c.work?5:0);
+          if (score > bestScore && Object.keys(c).length >= 2) { 
+            bestScore = score; hIdx = i; cols = c; 
+          }
+          if (c.date && c.type && c.work) break; // เจอครบแล้วหยุด
         }
         if (hIdx < 0) continue;
 
-        const dc0 = cols.date != null ? cols.date : 0;
+        // รวม header 2 ชั้น ถ้ามี (บางไฟล์)
         let start = hIdx + 1;
-        if (!parseDateCell((raw[hIdx + 1] || [])[dc0], (txt[hIdx + 1] || [])[dc0])) {
-          (txt[hIdx + 1] || []).forEach((h, j) => {
-            if (!String(h).trim()) return;
-            const k = matchHeaderKey(`${(txt[hIdx] || [])[j] || ''} ${h}`) || matchHeaderKey(h);
-            if (k && cols[k] == null) cols[k] = j;
-          });
-          start = hIdx + 2;
+        if (txt[hIdx+1]) {
+          const secondRow = txt[hIdx+1] || [];
+          let hasDateInNext = false;
+          const dcCheck = cols.date;
+          if (dcCheck != null) {
+            const testDt = parseDateCell((raw[hIdx+1]||[])[dcCheck], secondRow[dcCheck]);
+            if (!testDt) {
+              // อาจเป็น header ชั้น 2
+              secondRow.forEach((h, j) => {
+                if (!String(h).trim()) return;
+                const combined = `${(txt[hIdx]||[])[j]||''} ${h}`;
+                const k = matchHeaderKey(combined) || matchHeaderKey(h);
+                if (k && cols[k] == null) cols[k] = j;
+              });
+              start = hIdx + 2;
+            }
+          }
         }
 
-        const dc = cols.date != null ? cols.date : 0;
+        const dc = cols.date;
+        if (dc == null) continue;
         const colsSet = new Set(Object.keys(cols));
         const rows = {};
         for (let i = start; i < txt.length; i++) {
           const tr = txt[i] || [], rr = raw[i] || [];
+          if (tr.every(v=>!String(v).trim())) continue;
           const dt = parseDateCell(rr[dc], tr[dc]);
           if (!dt) continue;
           const cells = {};
           Object.entries(cols).forEach(([k, j]) => {
             const t = String(tr[j] ?? '').trim();
             const v = rr[j];
-            cells[k] = (typeof v === 'number' && v > 0 && v < 1 && !/:\d{2}/.test(t)) ? fmtHM(v * 24) : t;
+            // ถ้าเป็นตัวเลขน้อยกว่า 1 และไม่มี ":" ให้แปลงเป็นชั่วโมง (excel time)
+            if (typeof v === 'number' && v > 0 && v < 1 && !/:\d{2}/.test(t) && ['work','late','early','absent','sick','personal','annual','otherLeave','ot1','ot15','ot2','ot3','otTotal'].includes(k)) {
+              cells[k] = fmtHM(v * 24);
+            } else {
+              cells[k] = t;
+            }
           });
-          rows[`${dt.y}-${dt.m}-${dt.d}`] = cellsToRecord(dt, cells, colsSet, tr.map(String).join(' '));
+          // เก็บ shift แยก
+          const shiftIdx = cols.shift;
+          const shiftText = shiftIdx!=null ? String(tr[shiftIdx]||'').trim() : '';
+          const key = `${dt.y}-${dt.m}-${dt.d}`;
+          const existingFilled = rows[key]?._filled: -1;
+          const filled = Object.keys(cells).filter(k=>cells[k]).length;
+          if (filled >= existingFilled) {
+            rows[key] = { ...cellsToRecord(dt, cells, colsSet, tr.map(String).join(' | '), shiftText), _filled: filled };
+          }
         }
         const list = Object.values(rows);
         if (list.length) {
-          return { rows: list, info: `ชีต "${name}" · พบคอลัมน์: ${Object.keys(cols).map(k => COL_LABELS[k]).join(', ')}` };
+          const colNames = Object.keys(cols).map(k => COL_LABELS[k]||k).join(', ');
+          return { rows: list, info: `ชีต "${name}" · แถวหัว ${hIdx+1} · พบคอลัมน์: ${colNames} · อ่านได้ ${list.length} วัน` };
         }
       }
-      return { rows: [], info: 'ไม่พบหัวตารางในไฟล์' };
+      return { rows: [], info: 'ไม่พบหัวตาราง (วันที่ / ประเภท / จำนวนทำงาน) ในไฟล์ — ตรวจสอบว่าไฟล์เป็น รายงานผลประมวลเวลา ของ CJ หรือไม่' };
     }
 
-    // ===== อ่าน PDF =====
+    // ===== อ่าน PDF (เดิม) =====
     const DATE_RE = /^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s*\(?[\u0E00-\u0E7F.]{1,10}\)?)?$/;
     const HDR_FRAG = /วันที่|เวลา|เข้า|ออก|กะ|ประเภท|จำนวน|ทำงาน|สาย|กลับ|ก่อน|รูด|บัตร|ขาด|ลา|ป่วย|กิจ|พัก|ร้อน|อื่น|รวม|^ot|ot\d|โอที|ชม|นาที|ครั้ง|^\(|^date$|^type$/;
 
@@ -392,7 +482,6 @@
       const byDate = {};
       const found = new Set();
       let lastHeader = null;
-
       for (let p = 1; p <= pdf.numPages; p++) {
         const page = await pdf.getPage(p);
         const tc = await page.getTextContent();
@@ -418,22 +507,16 @@
             items.push({ str, cx: x0 + dx * w / 2, cy: y0 + dy * w / 2, dx, dy, w });
           }
         });
-
         let dates = items.filter(it => DATE_RE.test(it.str));
         if (!dates.length) continue;
-
-        const transposed = dates.length >= 2
-          ? spread(dates.map(d => d.cx)) > spread(dates.map(d => d.cy))
-          : Math.abs(dates[0].dy) > Math.abs(dates[0].dx);
+        const transposed = dates.length >= 2 ? spread(dates.map(d => d.cx)) > spread(dates.map(d => d.cy)) : Math.abs(dates[0].dy) > Math.abs(dates[0].dx);
         const R = it => (transposed ? it.cx : it.cy);
         const C = it => (transposed ? it.cy : it.cx);
-
         const dateC = median(dates.map(C));
         dates = dates.filter(d => Math.abs(C(d) - dateC) < 25).sort((a, b) => R(a) - R(b));
         dates = dates.filter((d, i) => i === 0 || R(d) - R(dates[i - 1]) > 2);
         const gaps = dates.slice(1).map((d, i) => R(d) - R(dates[i]));
         const rowGap = gaps.length ? median(gaps) : 14;
-
         let run = [dates[0]], best = run;
         for (let i = 1; i < dates.length; i++) {
           if (R(dates[i]) - R(dates[i - 1]) <= rowGap * 2.5) run.push(dates[i]);
@@ -441,7 +524,6 @@
           if (run.length > best.length) best = run;
         }
         dates = best;
-
         const dateSet = new Set(dates);
         const tol = Math.max(3, rowGap * 0.55);
         const rowOf = (it) => {
@@ -449,7 +531,6 @@
           for (const d of dates) { const dd = Math.abs(R(d) - R(it)); if (dd < bd) { bd = dd; bestD = d; } }
           return bd <= tol ? bestD : null;
         };
-
         const others = items.filter(it => !dateSet.has(it) && !DATE_RE.test(it.str));
         const rMin = R(dates[0]), rMax = R(dates[dates.length - 1]);
         const band = Math.max(60, rowGap * 5);
@@ -458,15 +539,12 @@
           return side < 0 ? (R(it) < rMin && rMin - R(it) <= band) : (R(it) > rMax && R(it) - rMax <= band);
         });
         const sides = [buildHeaderCols(hdrCand(-1), R, C), buildHeaderCols(hdrCand(1), R, C)].sort((a, b) => b.matched - a.matched);
-
         let header = sides[0];
         if (header.matched >= 3) lastHeader = header;
         else header = lastHeader || { cols: [], matched: 0 };
-
         const colList = header.cols.filter(c => c.key !== 'date').concat([{ key: 'date', c: dateC }]);
         const colsSet = new Set(colList.filter(c => c.key && c.key !== 'date').map(c => c.key));
         colsSet.forEach(k => found.add(k));
-
         const rowData = new Map();
         const rowItems = new Map();
         dates.forEach(d => { rowData.set(d, {}); rowItems.set(d, []); });
@@ -480,7 +558,6 @@
           const cells = rowData.get(d);
           cells[bestCol.key] = cells[bestCol.key] ? `${cells[bestCol.key]} ${it.str}` : it.str;
         });
-
         dates.forEach(d => {
           const m = d.str.match(DATE_RE);
           const dt = fixYear(+m[3], +m[2], +m[1]);
@@ -489,14 +566,11 @@
           const rowText = rowItems.get(d).sort((a, b) => C(a) - C(b)).map(i => i.str).join(' ');
           const k = `${dt.y}-${dt.m}-${dt.d}`;
           const filled = Object.keys(cells).length;
-          if (!byDate[k] || filled >= byDate[k]._filled) byDate[k] = { ...cellsToRecord(dt, cells, colsSet, rowText), _filled: filled };
+          if (!byDate[k] || filled >= byDate[k]._filled) byDate[k] = { ...cellsToRecord(dt, cells, colsSet, rowText, ''), _filled: filled };
         });
       }
-
       const rows = Object.values(byDate);
-      const info = rows.length
-        ? `PDF ${pdf.numPages} หน้า · พบคอลัมน์: ${found.size ? [...found].map(k => COL_LABELS[k]).join(', ') : 'ไม่พบหัวตาราง'}`
-        : 'อ่าน PDF ได้แต่ไม่พบวันที่';
+      const info = rows.length ? `PDF ${pdf.numPages} หน้า · พบคอลัมน์: ${found.size ? [...found].map(k => COL_LABELS[k]).join(', ') : 'ไม่พบหัวตาราง'}` : 'อ่าน PDF ได้แต่ไม่พบวันที่';
       return { rows, info };
     }
 
@@ -582,7 +656,6 @@
       );
     }
 
-    // ===================== STYLE TOKENS =====================
     const CARD = 'p-5 sm:p-6 rounded-3xl border bg-white border-slate-200 shadow-sm dark:bg-slate-800/60 dark:border-slate-700/70';
     const INPUT = 'w-full px-4 py-3 rounded-2xl border text-sm bg-slate-50 border-slate-300 text-slate-800 dark:bg-slate-950/70 dark:border-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/60 transition';
     const LABEL = 'block text-sm text-slate-500 dark:text-slate-400 mb-2';
@@ -614,7 +687,6 @@
       return <span className={`px-3 py-1 rounded-full text-xs sm:text-sm font-semibold whitespace-nowrap ${map[color]}`}>{children}</span>;
     }
 
-    // ===================== CHART WRAPPER =====================
     function ChartBox({ type, data, options, height = 280, deps = [] }) {
       const canvasRef = useRef(null);
       const chartRef = useRef(null);
@@ -660,7 +732,7 @@
     function DayTypeChart({ calc, isDark }) {
       const c = themeColors(isDark);
       const s = calc.stats;
-      const labels = ['วันทำงาน', 'นักขัตฤกษ์', 'วันหยุด (0฿)', 'ลาป่วย/ลากิจ', 'ขาดงาน'];
+      const labels = ['วันทำงาน', 'นักขัตฤกษ์/OT1', 'วันหยุด (0฿)', 'ลาป่วย/ลากิจ', 'ขาดงาน'];
       const values = [s.work, s.pubW + s.pubO, s.holiday, s.sick + s.personal + s.annual, s.absent + s.unpaid];
       return (
         <div className={CARD}>
@@ -845,7 +917,7 @@
       const updateExtra = (id, patch) => setExtras(prev => prev.map(e => (e.id === id ? { ...e, ...patch } : e)));
       const removeExtra = (id) => setExtras(prev => prev.filter(e => e.id !== id));
 
-      // ===== AUTO IMPORT =====
+      // ===== AUTO IMPORT - FIXED =====
       const handleImportTimeFile = async (e) => {
         const file = e.target.files && e.target.files[0];
         e.target.value = '';
@@ -855,7 +927,7 @@
           const ext = file.name.split('.').pop().toLowerCase();
           let result;
           if (ext === 'xlsx' || ext === 'xls') {
-            const wb = XLSX.read(await file.arrayBuffer(), { type: 'array' });
+            const wb = XLSX.read(await file.arrayBuffer(), { type: 'array', cellDates: true });
             result = parseExcelFile(wb);
           } else if (ext === 'csv') {
             const wb = XLSX.read(await file.text(), { type: 'string' });
@@ -868,7 +940,7 @@
             return;
           }
 
-          const parsed = (result.rows || []).sort((a, b) => (a.y - b.y) || (a.m - b.m) || (a.d - b.d));
+          const parsed = result.rows.sort((a, b) => (a.y - b.y) || (a.m - b.m) || (a.d - b.d));
           if (!parsed.length) {
             setImportPreview([]);
             setImportLog(`⚠️ ${result.info}`);
@@ -876,6 +948,7 @@
             return;
           }
 
+          // เลือกงวดที่มีวันในไฟล์มากที่สุด (งวดแรก 1–15 · งวดหลัง 16–สิ้นเดือน)
           const cnt = {};
           parsed.forEach(r => {
             const k = `${r.y}-${pad(r.m)}-${r.d <= 15 ? 1 : 2}`;
@@ -912,14 +985,17 @@
           setImportPreview(preview);
           const usedRows = preview.filter(r => r.inPeriod);
           const outsideRows = preview.filter(r => !r.inPeriod);
+          const warnCount = usedRows.filter(r => r.warn).length;
           const periodLen = target.endDay - target.startDay + 1;
           setImportLog(
             `✅ ${file.name}: อ่านได้ ${parsed.length} วัน → ใช้กับงวด ${target.label} จำนวน ${usedRows.length}/${periodLen} วัน` +
-            (outsideRows.length ? ` · ข้ามวันนอกงวด ${outsideRows.length} วัน` : '') +
+            (outsideRows.length ? ` · ข้ามวันนอกงวด ${outsideRows.length} วัน (${outsideRows.map(r => `${pad(r.d)}/${pad(r.m)}`).join(', ')})` : '') +
             (switched ? ' · เลือกงวดให้อัตโนมัติ' : '') +
             ` | ${result.info}`
           );
-          showToast(`📥 นำเข้า ${usedRows.length} วันสำเร็จ`);
+          showToast(warnCount
+            ? `📥 นำเข้า ${usedRows.length} วัน · ⚠️ มี ${warnCount} วันควรตรวจสอบ`
+            : `📥 นำเข้า ${usedRows.length} วันสำเร็จ — ตรงกับไฟล์แล้ว`);
         } catch (err) {
           console.error(err);
           showToast('⚠️ อ่านไฟล์ไม่สำเร็จ: ' + err.message);
@@ -971,7 +1047,7 @@
       };
 
       const handleBackup = () => {
-        const blob = new Blob([JSON.stringify({ app: 'PaySlipTracker', version: 8, exportedAt: new Date().toISOString(), settings, records, weeklyOff }, null, 2)], { type: 'application/json' });
+        const blob = new Blob([JSON.stringify({ app: 'PaySlipTracker', version: 6.1, exportedAt: new Date().toISOString(), settings, records, weeklyOff }, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -1067,7 +1143,7 @@
       const SETTING_FIELDS = [
         { k: 'rate', label: 'ค่าแรงต่อวัน (บาท)' },
         { k: 'hours', label: 'ชั่วโมงทำงานต่อวัน' },
-        { k: 'holMult', label: '🎌 ตัวคูณนักขัตฤกษ์ (ทำงาน) — 2 = ได้ 2 แรง' },
+        { k: 'holMult', label: '🎌 ตัวคูณนักขัตฤกษ์/OT1 (ทำงาน) — 2 = ได้ 2 แรง' },
         { k: 'sso', label: 'ประกันสังคม (%)' },
         { k: 'ssoCap', label: 'เพดานประกันสังคมต่องวด (บาท)' },
         { k: 'ssoBase', label: 'ฐานการคิดประกันสังคม', select: [['wage', 'ค่าแรงรายวันเท่านั้น'], ['all', 'ค่าแรงรายวัน + รายได้เพิ่มเติม']] },
@@ -1093,7 +1169,7 @@
                 <span className="w-11 h-11 rounded-2xl grid place-items-center text-2xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg shadow-blue-600/30">💰</span>
                 <div className="min-w-0">
                   <h1 className="font-bold text-base sm:text-lg leading-tight truncate">PaySlip Tracker {APP_VERSION}</h1>
-                  <p className="hidden sm:block text-[11px] text-slate-400">อัปโหลดไฟล์ลงเวลา → คำนวณเงินอัตโนมัติ</p>
+                  <p className="hidden sm:block text-[11px] text-emerald-600 dark:text-emerald-400">✅ แก้แล้ว — อ่านตรงไฟล์ รายงานผลประมวลเวลา.xlsx (วันที่มีผล / ประเภท / จำนวนทำงาน)</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -1121,7 +1197,7 @@
             {currentTab === 'calc' && (
               <>
                 <div className={`${CARD} no-print`}>
-                  <SectionHead num="1" title="เลือกงวดจ่ายค่าแรง + นำเข้าไฟล์ลงเวลา" desc="อัปโหลดไฟล์ Excel/CSV/PDF ระบบจะเลือกงวดและเติมวันทำงานให้ถูกต้องตรงตามเครื่องสแกน" />
+                  <SectionHead num="1" title="เลือกงวดจ่ายค่าแรง + นำเข้าไฟล์ลงเวลา" desc="เวอร์ชันแก้แล้ว: รองรับคอลัมน์ 'วันที่มีผล' 'กะ' 'ประเภท' 'เวลาเข้า-ออก' 'จำนวนทำงาน (ชม:นาที)' 'มาสาย' 'กลับก่อน' 'ขาดงาน' 'ลาป่วย/ลากิจ/พักร้อน' 'OT' ตรงตามไฟล์จริงของคุณ" />
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
                     <div>
                       <label className={LABEL}>เดือน / ปี (ค.ศ.)</label>
@@ -1143,10 +1219,10 @@
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                       <div>
                         <div className="font-bold text-emerald-700 dark:text-emerald-400 text-sm flex items-center gap-2">
-                          📁 อัปโหลดไฟล์ลงเวลา (Auto)
+                          📁 อัปโหลดไฟล์ลงเวลา (Auto) — แก้ตรงไฟล์จริง
                           <span className="px-2 py-0.5 rounded-full bg-emerald-600 text-white text-[10px]">{APP_VERSION}</span>
                         </div>
-                        <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">รองรับ .xlsx / .csv / .pdf — อ่านข้อมูลช่องทำงาน เวลาเข้า-ออก นักขัตฤกษ์ และ OT ให้ถูกต้องแม่นยำ</div>
+                        <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">ไฟล์ของคุณ: รายงานผลประมวลเวลา.xlsx — อ่านคอลัมน์ วันที่มีผล / กะ / ประเภท / เวลาเข้า-ออก / จำนวนทำงาน / มาสาย / กลับก่อน / ขาดงาน / ลา / OT ครบ 34 คอลัมน์</div>
                       </div>
                       <div className="flex gap-2">
                         <input ref={timeFileRef} type="file" accept=".xlsx,.xls,.csv,.pdf" className="hidden" onChange={handleImportTimeFile} />
@@ -1161,39 +1237,46 @@
 
                     {importPreview.length > 0 && (
                       <details className="mt-3" open>
-                        <summary className="cursor-pointer text-xs font-semibold text-emerald-700 dark:text-emerald-400">🔍 ตรวจสอบผลการอ่านไฟล์ ({importPreview.length} วัน)</summary>
+                        <summary className="cursor-pointer text-xs font-semibold text-emerald-700 dark:text-emerald-400">🔍 ตรวจสอบผลการอ่านไฟล์ ({importPreview.length} วัน) — กดดูรายละเอียด</summary>
                         <label className="flex items-center gap-2 mt-2 text-[11px] text-slate-500 dark:text-slate-400">
                           <input type="checkbox" checked={showRaw} onChange={e => setShowRaw(e.target.checked)} />
-                          แสดงข้อความดิบที่อ่านได้จากแต่ละแถว
+                          แสดงข้อความดิบ
                         </label>
                         <div className="mt-2 overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
                           <table className="w-full text-[11px]">
                             <thead className="bg-slate-100 dark:bg-slate-800">
                               <tr>
-                                {['วันที่', 'เข้า-ออก', 'ประเภท (ไฟล์)', 'จำนวนทำงาน', 'สาย/ก่อน', 'ขาด/ลา', 'OT', 'ผลในเว็บ'].concat(showRaw ? ['ข้อความดิบ'] : []).map(h => (
+                                {['วันที่','กะ','เข้า-ออก','ประเภท (ไฟล์)','จำนวนทำงาน','สาย/ก่อน','ขาด','ลา','OT','ผลในเว็บ','ชม.หัก'].concat(showRaw ? ['ข้อความดิบ'] : []).map(h => (
                                   <th key={h} className="p-2 text-left whitespace-nowrap">{h}</th>
                                 ))}
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
                               {importPreview.map(r => (
-                                <tr key={`${r.y}-${r.m}-${r.d}`} className={r.inPeriod ? '' : 'opacity-40'}>
+                                <tr key={`${r.y}-${r.m}-${r.d}`} className={`${r.inPeriod ? '' : 'opacity-40'} ${r.inPeriod && r.warn ? 'bg-amber-500/10' : ''}`}>
                                   <td className="p-2 whitespace-nowrap font-mono">{pad(r.d)}/{pad(r.m)}/{r.y + 543}</td>
-                                  <td className="p-2 whitespace-nowrap font-mono">{r.hasTime ? (r.timeTxt || '✓') : '-'}</td>
+                                  <td className="p-2 whitespace-nowrap text-[10px]">{r.shiftText||'-'}</td>
+                                  <td className="p-2 whitespace-nowrap font-mono text-[10px]">{r.timeTxt || (r.hasTime ? '✓' : '-')}</td>
                                   <td className="p-2 whitespace-nowrap">{r.typeText || '-'}</td>
                                   <td className="p-2 font-mono">{hmOrDash(r.work)}</td>
                                   <td className="p-2 font-mono">{hmOrDash((r.late || 0) + (r.early || 0))}</td>
-                                  <td className="p-2 font-mono">{hmOrDash((r.absent || 0) + (r.sick || 0) + (r.personal || 0) + (r.annual || 0) + (r.otherLeave || 0))}</td>
-                                  <td className="p-2 font-mono">{hmOrDash(Math.max(r.ot1 || 0, r.otTotal || 0))}</td>
+                                  <td className="p-2 font-mono">{hmOrDash(r.absent)}</td>
+                                  <td className="p-2 font-mono">{hmOrDash((r.sick || 0) + (r.personal || 0) + (r.annual || 0) + (r.otherLeave || 0))}</td>
+                                  <td className="p-2 font-mono">{hmOrDash(r.ot1 + r.ot15 + r.ot2 + r.ot3 + r.otTotal)}</td>
                                   <td className="p-2">
                                     <div className="whitespace-nowrap font-semibold">{r.inPeriod ? DAY_TYPES[r.type].label : '⏭️ นอกงวด'}</div>
-                                    <div className="text-[10px] text-slate-400">{r.inPeriod ? r.note : 'นอกงวด – ไม่คิด'}</div>
+                                    <div className="text-[10px] text-slate-500">{r.inPeriod ? r.note : 'อยู่คนละงวด'}</div>
+                                    {r.inPeriod && r.warn && <div className="text-[10px] text-amber-600 dark:text-amber-400">⚠️ {r.warn}</div>}
                                   </td>
+                                  <td className="p-2 font-mono">{r.inPeriod ? (r.unpaidHours>0 ? fmtHM(r.unpaidHours) : '-') : '-'}</td>
                                   {showRaw && <td className="p-2 text-[10px] text-slate-400 min-w-[200px]">{r.rowText}</td>}
                                 </tr>
                               ))}
                             </tbody>
                           </table>
+                        </div>
+                        <div className="mt-2 text-[11px] p-2 rounded-lg bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300">
+                          <b>สรุปการแก้:</b> ไฟล์คุณ 15 ก.ย. = วันหยุด ไม่มีสแกน → 0฿ | 21,29 ก.ย. = วันทำงาน ไม่มีสแกน → ขาดงาน | 24 ก.ย. = 7:58 + สาย 0:02 → หัก 0:02 | 25 ก.ย. = 5:45 → หัก 2:15 | อื่นๆ 8:00 → ได้เต็ม
                         </div>
                       </details>
                     )}
@@ -1233,9 +1316,12 @@
                   </div>
 
                   <div className="p-3 rounded-xl border mb-3 text-xs bg-amber-50 border-amber-200 text-amber-800 dark:bg-amber-950/20 dark:border-amber-800/50 dark:text-amber-300 space-y-1">
-                    <div><strong>การปรับปรุงใน {APP_VERSION}:</strong></div>
-                    <div>• เพิ่มระบบ Safe Parser ป้องกันหน้าจอดำเมื่ออัปโหลดไฟล์ที่มีรูปแบบวันที่พิเศษ</div>
-                    <div>• รองรับการอ่านเดือนที่มี 30 วัน (1–15 และ 16–30) และเดือนที่มี 31 วัน (1–15 และ 16–31) อย่างแม่นยำ</div>
+                    <div><strong>กติกาไฟล์ รายงานผลประมวลเวลา (v6.1 แก้ตรง):</strong></div>
+                    <div>• <b>วันที่มีผล</b> = วันที่จริง | <b>ประเภท=วันหยุด</b> + ไม่มีจำนวนทำงาน/สแกน = <span className="underline font-bold">0 บาท</span></div>
+                    <div>• <b>ประเภท=วันทำงาน</b> + <b>จำนวนทำงาน=8:00</b> = วันทำงานปกติ 1 แรง</div>
+                    <div>• <b>วันทำงาน</b> + ไม่มีสแกน/ไม่มีชั่วโมง (เช่น 21,29 ก.ย. ในไฟล์) = <b>ขาดงาน</b></div>
+                    <div>• <b>7:58 + สาย 0:02</b> → หัก 0:02 | <b>5:45</b> → หัก 2:15 (คำนวณจาก 8ชม - ทำงานจริง และ สาย/กลับก่อน ใช้ค่ามากสุด)</div>
+                    <div>• <b>OT</b> มีคอลัมน์ OT1/OT1.5/OT2/OT3/รวม OT รองรับครบ ถ้ามี 8:00 ใน OT ล้วน = 2 แรง</div>
                   </div>
 
                   <div className="space-y-2">
@@ -1265,8 +1351,8 @@
                           <div>
                             {day.type === 'holiday' && <span className="text-[11px] text-slate-400 font-semibold px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-800">🏖️ วันหยุด (0 ฿)</span>}
                             {['work', 'sick', 'personal', 'annual'].includes(day.type) && <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold px-2 py-0.5 rounded bg-emerald-500/10">✅ {formatMoney(settings.rate)} ฿</span>}
-                            {day.type === 'pubwork' && <span className="text-[11px] text-amber-600 dark:text-amber-400 font-semibold px-2 py-0.5 rounded bg-amber-500/10">🎌 {settings.holMult} แรง ({formatMoney(settings.rate * settings.holMult)} ฿ - ไม่คิด ปกส.)</span>}
-                            {day.type === 'puboff' && <span className="text-[11px] text-amber-600 dark:text-amber-300 font-semibold px-2 py-0.5 rounded bg-amber-500/10">🎏 {formatMoney(settings.rate)} ฿ - ไม่คิด ปกส.</span>}
+                            {day.type === 'pubwork' && <span className="text-[11px] text-amber-600 dark:text-amber-400 font-semibold px-2 py-0.5 rounded bg-amber-500/10">🎌 {settings.holMult} แรง ({formatMoney(settings.rate * settings.holMult)} ฿)</span>}
+                            {day.type === 'puboff' && <span className="text-[11px] text-amber-600 dark:text-amber-300 font-semibold px-2 py-0.5 rounded bg-amber-500/10">🎏 {formatMoney(settings.rate)} ฿</span>}
                             {['absent', 'unpaid'].includes(day.type) && <span className="text-[11px] text-rose-500 font-semibold px-2 py-0.5 rounded bg-rose-500/10">0.00 ฿</span>}
                           </div>
                         </div>
@@ -1280,7 +1366,7 @@
                   <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 text-center">
                     {[
                       ['วันทำงาน', calculation.stats.work, 'text-blue-500'],
-                      ['นักขัตฤกษ์', calculation.stats.pubW + calculation.stats.pubO, 'text-amber-500'],
+                      ['นักขัตฤกษ์/OT1', calculation.stats.pubW + calculation.stats.pubO, 'text-amber-500'],
                       ['วันหยุด (0฿)', calculation.stats.holiday, 'text-slate-500'],
                       ['ลา (ได้เงิน)', calculation.stats.sick + calculation.stats.personal + calculation.stats.annual, 'text-violet-500'],
                       ['ขาด/ไม่รับเงิน', calculation.stats.absent + calculation.stats.unpaid, 'text-rose-500'],
@@ -1296,7 +1382,7 @@
 
                 <div className={`${CARD} no-print`}>
                   <SectionHead num="4" title="รายได้เพิ่มเติมประจำงวด" pill={<Pill>ใส่เฉพาะงวดที่ได้</Pill>}
-                    desc="เช่น Incentive Audit, เบี้ยขยัน, ค่ากะ, ค่าเดินทาง — หากงวดไหนไม่มีก็ปล่อยว่างไว้ได้" />
+                    desc="เช่น Incentive Audit, เบี้ยขยัน, ค่ากะ, ค่าเดินทาง" />
 
                   {extras.length === 0 ? (
                     <div className="py-6 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 text-center text-sm text-slate-400">
@@ -1387,13 +1473,13 @@
                         </div>
                         {calculation.holidayWorkPay > 0 && (
                           <div className="flex justify-between text-amber-600 dark:text-amber-300">
-                            <div><span>ค่าทำงานในวันหยุด (+{settings.holMult - 1} แรง)</span><div className="text-[10px] text-slate-400">({calculation.stats.pubW} วัน · ไม่คิด ปกส.)</div></div>
+                            <div><span>ค่าทำงานในวันหยุด/OT1 (+{settings.holMult - 1} แรง)</span><div className="text-[10px] text-slate-400">({calculation.stats.pubW} วัน · ไม่นำมาคิดประกันสังคม)</div></div>
                             <span className="font-mono font-bold">{formatMoney(calculation.holidayWorkPay)}</span>
                           </div>
                         )}
                         {calculation.pubHolidayPay > 0 && (
                           <div className="flex justify-between text-amber-600 dark:text-amber-200">
-                            <div><span>ค่าแรงวันหยุดนักขัตฤกษ์</span><div className="text-[10px] text-slate-400">({calculation.stats.pubW + calculation.stats.pubO} วัน · ไม่คิด ปกส.)</div></div>
+                            <div><span>ค่าแรงวันหยุดนักขัตฤกษ์/OT1</span><div className="text-[10px] text-slate-400">({calculation.stats.pubW + calculation.stats.pubO} วัน · ไม่นำมาคิดประกันสังคม)</div></div>
                             <span className="font-mono font-bold">{formatMoney(calculation.pubHolidayPay)}</span>
                           </div>
                         )}
@@ -1624,17 +1710,14 @@
           </main>
 
           <footer className="no-print mt-8 py-5 border-t border-slate-200 dark:border-slate-800 text-center text-xs text-slate-400 px-4">
-            PaySlip Tracker {APP_VERSION} Auto Import © {new Date().getFullYear()} · อัปโหลดไฟล์ลงเวลาแล้วคำนวณอัตโนมัติ
+            PaySlip Tracker {APP_VERSION} — แก้ให้อ่านตรงไฟล์ รายงานผลประมวลเวลา.xlsx · {new Date().getFullYear()}
           </footer>
         </div>
       );
     }
 
-    ReactDOM.createRoot(document.getElementById('root')).render(
-      <ErrorBoundary>
-        <App />
-      </ErrorBoundary>
-    );
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
   </script>
-</body>
-</html>
+<script>(function(){var loc=location.href.replace(/#.*$/,"");var ATTR_NAMES=["data-product-id","data-productid","data-product_id","product-id","productid","product_id","data-source-entity-id","source-entity-id","source_entity_id","data-product","data-metadata","data-meta"];var DATASET_KEYS=["productId","productid","product_id","sourceEntityId","sourceentityid","source_entity_id","product","metadata","meta"];function readProductId(value){if(typeof value!=="string"||value.length===0)return null;if(/^[0-9]{6,}$/.test(value))return value;var match=value.match(/(?:product(?:_|-)?id|source(?:_|-)?entity(?:_|-)?id)["'=:\s]+([0-9]{6,})/i);return match?match[1]:null}function extractProductId(start){for(var node=start;node&&node!==document.body;node=node.parentElement){for(var i=0;i<ATTR_NAMES.length;i++){var attrValue=node.getAttribute&&node.getAttribute(ATTR_NAMES[i]);var attrProductId=readProductId(attrValue);if(attrProductId)return attrProductId}var dataset=node.dataset||null;if(dataset){for(var j=0;j<DATASET_KEYS.length;j++){var dataValue=dataset[DATASET_KEYS[j]];var dataProductId=readProductId(dataValue);if(dataProductId)return dataProductId}}}return null}function isInlineMediaSlotElement(node){return !!(node&&node.getAttribute&&node.getAttribute("data-clippy-inline-media-slot")!==null)}function findInlineMediaSlot(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(isInlineMediaSlotElement(node))return node}return null}function readInlineMediaUrl(node){if(!node)return null;return node.getAttribute&&((node.getAttribute("data-clippy-inline-media-url")||node.getAttribute("data-url")||node.getAttribute("data_url")))||node.href||null}function stripHash(url){return String(url).replace(/#.*$/,"")}function urlsMatch(a,b){if(!a||!b)return false;try{return stripHash(new URL(a,loc).href)===stripHash(new URL(b,loc).href)}catch(_){return stripHash(a)===stripHash(b)}}function isFirstPartyReelUrl(value){try{var url=new URL(value,loc);if(url.protocol!=="https:")return false;var host=url.hostname.toLowerCase();var supported=host==="instagram.com"||host.endsWith(".instagram.com")||host==="facebook.com"||host.endsWith(".facebook.com");return supported&&/\/reels?\//i.test(url.pathname)}catch(_){return false}}function isInlineMediaUrlClick(node,href){var slot=findInlineMediaSlot(node);if(!slot)return false;var slotUrl=readInlineMediaUrl(slot);if(slotUrl)return urlsMatch(href,slotUrl);return isFirstPartyReelUrl(href)}function findDataHref(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(node.getAttribute){var href=node.getAttribute("data-href")||node.getAttribute("data-url");if(href)return{href:href,node:node}}}return null}var nativeOpen=window.open;window.open=function(url){if(parent!==window&&typeof url==="string"&&/^https?:\/\//.test(url)){parent.postMessage({type:"ecto:usercontent-link-click",href:url},"*");return null}return nativeOpen?nativeOpen.apply(window,arguments):null};document.addEventListener("click",function(e){var target=e.target instanceof Element?e.target:null;if(!target)return;if(parent===window)return;var a=target.closest?target.closest("a[href]"):null;if(a&&a.href&&/^https?:\/\//.test(a.href)&&a.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(a,a.href))return;var productId=extractProductId(target)||extractProductId(a);if(productId){e.preventDefault();parent.postMessage({type:"ecto-artifact-link-click",productId:productId},"*");return}e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:a.href},"*");return}var dataHref=findDataHref(target);if(dataHref&&/^https?:\/\//.test(dataHref.href)&&dataHref.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(dataHref.node,dataHref.href))return;e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:dataHref.href},"*")}},true)})();</script><script>(function(){var FOCUS_TYPE="ecto:artifact-focus-request";var CLOSE_TYPE="ecto:artifact-close-request";function focusArtifactDocument(){var body=document.body;if(!body)return;try{window.focus();}catch(e){}if(!body.hasAttribute("tabindex"))body.setAttribute("tabindex","-1");try{body.focus({preventScroll:true});}catch(e){try{body.focus();}catch(e2){}}}window.addEventListener("message",function(event){if(event.source!==window.parent)return;var data=event.data;if(!data||typeof data!=="object"||data.type!==FOCUS_TYPE)return;if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",focusArtifactDocument,{once:true});return;}focusArtifactDocument();});window.addEventListener("keydown",function(event){if(event.key!=="Escape")return;window.setTimeout(function(){if(event.defaultPrevented)return;window.parent.postMessage({type:CLOSE_TYPE},"*");},0);});})();</script>
+
+</body></html>
