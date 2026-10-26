@@ -4,9 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PaySlip Tracker v6.2 — อ่านไฟล์รายงานผลประมวลเวลา</title>
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -21,13 +23,15 @@
       }
     }
   </script>
-  <script crossorigin src="https://unpkg.com/react@18/umd/react-dom.production.min.js"></script>
+
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script>if (window.pdfjsLib) { pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'; }</script>
+
   <style>
     @media print {
       .no-print { display: none !important; }
@@ -122,30 +126,84 @@
       }
       return days;
     }
-
-    // ===================== จุดที่ 1: HELPER เพิ่มใหม่ (วางต่อจาก generateInitialDays) =====================
-    function getPrevPeriodInfo(period) {
-      if (!period) return null;
-      if (period.half === 2) {
-        return generatePeriodInfo(period.y, period.m, 1);
-      } else {
-        let y = period.y, m = period.m - 1;
-        if (m < 1) { m = 12; y--; }
-        return generatePeriodInfo(y, m, 2);
+    // ===================== RANGE COMPARE HELPERS (เปรียบเทียบตามช่วงวันที่) =====================
+    function rangeLabel(from, to) {
+      if (!from || !to) return '-';
+      const [y1, m1, d1] = from.split('-').map(Number);
+      const [y2, m2, d2] = to.split('-').map(Number);
+      const yy1 = String(y1 + 543).slice(-2);
+      const yy2 = String(y2 + 543).slice(-2);
+      if (y1 === y2 && m1 === m2) {
+        return d1 === d2 ? `${d1} ${TH_MONTHS[m2 - 1]}${yy2}` : `${d1}–${d2} ${TH_MONTHS[m2 - 1]}${yy2}`;
       }
+      if (y1 === y2) return `${d1} ${TH_MONTHS[m1 - 1]}–${d2} ${TH_MONTHS[m2 - 1]}${yy2}`;
+      return `${d1} ${TH_MONTHS[m1 - 1]}${yy1}–${d2} ${TH_MONTHS[m2 - 1]}${yy2}`;
     }
-    function ensureCorrectOrder(a, b) {
-      if (!a || !b) return [a, b];
-      return a.key.localeCompare(b.key) <= 0 ? [a, b] : [b, a];
+    // ถ้า "ตั้งแต่" มากกว่า "ถึง" ให้สลับให้เอง
+    function normalizeRange(from, to) {
+      if (from && to && from > to) return { from: to, to: from, swapped: true };
+      return { from, to, swapped: false };
     }
-    function getMobileHeader(p) {
-      if (!p) return { main: '-', sub: '' };
-      const main = p.half === 1 ? 'ต้นเดือน' : 'ปลายเดือน';
-      const sub = `${p.startDay}–${p.endDay} ${TH_MONTHS[p.m-1]}${String(p.y+543).slice(-2)}`;
-      return { main, sub, full: p.label };
+    function periodRangeStr(p) {
+      return {
+        from: `${p.y}-${pad(p.m)}-${pad(p.startDay)}`,
+        to: `${p.y}-${pad(p.m)}-${pad(p.endDay)}`,
+      };
     }
-
+    function previousPeriodOf(p) {
+      if (p.half === 2) return generatePeriodInfo(p.y, p.m, 1);
+      return p.m === 1 ? generatePeriodInfo(p.y - 1, 12, 2) : generatePeriodInfo(p.y, p.m - 1, 2);
+    }
+    // [label, key, ทิศทางที่ดี (1 = มากดี, -1 = น้อยดี, 0 = กลาง), รูปแบบ]
+    const RANGE_ROWS = [
+      ['📆 จำนวนวันในช่วง', 'span', 0],
+      ['✅ วันทำงานปกติ', 'work', 1],
+      ['🎌 นักขัตฤกษ์/OT1 มาทำงาน (2 แรง)', 'pubwork', 1],
+      ['🎏 นักขัตฤกษ์ หยุด (1 แรง)', 'puboff', 0],
+      ['🏖️ วันหยุด (ไม่ได้ค่าจ้าง)', 'holiday', 0],
+      ['🤒 ลาป่วย', 'sick', 0],
+      ['📄 ลากิจ', 'personal', 0],
+      ['🌴 ลาพักร้อน', 'annual', 0],
+      ['📋 รวมวันลา (ได้เงิน)', 'leave', 0],
+      ['❌ ขาดงาน', 'absent', -1],
+      ['⛔ ลาไม่รับค่าจ้าง', 'unpaid', -1],
+      ['💰 วันได้รับค่าจ้าง', 'paidDays', 1],
+      ['⏱️ ชม.ถูกหัก', 'unpaidHours', -1, 'hm'],
+      ['💵 ค่าแรงโดยประมาณ', 'estWage', 1, 'money'],
+    ];
+    function buildRangeStats(dayList, from, to, settings) {
+      const rate = Number(settings.rate) || 0;
+      const hrs = Number(settings.hours) || 8;
+      const mult = Number(settings.holMult) || 0;
+      const [fy, fm, fd] = from.split('-').map(Number);
+      const [ty, tm, td] = to.split('-').map(Number);
+      const s = {
+        from, to, label: rangeLabel(from, to),
+        span: Math.round((new Date(ty, tm - 1, td) - new Date(fy, fm - 1, fd)) / 86400000) + 1,
+        days: 0, hasPreview: false,
+        work: 0, pubwork: 0, puboff: 0, holiday: 0, sick: 0, personal: 0, annual: 0, absent: 0, unpaid: 0,
+        unpaidHours: 0, units: 0,
+      };
+      dayList.forEach(day => {
+        if (!day.dateStr || day.dateStr < from || day.dateStr > to) return;
+        s.days++;
+        if (s[day.type] != null) s[day.type]++;
+        if (day._preview) s.hasPreview = true;
+        if (DAY_TYPES[day.type]?.pay) {
+          s.unpaidHours += Math.max(0, Number(day.unpaidHours) || 0);
+          s.units += day.type === 'pubwork' ? mult : 1;
+        }
+      });
+      return {
+        ...s,
+        leave: s.sick + s.personal + s.annual,
+        paidDays: s.work + s.pubwork + s.puboff + s.sick + s.personal + s.annual,
+        unpaidHours: Math.round(s.unpaidHours * 100) / 100,
+        estWage: Math.max(0, Number((s.units * rate - s.unpaidHours * (rate / hrs)).toFixed(2))),
+      };
+    }
     // ===================== WEEKLY HELPERS =====================
+    // [label, key, ทิศทางที่ดี (1 = มากดี, -1 = น้อยดี, 0 = กลาง), รูปแบบ]
     const WEEK_ROWS = [
       ['✅ วันทำงานปกติ', 'work', 1],
       ['🎌 นักขัตฤกษ์/OT1 มาทำงาน (2 แรง)', 'pubwork', 1],
@@ -176,7 +234,7 @@
     function weekStartStr(dateStr) {
       const [y, m, d] = dateStr.split('-').map(Number);
       const dt = new Date(y, m - 1, d);
-      dt.setDate(dt.getDate() - ((dt.getDay() + 6) % 7));
+      dt.setDate(dt.getDate() - ((dt.getDay() + 6) % 7)); // ถอยไปวันจันทร์
       return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`;
     }
     function weekLabel(startStr) {
@@ -223,7 +281,6 @@
           estWage: Math.max(0, Number((w.units * rate - w.unpaidHours * (rate / hrs)).toFixed(2))),
         }));
     }
-
     // ===================== IMPORT HELPERS =====================
     const median = (arr) => {
       const s = [...arr].sort((a, b) => a - b);
@@ -238,7 +295,9 @@
       return `${Math.floor(mins / 60)}:${pad(mins % 60)}`;
     }
     const hmOrDash = (h) => (h > 0.001 ? fmtHM(h) : '-');
-    const LATE_GRACE_MIN = 30;
+    // มาสายน้อยกว่าค่านี้ (นาที) = ไม่หัก · ตั้งแต่ค่านี้ขึ้นไป = หักตามเวลาที่สายจริง
+const LATE_GRACE_MIN = 30;
+
 
     const PUA_MAP = {
       '\uF700': '\u0E10', '\uF701': '\u0E34', '\uF702': '\u0E35', '\uF703': '\u0E36', '\uF704': '\u0E37',
@@ -269,6 +328,7 @@
       if (k.includes('วันที่มีผล') || k.includes('วันทีมีผล')) return 'date';
       if (k.includes('วันที่')) return 'date';
       if (k === 'date') return 'date';
+
       if (k.includes('รวม') && (k.includes('ot') || k.includes('โอที'))) return 'otTotal';
       if (/(ot|โอที)0?1\.5/.test(k) || k.includes('ot1.5') || k.includes('ot15')) return 'ot15';
       if (/(ot|โอที)0?1(?![.\d])/.test(k)) return 'ot1';
@@ -313,9 +373,11 @@
     }
     function parseDateCell(rawV, textV) {
       if (rawV instanceof Date && !isNaN(rawV)) {
+        // ปัด +12 ชม. กันวันที่เลื่อนจากเขตเวลา
         const t = new Date(rawV.getTime() + 12 * 3600 * 1000);
         return fixYear(t.getFullYear(), t.getMonth() + 1, t.getDate());
       }
+      // Excel serial number (รองรับปี พ.ศ. ที่เก็บเป็นวันที่จริงด้วย)
       if (typeof rawV === 'number' && rawV > 20000 && rawV < 400000 && window.XLSX) {
         try {
           const o = XLSX.SSF.parse_date_code(rawV);
@@ -378,39 +440,53 @@
       const lateEarly = (r.late || 0) + (r.early || 0);
       const absentH = r.absent || 0;
       const otVal = Math.max(r.ot1 || 0, r.otTotal || 0, r.ot15 || 0, r.ot2 || 0, r.ot3 || 0);
+
+      // ===== เกณฑ์มาสาย =====
       const lateMin = Math.round((r.late || 0) * 60);
       const lateForgiven = lateMin > 0 && lateMin < LATE_GRACE_MIN;
       const lateCut = lateForgiven ? 0 : (r.late || 0);
       const directCut = lateCut + (r.early || 0) + absentH;
       const calcUnpaid = (withWork) => {
         if (!withWork) return round4(Math.min(directCut, stdHours));
+        // ชม.ทำงานที่ขาดไปเพราะสายที่ได้รับยกเว้น ไม่ต้องนับหัก
         const forgiven = lateForgiven ? (r.late || 0) : 0;
         let missing = Math.max(0, stdHours - work - forgiven);
-        missing = Math.round(missing * 60) / 60;
+        missing = Math.round(missing * 60) / 60; // ปัดเป็นนาที กันเศษทศนิยม
         return round4(Math.min(Math.max(directCut, missing), stdHours));
       };
       const lateNote = lateForgiven ? ` (สาย ${lateMin} นาที · ไม่หัก)` : '';
+
       const otValid = (cols.has('ot1') && cols.has('otTotal')) ? (r.ot1 > 0 && r.otTotal > 0) : otVal > 0;
       const otWarn = (cols.has('ot1') && cols.has('otTotal') && otVal > 0 && !(r.ot1 > 0 && r.otTotal > 0)) ? 'มีค่า OT แค่ช่องเดียว โปรดตรวจสอบ' : '';
+
+      // 1) นักขัตฤกษ์
       if (isPub) {
         if (r.hasTime || hasWork || otValid) {
           return { type: 'pubwork', unpaidHours: calcUnpaid(false), note: `นักขัตฤกษ์ มาทำงาน${otValid ? ` (OT ${fmtHM(otVal)})` : ''} → 2 แรง${lateNote}`, warn: '' };
         }
         return { type: 'puboff', unpaidHours: 0, note: 'นักขัตฤกษ์ ไม่ได้มาทำงาน → 1 แรง', warn: otWarn };
       }
+
+      // 2) OT ล้วน
       if (otValid && !hasWork && !isHolidayType) {
         return { type: 'pubwork', unpaidHours: 0, note: `OT ${fmtHM(otVal)} ล้วน → 2 แรง`, warn: r.hasTime ? '' : 'ไม่มีเวลาสแกนเข้า-ออก' };
       }
+
+      // 3) ลาต่างๆ
       if (r.sick > 0) return { type: 'sick', unpaidHours: 0, note: `ลาป่วย ${fmtHM(r.sick)}`, warn: '' };
       if (r.personal > 0) return { type: 'personal', unpaidHours: 0, note: `ลากิจ ${fmtHM(r.personal)}`, warn: '' };
       if (r.annual > 0) return { type: 'annual', unpaidHours: 0, note: `ลาพักร้อน ${fmtHM(r.annual)}`, warn: '' };
       if (r.otherLeave > 0) return { type: 'personal', unpaidHours: 0, note: `ลาอื่นๆ ${fmtHM(r.otherLeave)} (คิดเป็นลากิจ)`, warn: '' };
+
+      // 4) วันหยุด
       if (isHolidayType) {
         if (hasWork || r.hasTime) {
           return { type: 'work', unpaidHours: calcUnpaid(hasWork), note: `วันหยุดแต่มาทำงาน ${hasWork ? fmtHM(work) : 'มีสแกน'} → 1 แรง${lateNote}`, warn: '' };
         }
         return { type: 'holiday', unpaidHours: 0, note: 'วันหยุด ไม่มีชั่วโมงทำงาน → 0 บาท', warn: otWarn };
       }
+
+      // 5) วันทำงานปกติ มีชั่วโมงทำงาน
       if (hasWork) {
         const unpaid = calcUnpaid(true);
         let note = `ทำงาน ${fmtHM(work)}`;
@@ -423,19 +499,25 @@
         if (r.noIn || r.noOut) warn = `ไม่รูด ${r.noIn ? 'เข้า' : ''} ${r.noOut ? 'ออก' : ''}`.trim();
         return { type: 'work', unpaidHours: unpaid, note, warn };
       }
+
+      // 6) มีสแกน แต่อ่านจำนวนทำงานไม่ได้
       if (r.hasTime) {
         return { type: 'work', unpaidHours: calcUnpaid(false), note: `มีสแกน ${r.timeTxt || 'เข้า-ออก'} → วันทำงาน${lateNote}`, warn: 'อ่านช่องจำนวนทำงานไม่ได้' };
       }
+
+      // 7) ไม่มีชั่วโมง ไม่มีสแกน → ขาดงาน
       const isAbsentMarked = absentH > 0 || /ขาด/.test(t);
       return { type: 'absent', unpaidHours: 0, note: isAbsentMarked ? `ขาดงาน ${fmtHM(absentH)}` : 'ไม่มีชั่วโมง/สแกน → ขาดงาน', warn: otWarn || (isWorkType ? 'ไม่มีเวลาสแกนเข้า-ออก' : '') };
     }
 
+    // ===== อ่าน Excel / CSV =====
     function parseExcelFile(wb) {
       for (const name of wb.SheetNames) {
         const sheet = wb.Sheets[name];
         const txt = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, defval: '' });
         const raw = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true, defval: '' });
         if (txt.length < 2) continue;
+
         let hIdx = -1, cols = {};
         let bestScore = 0;
         for (let i = 0; i < Math.min(20, txt.length); i++) {
@@ -453,6 +535,8 @@
           if (c.date != null && c.type != null && c.work != null) break;
         }
         if (hIdx < 0 || cols.date == null) continue;
+
+        // หัวตาราง 2 ชั้น (ถ้ามี) — รวมเฉพาะเมื่อแถวถัดไปเป็นหัวตารางจริง
         const nextTxt = txt[hIdx + 1];
         if (nextTxt) {
           const testDt = parseDateCell((raw[hIdx + 1] || [])[cols.date], nextTxt[cols.date]);
@@ -471,6 +555,7 @@
             }
           }
         }
+
         const dc = cols.date;
         const colsSet = new Set(Object.keys(cols));
         const rows = {};
@@ -507,7 +592,8 @@
       return { rows: [], info: 'ไม่พบหัวตาราง (วันที่ / ประเภท / จำนวนทำงาน) ในไฟล์ — ตรวจสอบว่าเป็นไฟล์ รายงานผลประมวลเวลา หรือไม่' };
     }
 
-    const DATE_RE = /^(\d{1,2})\/(\d{4})(?:\s*\(?[\u0E00-\u0E7F.]{1,10}\)?)?$/;
+    // ===== อ่าน PDF =====
+    const DATE_RE = /^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s*\(?[\u0E00-\u0E7F.]{1,10}\)?)?$/;
     const HDR_FRAG = /วันที่|เวลา|เข้า|ออก|กะ|ประเภท|จำนวน|ทำงาน|สาย|กลับ|ก่อน|รูด|บัตร|ขาด|ลา|ป่วย|กิจ|พัก|ร้อน|อื่น|รวม|^ot|ot\d|โอที|ชม|นาที|ครั้ง|^\(|^date$|^type$/;
 
     function buildHeaderCols(arr, R, C) {
@@ -635,6 +721,7 @@
       let unHr = 0, ssoUnHr = 0, pubUnHr = 0, wageUnits = 0, ssoWageUnits = 0;
       const rate = Number(settings.rate) || 0;
       const holMult = Number(settings.holMult) || 0;
+
       days.forEach((day) => {
         const dHr = Math.max(0, Number(day.unpaidHours) || 0);
         switch (day.type) {
@@ -649,26 +736,33 @@
           case 'unpaid': unpaid++; break;
         }
       });
+
       const hourRate = rate / (Number(settings.hours) || 8);
       const ssoUnpaidCut = Number((ssoUnHr * hourRate).toFixed(2));
       const pubUnpaidCut = Number((pubUnHr * hourRate).toFixed(2));
       const unpaidCut = Number((unHr * hourRate).toFixed(2));
+
       const dailyWage = Math.max(0, Number((ssoWageUnits * rate - ssoUnpaidCut).toFixed(2)));
       const holidayWorkPay = Number((pubW * Math.max(0, holMult - 1) * rate).toFixed(2));
       const pubHolidayPay = Math.max(0, Number(((pubW + pubO) * rate - pubUnpaidCut).toFixed(2)));
+
       const wage = Math.max(0, Number((dailyWage + holidayWorkPay + pubHolidayPay).toFixed(2)));
+
       const validExtras = (extras || [])
         .filter(e => Number(e.amt) > 0)
         .map(e => ({ name: (e.name || '').trim() || 'รายได้เพิ่มเติม', amt: Number(Number(e.amt).toFixed(2)) }));
       const extraSum = Number(validExtras.reduce((s, i) => s + i.amt, 0).toFixed(2));
       const gross = Number((wage + extraSum).toFixed(2));
+
       const ssoBaseAmount = settings.ssoBase === 'all' ? Number((dailyWage + extraSum).toFixed(2)) : dailyWage;
       let sso = Math.round(ssoBaseAmount * ((Number(settings.sso) || 0) / 100));
       if (Number(settings.ssoCap) > 0) sso = Math.min(sso, Number(settings.ssoCap));
+
       const tax = Number((Number(settings.tax) || 0).toFixed(2));
       const oth = Number((Number(settings.oth) || 0).toFixed(2));
       const ded = Number((sso + tax + oth).toFixed(2));
       const net = Number((gross - ded).toFixed(2));
+
       return {
         key: period.key, period, settings, days,
         extras: validExtras, extraSum,
@@ -974,6 +1068,7 @@
       const updateExtra = (id, patch) => setExtras(prev => prev.map(e => (e.id === id ? { ...e, ...patch } : e)));
       const removeExtra = (id) => setExtras(prev => prev.filter(e => e.id !== id));
 
+      // ===== นำเข้าไฟล์ลงเวลา =====
       const handleImportTimeFile = async (e) => {
         const file = e.target.files && e.target.files[0];
         e.target.value = '';
@@ -995,6 +1090,7 @@
             showToast('⚠️ รองรับ .xlsx, .xls, .csv, .pdf เท่านั้น');
             return;
           }
+
           const parsed = result.rows.sort((a, b) => (a.y - b.y) || (a.m - b.m) || (a.d - b.d));
           if (!parsed.length) {
             setImportPreview([]);
@@ -1002,6 +1098,7 @@
             showToast('⚠️ อ่านไฟล์ได้แต่ไม่พบข้อมูลวันที่');
             return;
           }
+
           const cnt = {};
           parsed.forEach(r => {
             const k = `${r.y}-${pad(r.m)}-${r.d <= 15 ? 1 : 2}`;
@@ -1011,6 +1108,7 @@
           const [ty, tm, th] = topKey.split('-').map(Number);
           const target = generatePeriodInfo(ty, tm, th);
           const switched = target.key !== currentPeriod.key;
+
           let base = days;
           if (switched) {
             const existing = records.find(r => r.key === target.key);
@@ -1020,6 +1118,7 @@
             setSelectedMonth(`${ty}-${pad(tm)}`);
             setSelectedHalf(th);
           }
+
           const std = Number(settings.hours) || 8;
           const map = {};
           parsed.forEach(r => { map[`${r.y}-${pad(r.m)}-${pad(r.d)}`] = r; });
@@ -1030,6 +1129,7 @@
             return { ...day, type: res.type, unpaidHours: res.unpaidHours };
           });
           setDays(newDays);
+
           const inP = (r) => r.y === target.y && r.m === target.m && r.d >= target.startDay && r.d <= target.endDay;
           const preview = parsed.map(r => ({ ...r, ...classifyRow(r, std), inPeriod: inP(r) }));
           setImportPreview(preview);
@@ -1172,42 +1272,50 @@
       }, [records]);
       const recA = records.find(r => r.key === cmpA);
       const recB = records.find(r => r.key === cmpB);
+      // ===== เปรียบเทียบตามช่วงวันที่ A/B =====
+      const [rngA, setRngA] = useState({ from: '', to: '' });
+      const [rngB, setRngB] = useState({ from: '', to: '' });
+      const [rngTouched, setRngTouched] = useState(false);
 
-      // ===================== จุดที่ 2: STATE เพิ่มใหม่ (วางต่อจาก recB) =====================
-      const [cmpInitDone, setCmpInitDone] = useState(false);
+      // ค่าเริ่มต้น: B = งวดปัจจุบัน, A = งวดก่อนหน้า
+      const applyDefaultRanges = () => {
+        setRngB(periodRangeStr(currentPeriod));
+        setRngA(periodRangeStr(previousPeriodOf(currentPeriod)));
+      };
       useEffect(() => {
-        if (cmpInitDone) return;
-        // ค่าเริ่มต้น: B = งวดปัจจุบัน (เช่น 16-31 ต.ค.) , A = งวดก่อนหน้า (1-15 ต.ค.)
-        const curKey = currentPeriod.key;
-        const prevInfo = getPrevPeriodInfo(currentPeriod);
-        if (!prevInfo) return;
-        const prevKey = prevInfo.key;
-        const hasCur = records.some(r => r.key === curKey);
-        const hasPrev = records.some(r => r.key === prevKey);
+        if (currentTab === 'cmp' && !rngTouched) applyDefaultRanges();
+      }, [currentTab, currentPeriod.key]);
 
-        // ถ้ามีบันทึกอยู่แล้วให้ใช้บันทึกนั้น, ถ้าไม่มีก็ยอมรับ preview ของงวดปัจจุบันได้
-        if (records.length >= 1) {
-          // B เป็นงวดปัจจุบันเสมอ
-          if (!cmpB) setCmpB(curKey);
-          if (!cmpA) setCmpA(hasPrev ? prevKey : (records[0]?.key !== curKey ? records[0].key : prevKey));
-          setCmpInitDone(true);
-        } else {
-          // ยังไม่มีประวัติเลย -> B = ปัจจุบัน, A = งวดก่อนหน้า (จะถูกสร้างเมื่อบันทึก)
-          if (!cmpB) setCmpB(curKey);
-          if (!cmpA) setCmpA(prevKey);
-          setCmpInitDone(true);
-        }
-      }, [currentPeriod, records]);
+      const changeRange = (which, field, value) => {
+        setRngTouched(true);
+        (which === 'A' ? setRngA : setRngB)(prev => ({ ...prev, [field]: value }));
+      };
+      const resetRanges = () => {
+        setRngTouched(false);
+        applyDefaultRanges();
+      };
 
-      // กันเลือกสลับกัน: ถ้า "ตั้งแต่" > "ถึง" ให้สลับให้ถูกเอง
-      useEffect(() => {
-        if (!cmpA || !cmpB || cmpA === cmpB) return;
-        if (cmpA.localeCompare(cmpB) > 0) {
-          const a = cmpA; const b = cmpB;
-          setCmpA(b); setCmpB(a);
-        }
-      }, [cmpA, cmpB]);
+      // รวมวันจากทุกงวดที่บันทึก + งวดที่กำลังแก้ไข (ทับด้วยข้อมูลล่าสุด)
+      const rangeDays = useMemo(() => {
+        const byDate = {};
+        [...records].sort((a, b) => a.key.localeCompare(b.key)).forEach(r => {
+          (r.days || []).forEach(d => { if (d.dateStr) byDate[d.dateStr] = d; });
+        });
+        const saved = records.some(r => r.key === calculation.key);
+        days.forEach(d => { if (d.dateStr) byDate[d.dateStr] = { ...d, _preview: !saved }; });
+        return Object.values(byDate);
+      }, [records, days, calculation.key]);
 
+      const rngAN = normalizeRange(rngA.from, rngA.to);
+      const rngBN = normalizeRange(rngB.from, rngB.to);
+      const rngAData = useMemo(
+        () => (rngAN.from && rngAN.to ? buildRangeStats(rangeDays, rngAN.from, rngAN.to, settings) : null),
+        [rangeDays, rngA.from, rngA.to, settings]
+      );
+      const rngBData = useMemo(
+        () => (rngBN.from && rngBN.to ? buildRangeStats(rangeDays, rngBN.from, rngBN.to, settings) : null),
+        [rangeDays, rngB.from, rngB.to, settings]
+      );
       const CMP_ROWS = [
         ['วันจ่ายเงิน (วัน)', r => r.stats.paidDays, false, true],
         ['ค่าแรงรายวัน', r => r.dailyWage],
@@ -1218,7 +1326,7 @@
         ['รวมเงินหัก', r => r.ded, true],
         ['เงินสุทธิ', r => r.net],
       ];
-
+      // ===== รายสัปดาห์ =====
       const [includeCurrent, setIncludeCurrent] = useState(true);
       const [wkA, setWkA] = useState('');
       const [wkB, setWkB] = useState('');
@@ -1307,7 +1415,6 @@
           <main className="flex-1 w-full max-w-5xl mx-auto p-4 space-y-5">
             {currentTab === 'calc' && (
               <>
-                {/* ... (ส่วน calc เหมือนเดิม ไม่ได้แก้) ... */}
                 <div className={`${CARD} no-print`}>
                   <SectionHead num="1" title="เลือกงวดจ่ายค่าแรง + นำเข้าไฟล์ลงเวลา" desc="รองรับคอลัมน์ 'วันที่มีผล' 'กะ' 'ประเภท' 'เวลาเข้า-ออก' 'จำนวนทำงาน (ชม:นาที)' 'มาสาย' 'กลับก่อน' 'ขาดงาน' 'ลาป่วย/ลากิจ/พักร้อน' 'OT'" />
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
@@ -1326,6 +1433,7 @@
                       สร้างตารางวัน 🗓️
                     </button>
                   </div>
+
                   <div className="mt-4 p-4 rounded-2xl border-2 border-dashed border-emerald-300 bg-emerald-50 dark:bg-emerald-950/20 dark:border-emerald-800">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                       <div>
@@ -1333,7 +1441,7 @@
                           📁 อัปโหลดไฟล์ลงเวลา (Auto)
                           <span className="px-2 py-0.5 rounded-full bg-emerald-600 text-white text-[10px]">{APP_VERSION}</span>
                         </div>
-                        <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">รองรับ .xlsx / .xls / .csv / .pdf</div>
+                        <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">รองรับ .xlsx / .xls / .csv / .pdf — อ่านคอลัมน์ วันที่มีผล / กะ / ประเภท / เวลาเข้า-ออก / จำนวนทำงาน / มาสาย / กลับก่อน / ขาดงาน / ลา / OT</div>
                       </div>
                       <div className="flex gap-2">
                         <input ref={timeFileRef} type="file" accept=".xlsx,.xls,.csv,.pdf" className="hidden" onChange={handleImportTimeFile} />
@@ -1343,12 +1451,100 @@
                         </button>
                       </div>
                     </div>
+
                     {importLog && <div className="text-[11px] mt-3 p-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 break-words">{importLog}</div>}
+
+                    {importPreview.length > 0 && (
+                      <details className="mt-3" open>
+                        <summary className="cursor-pointer text-xs font-semibold text-emerald-700 dark:text-emerald-400">🔍 ตรวจสอบผลการอ่านไฟล์ ({importPreview.length} วัน) — กดดูรายละเอียด</summary>
+                        <label className="flex items-center gap-2 mt-2 text-[11px] text-slate-500 dark:text-slate-400">
+                          <input type="checkbox" checked={showRaw} onChange={e => setShowRaw(e.target.checked)} />
+                          แสดงข้อความดิบ
+                        </label>
+                        <div className="mt-2 overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
+                          <table className="w-full text-[11px]">
+                            <thead className="bg-slate-100 dark:bg-slate-800">
+                              <tr>
+                                {['วันที่', 'กะ', 'เข้า-ออก', 'ประเภท (ไฟล์)', 'จำนวนทำงาน', 'สาย/ก่อน', 'ขาด', 'ลา', 'OT', 'ผลในเว็บ', 'ชม.หัก'].concat(showRaw ? ['ข้อความดิบ'] : []).map(h => (
+                                  <th key={h} className="p-2 text-left whitespace-nowrap">{h}</th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+                              {importPreview.map(r => (
+                                <tr key={`${r.y}-${r.m}-${r.d}`} className={`${r.inPeriod ? '' : 'opacity-40'} ${r.inPeriod && r.warn ? 'bg-amber-500/10' : ''}`}>
+                                  <td className="p-2 whitespace-nowrap font-mono">{pad(r.d)}/{pad(r.m)}/{r.y + 543}</td>
+                                  <td className="p-2 whitespace-nowrap text-[10px]">{r.shiftText || '-'}</td>
+                                  <td className="p-2 whitespace-nowrap font-mono text-[10px]">{r.timeTxt || (r.hasTime ? '✓' : '-')}</td>
+                                  <td className="p-2 whitespace-nowrap">{r.typeText || '-'}</td>
+                                  <td className="p-2 font-mono">{hmOrDash(r.work)}</td>
+                                  <td className="p-2 font-mono">{hmOrDash((r.late || 0) + (r.early || 0))}</td>
+                                  <td className="p-2 font-mono">{hmOrDash(r.absent)}</td>
+                                  <td className="p-2 font-mono">{hmOrDash((r.sick || 0) + (r.personal || 0) + (r.annual || 0) + (r.otherLeave || 0))}</td>
+                                  <td className="p-2 font-mono">{hmOrDash((r.ot1 || 0) + (r.ot15 || 0) + (r.ot2 || 0) + (r.ot3 || 0) + (r.otTotal || 0))}</td>
+                                  <td className="p-2">
+                                    <div className="whitespace-nowrap font-semibold">{r.inPeriod ? DAY_TYPES[r.type].label : '⏭️ นอกงวด'}</div>
+                                    <div className="text-[10px] text-slate-500">{r.inPeriod ? r.note : 'อยู่คนละงวด'}</div>
+                                    {r.inPeriod && r.warn && <div className="text-[10px] text-amber-600 dark:text-amber-400">⚠️ {r.warn}</div>}
+                                  </td>
+                                  <td className="p-2 font-mono">{r.inPeriod ? (r.unpaidHours > 0 ? fmtHM(r.unpaidHours) : '-') : '-'}</td>
+                                  {showRaw && <td className="p-2 text-[10px] text-slate-400 min-w-[200px]">{r.rowText}</td>}
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                        <div className="mt-2 text-[11px] p-2 rounded-lg bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300">
+                          <b>สรุปผลนำเข้า ({importSummary.total} วันในงวด):</b>{' '}
+                          {Object.entries(importSummary.cnt).map(([k, v]) => `${DAY_TYPES[k].label} ${v} วัน`).join(' · ')}
+                          {importSummary.hrs > 0 ? ` · ชม.หักรวม ${fmtHM(importSummary.hrs)}` : ''}
+                        </div>
+                      </details>
+                    )}
                   </div>
                 </div>
 
                 <div className={`${CARD} no-print`}>
                   <SectionHead num="2" title="บันทึกวันทำงาน" pill={<Pill>{calculation.period.label}</Pill>} />
+
+                  <div className="mb-3">
+                    <div className="flex items-center justify-between mb-2 gap-2">
+                      <span className="text-sm text-slate-500 dark:text-slate-400">🏖️ เลือกวันหยุดประจำสัปดาห์</span>
+                      <button onClick={resetDaysToWeeklyOff}
+                        className="text-xs px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-700/50 dark:hover:bg-slate-700 whitespace-nowrap">
+                        🔄 รีเซ็ตตาราง
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
+                      {WEEK_ORDER.map(dow => {
+                        const active = weeklyOff.includes(dow);
+                        const weekend = dow === 0 || dow === 6;
+                        return (
+                          <button key={dow} onClick={() => toggleWeeklyOff(dow)} title={`วัน${TH_DAYS[dow]}`}
+                            className={`py-2.5 rounded-xl border text-sm font-bold transition active:scale-95 ${
+                              active
+                                ? 'bg-rose-500 border-rose-500 text-white shadow-lg shadow-rose-500/30'
+                                : `bg-slate-100 border-slate-200 hover:bg-slate-200 dark:bg-slate-800 dark:border-slate-700 dark:hover:bg-slate-700 ${weekend ? 'text-rose-500 dark:text-rose-400' : 'text-slate-600 dark:text-slate-300'}`
+                            }`}>
+                            {TH_DAYS_SHORT[dow]}
+                            <div className={`text-[9px] font-normal mt-0.5 ${active ? 'text-white/80' : 'text-slate-400'}`}>
+                              {active ? 'หยุด' : 'ทำงาน'}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="p-3 rounded-xl border mb-3 text-xs bg-amber-50 border-amber-200 text-amber-800 dark:bg-amber-950/20 dark:border-amber-800/50 dark:text-amber-300 space-y-1">
+                    <div><strong>กติกาการอ่านไฟล์ รายงานผลประมวลเวลา:</strong></div>
+                    <div>• <b>วันที่มีผล</b> = วันที่จริง | <b>ประเภท=วันหยุด</b> + ไม่มีจำนวนทำงาน/สแกน = <span className="underline font-bold">0 บาท</span></div>
+                    <div>• <b>ประเภท=วันทำงาน</b> + <b>จำนวนทำงาน=8:00</b> = วันทำงานปกติ 1 แรง</div>
+                    <div>• <b>วันทำงาน</b> + ไม่มีสแกน/ไม่มีชั่วโมง = <b>ขาดงาน</b></div>
+                    <div>• ชั่วโมงหัก = ค่ามากกว่าระหว่าง (8 ชม. − ชม.ทำงานจริง) กับ (สาย + กลับก่อน + ขาด) เช่น 7:58 + สาย 0:02 → หัก 0:02 | 5:45 → หัก 2:15</div>
+                    <div>• <b>OT</b> รองรับ OT1/OT1.5/OT2/OT3/รวม OT — ถ้ามีแต่ OT ล้วน (ไม่มีชั่วโมงปกติ) = 2 แรง</div>
+                  </div>
+
                   <div className="space-y-2">
                     {days.map((day, idx) => {
                       const paid = DAY_TYPES[day.type].pay === 1;
@@ -1373,6 +1569,13 @@
                               </label>
                             )}
                           </div>
+                          <div>
+                            {day.type === 'holiday' && <span className="text-[11px] text-slate-400 font-semibold px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-800">🏖️ วันหยุด (0 ฿)</span>}
+                            {['work', 'sick', 'personal', 'annual'].includes(day.type) && <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold px-2 py-0.5 rounded bg-emerald-500/10">✅ {formatMoney(settings.rate)} ฿</span>}
+                            {day.type === 'pubwork' && <span className="text-[11px] text-amber-600 dark:text-amber-400 font-semibold px-2 py-0.5 rounded bg-amber-500/10">🎌 {settings.holMult} แรง ({formatMoney(settings.rate * settings.holMult)} ฿)</span>}
+                            {day.type === 'puboff' && <span className="text-[11px] text-amber-600 dark:text-amber-300 font-semibold px-2 py-0.5 rounded bg-amber-500/10">🎏 {formatMoney(settings.rate)} ฿</span>}
+                            {['absent', 'unpaid'].includes(day.type) && <span className="text-[11px] text-rose-500 font-semibold px-2 py-0.5 rounded bg-rose-500/10">0.00 ฿</span>}
+                          </div>
                         </div>
                       );
                     })}
@@ -1380,87 +1583,376 @@
                 </div>
 
                 <div className={`${CARD} no-print`}>
-                  <SectionHead num="4" title="รายได้เพิ่มเติมประจำงวด" />
+                  <SectionHead num="3" title="สรุปจำนวนวันในงวด" pill={<Pill color="blue">{calculation.stats.paidDays} วันจ่ายเงิน</Pill>} />
+                  <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 text-center">
+                    {[
+                      ['วันทำงาน', calculation.stats.work, 'text-blue-500'],
+                      ['นักขัตฤกษ์/OT1', calculation.stats.pubW + calculation.stats.pubO, 'text-amber-500'],
+                      ['วันหยุด (0฿)', calculation.stats.holiday, 'text-slate-500'],
+                      ['ลา (ได้เงิน)', calculation.stats.sick + calculation.stats.personal + calculation.stats.annual, 'text-violet-500'],
+                      ['ขาด/ไม่รับเงิน', calculation.stats.absent + calculation.stats.unpaid, 'text-rose-500'],
+                      ['ชม.ไม่ได้รับค่าจ้าง', calculation.stats.unpaidHours, 'text-slate-400'],
+                    ].map(([l, v, c]) => (
+                      <div key={l} className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700/60">
+                        <div className={`text-2xl font-bold font-mono ${c}`}>{v}</div>
+                        <div className="text-[11px] text-slate-400 mt-1">{l}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className={`${CARD} no-print`}>
+                  <SectionHead num="4" title="รายได้เพิ่มเติมประจำงวด" pill={<Pill>ใส่เฉพาะงวดที่ได้</Pill>}
+                    desc="เช่น Incentive Audit, เบี้ยขยัน, ค่ากะ, ค่าเดินทาง" />
+
                   {extras.length === 0 ? (
-                    <div className="py-6 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 text-center text-sm text-slate-400">ยังไม่มีรายการ</div>
+                    <div className="py-6 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 text-center text-sm text-slate-400">
+                      ยังไม่มีรายการรายได้เพิ่มเติมในงวดนี้
+                    </div>
                   ) : (
                     <div className="space-y-2">
                       {extras.map(e => (
                         <div key={e.id} className="flex items-center gap-2">
-                          <input type="text" value={e.name} onChange={ev => updateExtra(e.id, { name: ev.target.value })} className={`${INPUT} flex-1`} />
-                          <input type="number" value={e.amt} onChange={ev => updateExtra(e.id, { amt: ev.target.value })} className={`${INPUT} !w-32 font-mono text-right`} />
-                          <button onClick={() => removeExtra(e.id)} className="w-11 h-11 grid place-items-center rounded-2xl border border-rose-300 text-rose-500"><Ico name="x" /></button>
+                          <input type="text" value={e.name} placeholder="ชื่อรายการ เช่น เบี้ยขยัน"
+                            onChange={ev => updateExtra(e.id, { name: ev.target.value })}
+                            className={`${INPUT} flex-1`} />
+                          <input type="number" inputMode="decimal" value={e.amt} placeholder="0.00"
+                            onChange={ev => updateExtra(e.id, { amt: ev.target.value })}
+                            className={`${INPUT} !w-32 sm:!w-40 font-mono text-right`} />
+                          <button onClick={() => removeExtra(e.id)} title="ลบ"
+                            className="w-11 h-11 shrink-0 grid place-items-center rounded-2xl border border-rose-300 text-rose-500 hover:bg-rose-500/10 dark:border-rose-800/60">
+                            <Ico name="x" />
+                          </button>
                         </div>
                       ))}
+                      <div className="flex justify-between text-sm pt-1 px-1">
+                        <span className="text-slate-400">รวมรายได้เพิ่มเติม</span>
+                        <span className="font-mono font-bold text-amber-500">+{formatMoney(calculation.extraSum)} ฿</span>
+                      </div>
                     </div>
                   )}
-                  <div className="flex gap-3 mt-4">
-                    <button onClick={() => addExtra()} className={BTN_OUTLINE}><Ico name="plus" /> เพิ่มรายการ</button>
+
+                  <div className="flex flex-wrap gap-3 mt-4">
+                    <button onClick={() => addExtra()} className={BTN_OUTLINE}>
+                      <Ico name="plus" /> เพิ่มรายการ
+                    </button>
                     {settings.quickName && Number(settings.quickAmt) > 0 && (
-                      <button onClick={() => { addExtra(settings.quickName, settings.quickAmt); }} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl border text-sm font-semibold border-amber-500/50 bg-amber-500/10 text-amber-600"><Ico name="zap" /> {settings.quickName} +{formatMoney(settings.quickAmt)} ฿</button>
+                      <button onClick={() => { addExtra(settings.quickName, settings.quickAmt); showToast(`⚡ เพิ่ม ${settings.quickName} +${formatMoney(settings.quickAmt)} ฿`); }}
+                        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl border text-sm font-semibold border-amber-500/50 bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 dark:text-amber-400 transition">
+                        <Ico name="zap" /> {settings.quickName} +{formatMoney(settings.quickAmt)} ฿
+                      </button>
                     )}
                   </div>
-                  <button onClick={handleCalculate} className="mt-5 w-full py-4 rounded-2xl text-white font-bold bg-gradient-to-r from-blue-600 to-indigo-600"><Ico name="calc" /> คำนวณเงินงวดนี้</button>
+
+                  <button onClick={handleCalculate}
+                    className="mt-5 w-full py-4 rounded-2xl text-white font-bold text-sm sm:text-base flex items-center justify-center gap-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 shadow-lg shadow-blue-600/30 transition active:scale-[0.99]">
+                    <Ico name="calc" className="w-5 h-5" /> คำนวณเงินงวดนี้ &amp; อัปเดตกราฟ Real-time
+                  </button>
                 </div>
 
-                <div ref={slipRef} className={CARD}><h2 className="font-bold">สุทธิ {formatMoney(calculation.net)} ฿</h2></div>
-                <div className="no-print space-y-5"><DistributionChart calc={calculation} isDark={isDark} /><DayTypeChart calc={calculation} isDark={isDark} /><TrendChart list={trendList} isDark={isDark} /></div>
+                <div ref={slipRef} className={`${CARD} scroll-mt-32 transition ${flash ? 'ring-2 ring-blue-500' : ''}`}>
+                  <div className="flex flex-wrap items-center justify-between gap-2 pb-3 mb-4 border-b border-slate-200 dark:border-slate-700/50">
+                    <div>
+                      <h2 className="text-lg font-bold">รายการเงินสลิป</h2>
+                      <p className="text-xs text-slate-400">งวด {calculation.period.label} · วันจ่าย: {calculation.period.payLabel}</p>
+                    </div>
+                    <div className="flex gap-2 no-print">
+                      <button onClick={() => window.print()} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-semibold border-slate-300 dark:border-slate-600">
+                        <Ico name="printer" /> พิมพ์
+                      </button>
+                      <button onClick={handleSaveRecord} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold">
+                        <Ico name="save" /> บันทึกงวดนี้
+                      </button>
+                    </div>
+                  </div>
+
+                  {goal > 0 && (
+                    <div className={`p-3.5 rounded-2xl border mb-4 ${isReached ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-slate-50 border-slate-200 dark:bg-slate-900/60 dark:border-slate-700'}`}>
+                      <div className="flex justify-between text-xs mb-1.5 gap-2">
+                        <span>🎯 <strong>เป้าหมายเดือนนี้:</strong> {formatMoney(monthNet)} / {formatMoney(goal)} ฿</span>
+                        <span className="font-bold font-mono text-emerald-500">{pct}%{isReached ? ' 🎉' : ''}</span>
+                      </div>
+                      <div className="w-full h-2.5 rounded-full bg-slate-200 dark:bg-slate-950 overflow-hidden">
+                        <div className={`h-full rounded-full transition-all duration-500 ${isReached ? 'bg-emerald-400' : 'bg-blue-500'}`} style={{ width: `${progressWidth}%` }}></div>
+                      </div>
+                      {otherHalfNet > 0 && <p className="text-[10px] text-slate-400 mt-1">รวมงวดอื่นในเดือนเดียวกันที่บันทึกไว้ {formatMoney(otherHalfNet)} ฿</p>}
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                    <div className="rounded-2xl border border-slate-200 dark:border-slate-700/60 overflow-hidden">
+                      <div className="p-2.5 font-bold flex justify-between bg-slate-100 dark:bg-slate-900 text-emerald-600 dark:text-emerald-400">
+                        <span>รายการรายได้</span><span>จำนวนเงิน</span>
+                      </div>
+                      <div className="p-3 space-y-2.5">
+                        <div className="flex justify-between">
+                          <div>
+                            <span className="font-semibold">ค่าแรงรายวัน</span>
+                            <div className="text-[10px] text-slate-400">({calculation.stats.ssoWageUnits} วัน × {formatMoney(settings.rate)} ฿{calculation.unpaidCut > 0 ? ' − หักชั่วโมง' : ''})</div>
+                          </div>
+                          <span className="font-mono font-bold">{formatMoney(calculation.dailyWage)}</span>
+                        </div>
+                        {calculation.holidayWorkPay > 0 && (
+                          <div className="flex justify-between text-amber-600 dark:text-amber-300">
+                            <div><span>ค่าทำงานในวันหยุด/OT1 (+{settings.holMult - 1} แรง)</span><div className="text-[10px] text-slate-400">({calculation.stats.pubW} วัน · ไม่นำมาคิดประกันสังคม)</div></div>
+                            <span className="font-mono font-bold">{formatMoney(calculation.holidayWorkPay)}</span>
+                          </div>
+                        )}
+                        {calculation.pubHolidayPay > 0 && (
+                          <div className="flex justify-between text-amber-600 dark:text-amber-200">
+                            <div><span>ค่าแรงวันหยุดนักขัตฤกษ์/OT1</span><div className="text-[10px] text-slate-400">({calculation.stats.pubW + calculation.stats.pubO} วัน · ไม่นำมาคิดประกันสังคม)</div></div>
+                            <span className="font-mono font-bold">{formatMoney(calculation.pubHolidayPay)}</span>
+                          </div>
+                        )}
+                        {calculation.extras.map((e, i) => (
+                          <div key={i} className="flex justify-between text-sky-600 dark:text-sky-300">
+                            <div><span>{e.name}</span><div className="text-[10px] text-slate-400">(รายได้เพิ่มเติม{settings.ssoBase === 'all' ? ' · คิด ปกส.' : ''})</div></div>
+                            <span className="font-mono font-bold">{formatMoney(e.amt)}</span>
+                          </div>
+                        ))}
+                        <div className="pt-2 border-t border-slate-200 dark:border-slate-800 flex justify-between font-bold text-sm text-emerald-600 dark:text-emerald-400">
+                          <span>รวมรายได้</span><span className="font-mono">{formatMoney(calculation.gross)}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl border border-slate-200 dark:border-slate-700/60 overflow-hidden">
+                      <div className="p-2.5 font-bold flex justify-between bg-slate-100 dark:bg-slate-900 text-rose-500 dark:text-rose-400">
+                        <span>รายการหัก</span><span>จำนวนเงิน</span>
+                      </div>
+                      <div className="p-3 space-y-2.5">
+                        <div className="flex justify-between">
+                          <div>
+                            <span className="font-semibold">ประกันสังคม ({settings.sso}%)</span>
+                            <div className="text-[10px] text-slate-400">ฐาน: {formatMoney(calculation.ssoBaseAmount)} ฿ · เพดาน {formatMoney(settings.ssoCap)} ฿</div>
+                          </div>
+                          <span className="font-mono font-bold text-rose-500 dark:text-rose-400">-{formatMoney(calculation.sso)}</span>
+                        </div>
+                        <div className="flex justify-between text-slate-500 dark:text-slate-400">
+                          <span>ภาษีหัก ณ ที่จ่าย</span><span className="font-mono">{calculation.tax > 0 ? '-' : ''}{formatMoney(calculation.tax)}</span>
+                        </div>
+                        {calculation.oth > 0 && (
+                          <div className="flex justify-between text-slate-500 dark:text-slate-400">
+                            <span>{calculation.othName}</span><span className="font-mono">-{formatMoney(calculation.oth)}</span>
+                          </div>
+                        )}
+                        <div className="pt-2 border-t border-slate-200 dark:border-slate-800 flex justify-between font-bold text-sm text-rose-500 dark:text-rose-400">
+                          <span>รวมเงินหัก</span><span className="font-mono">-{formatMoney(calculation.ded)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 p-4 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 flex justify-between items-center">
+                    <div>
+                      <span className="text-sm text-emerald-600 dark:text-emerald-400 font-bold block">เงินสุทธิ</span>
+                      <span className="text-[11px] text-slate-400">ยอดเงินรับจริง</span>
+                    </div>
+                    <div className="text-2xl sm:text-3xl font-bold font-mono text-emerald-600 dark:text-emerald-400">{formatMoney(calculation.net)} ฿</div>
+                  </div>
+                </div>
+
+                <div className="no-print space-y-5">
+                  <DistributionChart calc={calculation} isDark={isDark} />
+                  <DayTypeChart calc={calculation} isDark={isDark} />
+                  <TrendChart list={trendList} isDark={isDark} />
+                </div>
               </>
             )}
 
             {currentTab === 'hist' && (
               <div className={CARD}>
-                <SectionHead icon="📚" title="ประวัติรายเดือน" pill={<Pill color="blue">{records.length} งวด</Pill>} />
-                {monthGroups.length === 0 ? <div className="py-10 text-center text-slate-400">ยังไม่มีข้อมูล</div> : monthGroups.map(g => (
-                  <div key={g.key} className="rounded-2xl border mb-3 overflow-hidden border-slate-200 dark:border-slate-700">
-                    <div className="p-3 bg-slate-100 dark:bg-slate-900/70 flex justify-between"><strong>{TH_MONTHS_FULL[g.m - 1]} {g.y + 543}</strong><span className="font-mono text-emerald-500">{formatMoney(g.net)} ฿</span></div>
-                    {g.items.map(r => (
-                      <div key={r.key} className="p-3 flex justify-between text-xs border-t border-slate-200 dark:border-slate-800"><button onClick={() => loadRecord(r)} className="text-left">{r.period.label}</button><span className="font-mono font-bold">{formatMoney(r.net)} ฿</span></div>
+                <SectionHead icon="📚" title="ประวัติรายเดือน" pill={<Pill color="blue">{records.length} งวด</Pill>} desc="รวมยอดแต่ละเดือนจากทั้ง 2 งวด · กดที่งวดเพื่อเปิดแก้ไข" />
+                {monthGroups.length === 0 ? (
+                  <div className="py-10 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 text-center text-sm text-slate-400">ยังไม่มีข้อมูลที่บันทึกไว้</div>
+                ) : (
+                  <div className="space-y-4">
+                    {monthGroups.map(g => (
+                      <div key={g.key} className="rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                        <div className="p-3 flex flex-wrap justify-between items-center gap-2 bg-slate-100 dark:bg-slate-900/70">
+                          <strong className="text-sm">{TH_MONTHS_FULL[g.m - 1]} {g.y + 543}</strong>
+                          <div className="text-xs text-slate-500 dark:text-slate-400">
+                            รายได้ {formatMoney(g.gross)} · หัก {formatMoney(g.ded)} · <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-sm">สุทธิ {formatMoney(g.net)} ฿</span>
+                          </div>
+                        </div>
+                        <div className="divide-y divide-slate-200 dark:divide-slate-800">
+                          {g.items.map(r => (
+                            <div key={r.key} className="p-3 flex justify-between items-center gap-2 text-xs">
+                              <button onClick={() => loadRecord(r)} className="text-left flex-1 min-w-0">
+                                <strong>{r.period.half === 1 ? 'งวดแรก' : 'งวดหลัง'} · {r.period.label}</strong>
+                                <div className="text-[11px] text-slate-400">
+                                  {r.stats.paidDays} วันจ่าย · รายได้ {formatMoney(r.gross)} ฿{r.extraSum > 0 ? ` (เพิ่มเติม ${formatMoney(r.extraSum)})` : ''} · หัก {formatMoney(r.ded)} ฿ · จ่าย {r.period.payLabel}
+                                </div>
+                              </button>
+                              <div className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-sm whitespace-nowrap">{formatMoney(r.net)} ฿</div>
+                              <button onClick={() => loadRecord(r)} title="แก้ไข" className="p-2 rounded-lg text-blue-500 hover:bg-blue-500/10"><Ico name="edit" /></button>
+                              <button onClick={() => deleteRecord(r.key)} title="ลบ" className="p-2 rounded-lg text-rose-500 hover:bg-rose-500/10"><Ico name="trash" /></button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     ))}
                   </div>
-                ))}
+                )}
               </div>
             )}
+                {/* ===== เปรียบเทียบรายสัปดาห์ ===== */}
+                <div className={CARD}>
+                  <SectionHead icon="🗓️" title="เปรียบเทียบรายสัปดาห์" pill={<Pill color="blue">{weeklyStats.length} สัปดาห์</Pill>}
+                    desc="นับจำนวนวันแต่ละประเภท แยกตามสัปดาห์ (จันทร์–อาทิตย์) จากทุกงวดที่บันทึกไว้" />
+                  <label className="flex items-center gap-2 mb-4 text-xs text-slate-500 dark:text-slate-400">
+                    <input type="checkbox" checked={includeCurrent} onChange={e => setIncludeCurrent(e.target.checked)} />
+                    รวมงวดที่กำลังแก้ไข ({calculation.period.label}) แม้ยังไม่ได้บันทึก
+                  </label>
 
-            {/* ===== เปรียบเทียบรายสัปดาห์ ===== */}
-            <div className={CARD}>
-              <SectionHead icon="🗓️" title="เปรียบเทียบรายสัปดาห์" pill={<Pill color="blue">{weeklyStats.length} สัปดาห์</Pill>} desc="นับจำนวนวันแต่ละประเภท แยกตามสัปดาห์ (จันทร์–อาทิตย์)" />
-              <label className="flex items-center gap-2 mb-4 text-xs text-slate-500"><input type="checkbox" checked={includeCurrent} onChange={e => setIncludeCurrent(e.target.checked)} />รวมงวดที่กำลังแก้ไข ({calculation.period.label})</label>
-              {weeklyStats.length >= 2 && wkAData && wkBData && (
-                <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-700">
-                  <table className="w-full text-xs"><thead className="bg-slate-100 dark:bg-slate-900/70"><tr><th className="p-2.5 text-left">รายการ</th><th className="p-2.5 text-right">A: {wkAData.label}</th><th className="p-2.5 text-right">B: {wkBData.label}</th><th className="p-2.5 text-right">ผลต่าง</th></tr></thead>
-                  <tbody className="divide-y">{WEEK_ROWS.map(([label, key, dir, fmtType]) => {
-                    const a = wkAData[key]||0; const b = wkBData[key]||0; const d = Math.round((b-a)*100)/100;
-                    return <tr key={key}><td className="p-2.5">{label}</td><td className="p-2.5 text-right font-mono">{a}</td><td className="p-2.5 text-right font-mono">{b}</td><td className="p-2.5 text-right font-mono">{d}</td></tr>
-                  })}</tbody></table>
+                  {weeklyStats.length < 2 ? (
+                    <div className="py-10 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 text-center text-sm text-slate-400">
+                      ต้องมีข้อมูลอย่างน้อย 2 สัปดาห์จึงจะเปรียบเทียบได้
+                    </div>
+                  ) : (
+                    <>
+                      <div className="grid grid-cols-2 gap-3 mb-4">
+                        {[['สัปดาห์ A', wkA, setWkA], ['สัปดาห์ B', wkB, setWkB]].map(([lbl, val, setter]) => (
+                          <div key={lbl}>
+                            <label className={LABEL}>{lbl}</label>
+                            <select value={val} onChange={e => setter(e.target.value)} className={INPUT}>
+                              {weeklyStats.map(w => <option key={w.key} value={w.key}>{weekOptionLabel(w)}</option>)}
+                            </select>
+                          </div>
+                        ))}
+                      </div>
+
+                      {wkAData && wkBData && (
+                        <>
+                          {(wkAData.days < 7 || wkBData.days < 7) && (
+                            <div className="mb-3 p-2.5 rounded-xl text-[11px] bg-amber-50 border border-amber-200 text-amber-700 dark:bg-amber-950/20 dark:border-amber-800/50 dark:text-amber-300">
+                              ⚠️ สัปดาห์ที่เลือกมีข้อมูลไม่ครบ 7 วัน (งวดที่อยู่ติดกันอาจยังไม่ได้บันทึก) ตัวเลขจึงอาจยังไม่ครบ
+                            </div>
+                          )}
+                          <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-700">
+                            <table className="w-full text-xs sm:text-sm">
+                              <thead className="bg-slate-100 dark:bg-slate-900/70">
+                                <tr>
+                                  <th className="p-2.5 text-left">รายการ</th>
+                                  <th className="p-2.5 text-right whitespace-nowrap">A: {wkAData.label}</th>
+                                  <th className="p-2.5 text-right whitespace-nowrap">B: {wkBData.label}</th>
+                                  <th className="p-2.5 text-right">ผลต่าง (B−A)</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+                                {WEEK_ROWS.map(([label, key, dir, fmtType]) => {
+                                  const a = wkAData[key] || 0;
+                                  const b = wkBData[key] || 0;
+                                  const d = Math.round((b - a) * 100) / 100;
+                                  const color = d === 0 ? 'text-slate-400'
+                                    : dir === 0 ? 'text-blue-500'
+                                    : (dir * d > 0 ? 'text-emerald-500' : 'text-rose-500');
+                                  const fmt = (v, signed = false) => {
+                                    const sign = signed ? (v > 0 ? '+' : v < 0 ? '−' : '') : '';
+                                    const x = Math.abs(v);
+                                    const body = fmtType === 'money' ? formatMoney(x) : fmtType === 'hm' ? fmtHM(x) : x;
+                                    return sign + body;
+                                  };
+                                  const bold = ['paidDays', 'estWage'].includes(key);
+                                  return (
+                                    <tr key={key} className={bold ? 'font-bold bg-slate-50 dark:bg-slate-900/40' : ''}>
+                                      <td className="p-2.5 whitespace-nowrap">{label}</td>
+                                      <td className="p-2.5 text-right font-mono">{fmt(a)}</td>
+                                      <td className="p-2.5 text-right font-mono">{fmt(b)}</td>
+                                      <td className={`p-2.5 text-right font-mono ${color}`}>{d === 0 ? '-' : fmt(d, true)}</td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                          <p className="text-[10px] text-slate-400 mt-2">
+                            * ค่าแรงโดยประมาณ = (แรง × ค่าแรง) − ชม.หัก ยังไม่รวมรายได้เพิ่มเติม/ประกันสังคม · เขียว = ดีขึ้น · แดง = แย่ลง · ฟ้า = เปลี่ยนแปลง
+                          </p>
+                        </>
+                      )}
+                    </>
+                  )}
                 </div>
-              )}
-            </div>
 
+                {weeklyStats.length > 0 && (
+                  <div className={CARD}>
+                    <SectionHead icon="📊" title="จำนวนวันแต่ละประเภท รายสัปดาห์" pill={<Pill color="purple">{Math.min(12, weeklyStats.length)} สัปดาห์ล่าสุด</Pill>} />
+                    <ChartBox type="bar" height={320} deps={[isDark]}
+                      data={{
+                        labels: weeklyStats.slice(-12).map(w => w.label + (w.hasPreview ? ' *' : '')),
+                        datasets: WEEK_SERIES.map(s => ({
+                          label: s.label,
+                          data: weeklyStats.slice(-12).map(w => w[s.k]),
+                          backgroundColor: s.color,
+                          borderRadius: 4,
+                          maxBarThickness: 48,
+                        })),
+                      }}
+                      options={{
+                        responsive: true, maintainAspectRatio: false,
+                        interaction: { mode: 'index', intersect: false },
+                        plugins: {
+                          legend: { position: 'bottom', labels: { color: themeColors(isDark).legend, boxWidth: 12, boxHeight: 12 } },
+                          tooltip: { filter: (item) => item.raw > 0, callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${ctx.raw} วัน` } },
+                        },
+                        scales: {
+                          x: { stacked: true, ticks: { color: themeColors(isDark).tick, maxRotation: 40, minRotation: 0 }, grid: { display: false } },
+                          y: { stacked: true, beginAtZero: true, max: 7, ticks: { color: themeColors(isDark).tick, stepSize: 1, precision: 0 }, grid: { color: themeColors(isDark).grid } },
+                        },
+                      }} />
+
+                    <div className="mt-5 overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-700">
+                      <table className="w-full text-[11px] sm:text-xs">
+                        <thead className="bg-slate-100 dark:bg-slate-900/70">
+                          <tr>
+                            {['สัปดาห์', 'ทำงาน', 'นักขัตฯ มาทำ', 'นักขัตฯ หยุด', 'หยุด 0฿', 'ป่วย', 'กิจ', 'พักร้อน', 'ขาด', 'ไม่รับเงิน', 'ชม.หัก', 'ค่าแรง≈'].map(h => (
+                              <th key={h} className={`p-2 whitespace-nowrap ${h === 'สัปดาห์' ? 'text-left' : 'text-center'}`}>{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+                          {[...weeklyStats].reverse().map(w => (
+                            <tr key={w.key} className={w.key === wkA || w.key === wkB ? 'bg-blue-500/5' : ''}>
+                              <td className="p-2 whitespace-nowrap">
+                                <span className="font-semibold">{w.label}</span>
+                                {w.key === wkA && <span className="ml-1 px-1.5 rounded bg-slate-500 text-white text-[9px]">A</span>}
+                                {w.key === wkB && <span className="ml-1 px-1.5 rounded bg-blue-600 text-white text-[9px]">B</span>}
+                                {w.days < 7 && <div className="text-[9px] text-amber-500">มีข้อมูล {w.days}/7 วัน</div>}
+                              </td>
+                              {WEEK_SERIES.map(s => (
+                                <td key={s.k} className={`p-2 text-center font-mono ${w[s.k] ? '' : 'text-slate-300 dark:text-slate-600'}`}>
+                                  {w[s.k] || '-'}
+                                </td>
+                              ))}
+                              <td className="p-2 text-center font-mono">{hmOrDash(w.unpaidHours)}</td>
+                              <td className="p-2 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">{formatMoney(w.estWage)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    {weeklyStats.some(w => w.hasPreview) && <p className="text-[10px] text-slate-400 mt-2">* มีข้อมูลจากงวดที่ยังไม่ได้บันทึก</p>}
+                  </div>
+                )}
             {currentTab === 'cmp' && (
               <>
                 <div className={CARD}>
-                  <SectionHead icon="📊" title="เปรียบเทียบงวด" desc="เลือก 2 งวดที่บันทึกไว้เพื่อดูความแตกต่าง - ถ้าเลือกสลับกันระบบจะสลับให้อัตโนมัติ" />
-                  {records.length < 1 ? (
-                    <div className="py-10 rounded-2xl border-2 border-dashed text-center text-sm text-slate-400">ต้องบันทึกอย่างน้อย 1 งวด (งวดปัจจุบันจะเป็น B อัตโนมัติ)</div>
+                  <SectionHead icon="📊" title="เปรียบเทียบงวด" desc="เลือก 2 งวดที่บันทึกไว้เพื่อดูความแตกต่าง" />
+                  {records.length < 2 ? (
+                    <div className="py-10 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 text-center text-sm text-slate-400">ต้องบันทึกอย่างน้อย 2 งวดจึงจะเปรียบเทียบได้</div>
                   ) : (
                     <>
                       <div className="grid grid-cols-2 gap-3 mb-4">
                         <div>
-                          <label className={LABEL}>งวด A (ตั้งแต่) — ค่าเริ่มต้น: {getPrevPeriodInfo(currentPeriod)?.label}</label>
+                          <label className={LABEL}>งวด A</label>
                           <select value={cmpA} onChange={e => setCmpA(e.target.value)} className={INPUT}>
-                            {/* เพิ่มงวดปัจจุบันเข้าไปด้วยแม้ยังไม่บันทึก เพื่อให้เลือกได้ */}
-                            <option value={currentPeriod.key}>{currentPeriod.label} (ปัจจุบัน)</option>
                             {records.map(r => <option key={r.key} value={r.key}>{r.period.label}</option>)}
-                            {getPrevPeriodInfo(currentPeriod) && !records.some(r => r.key === getPrevPeriodInfo(currentPeriod).key) && (
-                              <option value={getPrevPeriodInfo(currentPeriod).key}>{getPrevPeriodInfo(currentPeriod).label} (ก่อนหน้า)</option>
-                            )}
                           </select>
                         </div>
                         <div>
-                          <label className={LABEL}>งวด B (ถึง) — ค่าเริ่มต้น: {currentPeriod.label}</label>
+                          <label className={LABEL}>งวด B</label>
                           <select value={cmpB} onChange={e => setCmpB(e.target.value)} className={INPUT}>
-                            <option value={currentPeriod.key}>{currentPeriod.label} (ปัจจุบัน)</option>
                             {records.map(r => <option key={r.key} value={r.key}>{r.period.label}</option>)}
                           </select>
                         </div>
@@ -1471,19 +1963,9 @@
                             <thead className="bg-slate-100 dark:bg-slate-900/70">
                               <tr>
                                 <th className="p-2.5 text-left">รายการ</th>
-                                {/* จุดที่ 3: คอลัมน์บนมือถือ ย่อเหลือ A / B + ช่วงวันที่ใต้หัว */}
-                                <th className="p-2.5 text-right">
-                                  <div className="sm:hidden"><div className="font-bold">A</div><div className="text-[10px] font-normal text-slate-500">{recA.period.label}</div></div>
-                                  <div className="hidden sm:block">A: {recA.period.label}</div>
-                                </th>
-                                <th className="p-2.5 text-right">
-                                  <div className="sm:hidden"><div className="font-bold">B</div><div className="text-[10px] font-normal text-slate-500">{recB.period.label}</div></div>
-                                  <div className="hidden sm:block">B: {recB.period.label}</div>
-                                </th>
-                                <th className="p-2.5 text-right">
-                                  <div className="sm:hidden"><div className="font-bold">Δ</div><div className="text-[10px] font-normal text-slate-500">B-A</div></div>
-                                  <div className="hidden sm:block">ผลต่าง (B−A)</div>
-                                </th>
+                                <th className="p-2.5 text-right">A</th>
+                                <th className="p-2.5 text-right">B</th>
+                                <th className="p-2.5 text-right">ผลต่าง (B−A)</th>
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
@@ -1493,7 +1975,7 @@
                                 const color = d === 0 ? 'text-slate-400' : good ? 'text-emerald-500' : 'text-rose-500';
                                 const fmt = (v) => isDay ? v : formatMoney(v);
                                 return (
-                                  <tr key={label} className={label === 'เงินสุทธิ' ? 'font-bold bg-slate-50 dark:bg-slate-900/40' : ''}>
+                                  <tr key={label} className={label === 'เงินสุทธิ' ? 'font-bold' : ''}>
                                     <td className="p-2.5">{label}</td>
                                     <td className="p-2.5 text-right font-mono">{fmt(a)}</td>
                                     <td className="p-2.5 text-right font-mono">{fmt(b)}</td>
@@ -1509,7 +1991,7 @@
                   )}
                 </div>
 
-                {recA && recB && (
+                {recA && recB && records.length >= 2 && (
                   <div className={CARD}>
                     <SectionHead icon="📉" title="กราฟเปรียบเทียบ A / B" />
                     <ChartBox type="bar" height={300} deps={[isDark]}
@@ -1531,66 +2013,106 @@
                   </div>
                 )}
 
-                {/* ===================== จุดที่ 3: UI เพิ่มใหม่ วางก่อน TrendChart (มือถือย่อคอลัมน์) ===================== */}
+                {/* ===== เปรียบเทียบตามช่วงวันที่ A/B ===== */}
                 <div className={CARD}>
-                  <SectionHead icon="📅" title="สรุปเทียบงวดปัจจุบัน vs งวดก่อนหน้า" pill={<Pill color="green">B = ปัจจุบัน</Pill>} desc="บนมือถือหัวตารางจะเหลือแค่ A / B และมีช่วงวันที่อยู่ใต้หัว ไม่ล้นจอ" />
-                  {(() => {
-                    const cur = calculation;
-                    const prevKey = getPrevPeriodInfo(currentPeriod)?.key;
-                    const prevRec = records.find(r => r.key === prevKey) || records.find(r => r.key === cmpA) || null;
-                    const prev = prevRec || { period: getPrevPeriodInfo(currentPeriod), gross: 0, ded: 0, net: 0, stats: { paidDays: 0 } };
-                    const hA = getMobileHeader(prev.period);
-                    const hB = getMobileHeader(cur.period);
-                    return (
+                  <SectionHead icon="🗓️" title="เปรียบเทียบตามช่วงวันที่" pill={<Pill color="blue">A / B</Pill>}
+                    desc="เลือกช่วงวันที่เองได้ (ข้ามงวดได้) · ดึงข้อมูลจากงวดที่บันทึกไว้ และงวดที่กำลังแก้ไข" />
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {[['A', rngA, rngAN, 'bg-slate-500'], ['B', rngB, rngBN, 'bg-blue-600']].map(([k, v, n, badge]) => (
+                      <div key={k} className="p-3 rounded-2xl border border-slate-200 dark:border-slate-700/60 bg-slate-50 dark:bg-slate-900/40">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className={`px-2 py-0.5 rounded text-white text-xs font-bold ${badge}`}>{k}</span>
+                          <span className="text-xs text-slate-500 dark:text-slate-400">ช่วง {k}</span>
+                          {n.swapped && <span className="text-[10px] text-amber-500">↔️ สลับวันที่ให้อัตโนมัติ</span>}
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="block text-[11px] text-slate-500 dark:text-slate-400 mb-1">ตั้งแต่</label>
+                            <input type="date" value={v.from} onChange={e => changeRange(k, 'from', e.target.value)}
+                              className={`${INPUT} !px-2 !py-2 !text-xs font-mono`} />
+                          </div>
+                          <div>
+                            <label className="block text-[11px] text-slate-500 dark:text-slate-400 mb-1">ถึง</label>
+                            <input type="date" value={v.to} onChange={e => changeRange(k, 'to', e.target.value)}
+                              className={`${INPUT} !px-2 !py-2 !text-xs font-mono`} />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex justify-end mt-2 mb-4">
+                    <button onClick={resetRanges}
+                      className="text-xs px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-700/50 dark:hover:bg-slate-700 whitespace-nowrap">
+                      🔄 กลับเป็นงวดปัจจุบัน / งวดก่อนหน้า
+                    </button>
+                  </div>
+
+                  {rngAData && rngBData ? (
+                    <>
+                      {[['A', rngAData], ['B', rngBData]].filter(([, d]) => d.days < d.span).map(([k, d]) => (
+                        <div key={k} className="mb-2 p-2.5 rounded-xl text-[11px] bg-amber-50 border border-amber-200 text-amber-700 dark:bg-amber-950/20 dark:border-amber-800/50 dark:text-amber-300">
+                          ⚠️ ช่วง {k} {d.days === 0 ? 'ไม่มีข้อมูลเลย' : `มีข้อมูล ${d.days}/${d.span} วัน`} — บันทึกงวดที่เกี่ยวข้อง หรือนำเข้าไฟล์ลงเวลาก่อน ตัวเลขอาจไม่ครบ
+                        </div>
+                      ))}
+
                       <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-700">
-                        <table className="w-full text-xs sm:text-sm">
+                        <table className="w-full text-[11px] sm:text-sm">
                           <thead className="bg-slate-100 dark:bg-slate-900/70">
                             <tr>
-                              <th className="p-2.5 text-left">รายการ</th>
-                              <th className="p-2.5 text-right">
-                                <div className="flex flex-col items-end">
-                                  <span className="sm:hidden font-bold">A</span><span className="hidden sm:inline font-bold">A: {hA.full || hA.main}</span>
-                                  <span className="text-[10px] font-normal text-slate-500">{hA.sub || hA.full}</span>
-                                </div>
+                              <th className="p-2 sm:p-2.5 text-left">รายการ</th>
+                              <th className="p-2 sm:p-2.5 text-right">
+                                <div>A</div>
+                                <div className="text-[9px] font-normal text-slate-400 whitespace-nowrap">{rngAData.label}</div>
                               </th>
-                              <th className="p-2.5 text-right">
-                                <div className="flex flex-col items-end">
-                                  <span className="sm:hidden font-bold">B</span><span className="hidden sm:inline font-bold">B: {hB.full || hB.main}</span>
-                                  <span className="text-[10px] font-normal text-slate-500">{hB.sub || hB.full}</span>
-                                </div>
+                              <th className="p-2 sm:p-2.5 text-right">
+                                <div>B</div>
+                                <div className="text-[9px] font-normal text-slate-400 whitespace-nowrap">{rngBData.label}</div>
                               </th>
-                              <th className="p-2.5 text-right">
-                                <div className="flex flex-col items-end">
-                                  <span className="sm:hidden font-bold">Δ</span><span className="hidden sm:inline">ผลต่าง</span>
-                                  <span className="text-[10px] font-normal text-slate-500">B-A</span>
-                                </div>
+                              <th className="p-2 sm:p-2.5 text-right">
+                                <span className="sm:hidden">B−A</span>
+                                <span className="hidden sm:inline">ผลต่าง (B−A)</span>
                               </th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-                            {[
-                              ['สุทธิ', r => r.net],
-                              ['รวมรายได้', r => r.gross],
-                              ['รวมหัก', r => r.ded],
-                              ['วันจ่าย', r => r.stats?.paidDays || 0, true],
-                            ].map(([lb, fn, isDay]) => {
-                              const a = prev ? fn(prev) : 0;
-                              const b = fn(cur);
-                              const d = b - a;
+                            {RANGE_ROWS.map(([label, key, dir, fmtType]) => {
+                              const a = rngAData[key] || 0;
+                              const b = rngBData[key] || 0;
+                              const d = Math.round((b - a) * 100) / 100;
+                              const color = d === 0 ? 'text-slate-400'
+                                : dir === 0 ? 'text-blue-500'
+                                : (dir * d > 0 ? 'text-emerald-500' : 'text-rose-500');
+                              const fmt = (val, signed = false) => {
+                                const sign = signed ? (val > 0 ? '+' : val < 0 ? '−' : '') : '';
+                                const x = Math.abs(val);
+                                const body = fmtType === 'money' ? formatMoney(x) : fmtType === 'hm' ? fmtHM(x) : x;
+                                return sign + body;
+                              };
+                              const bold = ['paidDays', 'estWage'].includes(key);
                               return (
-                                <tr key={lb}>
-                                  <td className="p-2.5">{lb}</td>
-                                  <td className="p-2.5 text-right font-mono">{isDay ? a : formatMoney(a)}</td>
-                                  <td className="p-2.5 text-right font-mono">{isDay ? b : formatMoney(b)}</td>
-                                  <td className={`p-2.5 text-right font-mono ${d>0?'text-emerald-500': d<0?'text-rose-500':'text-slate-400'}`}>{d>0?'+':''}{isDay?d:formatMoney(d)}</td>
+                                <tr key={key} className={bold ? 'font-bold bg-slate-50 dark:bg-slate-900/40' : ''}>
+                                  <td className="p-2 sm:p-2.5">{label}</td>
+                                  <td className="p-2 sm:p-2.5 text-right font-mono">{fmt(a)}</td>
+                                  <td className="p-2 sm:p-2.5 text-right font-mono">{fmt(b)}</td>
+                                  <td className={`p-2 sm:p-2.5 text-right font-mono ${color}`}>{d === 0 ? '-' : fmt(d, true)}</td>
                                 </tr>
                               );
                             })}
                           </tbody>
                         </table>
                       </div>
-                    );
-                  })()}
+                      <p className="text-[10px] text-slate-400 mt-2">
+                        * ค่าแรงโดยประมาณ = (แรง × ค่าแรง) − ชม.หัก ยังไม่รวมรายได้เพิ่มเติม/ประกันสังคม · เขียว = ดีขึ้น · แดง = แย่ลง · ฟ้า = เปลี่ยนแปลง
+                        {(rngAData.hasPreview || rngBData.hasPreview) ? ' · รวมข้อมูลงวดที่ยังไม่ได้บันทึก' : ''}
+                      </p>
+                    </>
+                  ) : (
+                    <div className="py-8 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 text-center text-sm text-slate-400">
+                      เลือกวันที่ให้ครบทั้งช่วง A และ B
+                    </div>
+                  )}
                 </div>
 
                 <TrendChart list={[...records].sort((a, b) => a.key.localeCompare(b.key)).slice(-12)} isDark={isDark} title="แนวโน้มทุกงวดที่บันทึก" />
@@ -1599,11 +2121,58 @@
 
             {currentTab === 'set' && (
               <>
-                <div className={CARD}><h2 className="font-bold">ตั้งค่า</h2></div>
+                <div className={CARD}>
+                  <div className="mb-5">
+                    <div className="flex items-center gap-3">
+                      <span className="text-blue-500"><Ico name="gear" className="w-6 h-6" /></span>
+                      <h2 className="text-lg font-bold">ตั้งค่าอัตราการคำนวณเงินเดือน</h2>
+                    </div>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">ค่าเหล่านี้จะถูกบันทึกในเครื่องและใช้คำนวณอัตโนมัติในทุกงวด</p>
+                  </div>
+
+                  <div className="space-y-5">
+                    {SETTING_FIELDS.map(f => (
+                      <div key={f.k}>
+                        <label className={LABEL}>{f.label}</label>
+                        {f.select ? (
+                          <select value={draft[f.k]} onChange={e => setDraft({ ...draft, [f.k]: e.target.value })} className={`${INPUT} font-semibold`}>
+                            {f.select.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                          </select>
+                        ) : (
+                          <input type={f.text ? 'text' : 'number'} inputMode={f.text ? 'text' : 'decimal'}
+                            value={draft[f.k] ?? ''} onChange={e => setDraft({ ...draft, [f.k]: e.target.value })}
+                            className={`${INPUT} ${f.text ? 'font-semibold' : 'font-mono'}`} />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  <button onClick={handleSaveSettings}
+                    className="mt-6 inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold shadow-lg shadow-blue-600/30">
+                    <Ico name="save" className="w-5 h-5" /> บันทึกการตั้งค่า
+                  </button>
+                </div>
+
+                <div className={CARD}>
+                  <h2 className="text-lg font-bold">สำรองข้อมูลและจัดการประวัติ</h2>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 mb-4">ดาวน์โหลดไฟล์สำรองเก็บไว้ในเครื่อง หรือล้างประวัติทั้งหมด</p>
+                  <div className="flex flex-wrap gap-3">
+                    <button onClick={handleBackup} className={BTN_OUTLINE}><Ico name="download" className="w-5 h-5" /> ดาวน์โหลดไฟล์สำรอง (.json)</button>
+                    <button onClick={() => fileRef.current && fileRef.current.click()} className={BTN_OUTLINE}><Ico name="upload" className="w-5 h-5" /> กู้คืนข้อมูลจากไฟล์</button>
+                    <input ref={fileRef} type="file" accept="application/json,.json" className="hidden" onChange={handleRestore} />
+                    <button onClick={handleClearAll}
+                      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl border text-sm font-semibold border-rose-400/60 text-rose-500 hover:bg-rose-500/10 dark:border-rose-800/70 dark:text-rose-400">
+                      <Ico name="trash" className="w-5 h-5" /> ล้างประวัติทั้งหมด
+                    </button>
+                  </div>
+                </div>
               </>
             )}
           </main>
-          <footer className="no-print mt-8 py-5 border-t text-center text-xs text-slate-400">PaySlip Tracker {APP_VERSION}</footer>
+
+          <footer className="no-print mt-8 py-5 border-t border-slate-200 dark:border-slate-800 text-center text-xs text-slate-400 px-4">
+            PaySlip Tracker {APP_VERSION} — อ่านไฟล์ รายงานผลประมวลเวลา · {new Date().getFullYear()}
+          </footer>
         </div>
       );
     }
