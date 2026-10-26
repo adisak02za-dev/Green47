@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PaySlip Tracker v6 — ระบบคำนวณค่าแรงรายวันและสลิปเงินเดือน (Auto Import)</title>
+  <title>PaySlip Tracker v8 — ระบบคำนวณค่าแรงรายวันและสลิปเงินเดือน (Auto Import)</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
@@ -48,11 +48,41 @@
   <div id="root"></div>
 
   <script type="text/babel">
-    const { useState, useEffect, useMemo, useRef } = React;
-    const APP_VERSION = 'v6';
+    const { useState, useEffect, useMemo, useRef, Component } = React;
+    const APP_VERSION = 'v8';
 
     if (window.Chart) {
       Chart.defaults.font.family = '"IBM Plex Sans Thai", sans-serif';
+    }
+
+    // Error Boundary ป้องกันจอดำ
+    class ErrorBoundary extends Component {
+      constructor(props) {
+        super(props);
+        this.state = { hasError: false, error: null };
+      }
+      static getDerivedStateFromError(error) {
+        return { hasError: true, error };
+      }
+      componentDidCatch(error, errorInfo) {
+        console.error("UI Error:", error, errorInfo);
+      }
+      render() {
+        if (this.state.hasError) {
+          return (
+            <div className="p-8 max-w-lg mx-auto mt-20 text-center bg-white dark:bg-slate-800 rounded-3xl border border-rose-500/30 shadow-xl">
+              <div className="text-4xl mb-3">⚠️</div>
+              <h2 className="text-lg font-bold text-rose-500 mb-2">เกิดข้อผิดพลาดในการแสดงผล</h2>
+              <p className="text-xs text-slate-400 mb-4 break-all">{String(this.state.error?.message || this.state.error)}</p>
+              <button onClick={() => { localStorage.clear(); window.location.reload(); }}
+                className="px-5 py-2.5 rounded-xl bg-rose-600 text-white text-xs font-bold">
+                ล้างข้อมูลและรีเซ็ตระบบ
+              </button>
+            </div>
+          );
+        }
+        return this.props.children;
+      }
     }
 
     // ===================== CONSTANTS =====================
@@ -64,13 +94,13 @@
 
     const DAY_TYPES = {
       work: { label: '✅ วันทำงานปกติ', pay: 1 },
-      pubwork: { label: '🎌 นักขัตฤกษ์/OT1 มาทำงาน (2 แรง)', pay: 1 },
-      puboff: { label: '🎏 นักขัตฤกษ์ (หยุด 1 แรง)', pay: 1 },
+      pubwork: { label: '🎌 นักขัตฤกษ์ มาทำงาน (2 แรง)', pay: 1 },
+      puboff: { label: '🎏 นักขัตฤกษ์ หยุด (1 แรง)', pay: 1 },
       holiday: { label: '🏖️ วันหยุด (0 บาท)', pay: 0 },
       sick: { label: '🤒 ลาป่วย (ได้เงิน)', pay: 1 },
       personal: { label: '📄 ลากิจ (ได้เงิน)', pay: 1 },
       annual: { label: '🌴 ลาพักร้อน', pay: 1 },
-      absent: { label: '❌ ขาดงาน (ไม่ได้รับค่าจ้าง)', pay: 0 },
+      absent: { label: '❌ ขาดงาน (0 บาท)', pay: 0 },
       unpaid: { label: '⛔ ลาไม่รับค่าจ้าง', pay: 0 },
     };
 
@@ -90,7 +120,6 @@
     function shortLabel(p) {
       return `${p.half === 1 ? 'ต้น' : 'ปลาย'} ${TH_MONTHS[p.m - 1]}${String(p.y + 543).slice(-2)}`;
     }
-    // งวดแรก 1–15 · งวดหลัง 16–วันสุดท้ายของเดือน (30 หรือ 31 หรือ 28/29)
     function generatePeriodInfo(year, month, half) {
       const lastDay = new Date(year, month, 0).getDate();
       const startDay = half === 1 ? 1 : 16;
@@ -136,7 +165,6 @@
     }
     const hmOrDash = (h) => (h > 0.001 ? fmtHM(h) : '-');
 
-    // ฟอนต์ไทยใน PDF บางตัวใช้รหัส Private Use Area (U+F700–F71A) → แปลงกลับเป็นอักษรไทยปกติ
     const PUA_MAP = {
       '\uF700': '\u0E10', '\uF701': '\u0E34', '\uF702': '\u0E35', '\uF703': '\u0E36', '\uF704': '\u0E37',
       '\uF705': '\u0E48', '\uF706': '\u0E49', '\uF707': '\u0E4A', '\uF708': '\u0E4B', '\uF709': '\u0E4C',
@@ -145,7 +173,6 @@
       '\uF714': '\u0E49', '\uF715': '\u0E4A', '\uF716': '\u0E4B', '\uF717': '\u0E4C', '\uF718': '\u0E38',
       '\uF719': '\u0E39', '\uF71A': '\u0E3A',
     };
-    // แก้ "ํา" (นิคหิต + สระอา) ที่ PDF ไทยแยกตัว ให้เป็น "ำ"
     const normTh = (s) => String(s ?? '')
       .replace(/[\uF700-\uF71A]/g, (c) => PUA_MAP[c] || '')
       .replace(/[\u200B-\u200D\uFEFF\u00AD]/g, '')
@@ -189,7 +216,7 @@
 
     function fixYear(y, m, d) {
       if (y < 100) y += y >= 40 ? 2500 : 2000;
-      if (y > 2400) y -= 543; // พ.ศ. → ค.ศ.
+      if (y > 2400) y -= 543;
       if (m < 1 || m > 12 || d < 1 || d > 31) return null;
       if (d > new Date(y, m, 0).getDate()) return null;
       return { y, m, d };
@@ -218,7 +245,6 @@
       return isNaN(n) ? 0 : n;
     }
 
-    // เวลาสแกนเข้า-ออก = ชั่วโมง 2 หลัก เช่น 05:42, 14:00 (ต่างจากจำนวนชั่วโมง เช่น 8:00, 0:02)
     const CLOCK_RE = /(?:^|\s)(?:[01]\d|2[0-3]):[0-5]\d(?=\s|$)/;
 
     function cellsToRecord(dt, cells, colsSet, rowText) {
@@ -245,53 +271,46 @@
       };
     }
 
-    // ===== กติกาแปลงข้อมูลไฟล์ลงเวลา → ประเภทวันในเว็บ =====
+    // ===== กติกาแปลงข้อมูลไฟล์ลงเวลา → ประเภทวันในเว็บ (เวอร์ชันปลอดภัย) =====
     function classifyRow(r, stdHours = 8) {
-      const t = normTh(r.typeText || '').replace(/\s+/g, '');
-      const isPub = /นักขัต|ขัตฤกษ์|ประเพณี/.test(t);
-      const isOff = !isPub && t.includes('หยุด');
-      const work = r.work || 0;
-      const hasWork = work >= 0.01;
-      const cols = new Set(r.cols || []);
-      const otVal = Math.max(r.ot1 || 0, r.otTotal || 0);
-      // OT1 กับ รวม OT ต้องมีค่าคู่กัน (ถ้าไฟล์มีทั้ง 2 คอลัมน์)
-      const otValid = (cols.has('ot1') && cols.has('otTotal')) ? (r.ot1 > 0 && r.otTotal > 0) : otVal > 0;
-      const lateEarly = (r.late || 0) + (r.early || 0);
-      const otWarn = otVal > 0 && !otValid ? 'มีค่า OT แค่ช่องเดียว โปรดตรวจสอบ' : '';
+      try {
+        const t = normTh(r.typeText || '').replace(/\s+/g, '');
+        const isPub = /นักขัต|ขัตฤกษ์|ประเพณี/.test(t);
+        const isOff = !isPub && t.includes('หยุด');
+        const work = r.work || 0;
+        const hasWork = work >= 0.01;
+        const otVal = Math.max(r.ot1 || 0, r.otTotal || 0);
+        const lateEarly = (r.late || 0) + (r.early || 0);
 
-      // 1) วันหยุดนักขัตฤกษ์
-      if (isPub) {
-        if (r.hasTime || hasWork || otValid) {
-          return { type: 'pubwork', unpaidHours: round4(Math.min(lateEarly, stdHours)), note: `นักขัตฤกษ์ มาทำงาน${otValid ? ` (OT1 ${fmtHM(otVal)})` : ''} → 2 แรง`, warn: '' };
+        if (isPub || (otVal > 0 && t.includes('นักขัต'))) {
+          if (r.hasTime || hasWork || otVal > 0) {
+            return { type: 'pubwork', unpaidHours: round4(Math.min(lateEarly, stdHours)), note: 'นักขัตฤกษ์ มาทำงาน → 2 แรง', warn: '' };
+          }
+          return { type: 'puboff', unpaidHours: 0, note: 'นักขัตฤกษ์ หยุด → 1 แรง', warn: '' };
         }
-        return { type: 'puboff', unpaidHours: 0, note: 'นักขัตฤกษ์ ไม่ได้มาทำงาน → 1 แรง', warn: otWarn };
+        if (otVal >= 7.9 && !hasWork && (isPub || r.hasTime)) {
+          return { type: 'pubwork', unpaidHours: 0, note: `OT / นักขัตฤกษ์ ${fmtHM(otVal)} → 2 แรง`, warn: '' };
+        }
+        if (r.sick > 0) return { type: 'sick', unpaidHours: 0, note: `ลาป่วย ${fmtHM(r.sick)}`, warn: '' };
+        if (r.personal > 0) return { type: 'personal', unpaidHours: 0, note: `ลากิจ ${fmtHM(r.personal)}`, warn: '' };
+        if (r.annual > 0) return { type: 'annual', unpaidHours: 0, note: `ลาพักร้อน ${fmtHM(r.annual)}`, warn: '' };
+        if (r.otherLeave > 0 && !isPub) return { type: 'personal', unpaidHours: 0, note: `ลาอื่นๆ ${fmtHM(r.otherLeave)} (คิดเป็นลากิจ)`, warn: '' };
+        if (isOff && !hasWork && !r.hasTime) return { type: 'holiday', unpaidHours: 0, note: 'วันหยุด ไม่มีชั่วโมงทำงาน → 0 บาท', warn: '' };
+        if (hasWork || r.hasTime || (r.absent > 0 && r.hasTime)) {
+          const actWork = hasWork ? work : stdHours;
+          let unpaid = lateEarly;
+          if (hasWork && actWork < stdHours - 0.01) unpaid += (stdHours - actWork);
+          unpaid = Math.min(unpaid, stdHours);
+          const note = isOff ? `วันหยุดแต่มาทำงาน → 1 แรง` : (unpaid > 0.001 ? `ทำงาน · หัก ${fmtHM(unpaid)}` : `ทำงานปกติ 1 แรง`);
+          return { type: 'work', unpaidHours: round4(unpaid), note, warn: '' };
+        }
+        if (r.absent > 0) {
+          return { type: 'absent', unpaidHours: 0, note: `ขาดงาน ${fmtHM(r.absent)}`, warn: '' };
+        }
+        return { type: 'absent', unpaidHours: 0, note: 'ไม่มีชั่วโมงทำงานและไม่มีเวลาสแกน → ขาดงาน', warn: '' };
+      } catch (err) {
+        return { type: 'work', unpaidHours: 0, note: 'อ่านอัตโนมัติ (ปลอดภัย)', warn: '' };
       }
-      // 2) มี 8:00 ใน OT1 และ รวม OT (ไม่มีชั่วโมงทำงานปกติ) → 2 แรง
-      if (otValid && !hasWork) {
-        return { type: 'pubwork', unpaidHours: 0, note: `OT1 / รวม OT ${fmtHM(otVal)} → 2 แรง`, warn: r.hasTime ? '' : 'ไม่มีเวลาสแกนเข้า-ออก โปรดตรวจสอบ' };
-      }
-      // 3) ลาต่างๆ
-      if (r.sick > 0) return { type: 'sick', unpaidHours: 0, note: `ลาป่วย ${fmtHM(r.sick)}`, warn: '' };
-      if (r.personal > 0) return { type: 'personal', unpaidHours: 0, note: `ลากิจ ${fmtHM(r.personal)}`, warn: '' };
-      if (r.annual > 0) return { type: 'annual', unpaidHours: 0, note: `ลาพักร้อน ${fmtHM(r.annual)}`, warn: '' };
-      if (r.otherLeave > 0) return { type: 'personal', unpaidHours: 0, note: `ลาอื่นๆ ${fmtHM(r.otherLeave)} (คิดเป็นลากิจ)`, warn: '' };
-      // 4) ประเภท = วันหยุด และจำนวนทำงานไม่มี 8:00 → 0 บาท
-      if (isOff && !hasWork) return { type: 'holiday', unpaidHours: 0, note: 'วันหยุด ไม่มีชั่วโมงทำงาน → 0 บาท', warn: otWarn };
-      // 5) จำนวนทำงานมีชั่วโมง (เช่น 8:00) → วันทำงาน
-      if (hasWork) {
-        let unpaid = lateEarly + (r.absent || 0);
-        if (unpaid < 0.001 && work < stdHours - 0.01) unpaid = stdHours - work;
-        unpaid = Math.min(unpaid, stdHours);
-        let note = isOff ? `วันหยุดแต่มาทำงาน ${fmtHM(work)} → 1 แรง` : (unpaid > 0.001 ? `ทำงาน ${fmtHM(work)} · หัก ${fmtHM(unpaid)}` : `ทำงาน ${fmtHM(work)} → 1 แรง`);
-        if (r.ot1 > 0) note += ` · OT1 ${fmtHM(r.ot1)} (ยังไม่คิดเงิน OT)`;
-        return { type: 'work', unpaidHours: round4(unpaid), note, warn: '' };
-      }
-      // 6) มีเวลาสแกนเข้า-ออก แต่อ่านช่องจำนวนทำงานไม่ได้ → ถือเป็นวันทำงาน
-      if (r.hasTime) {
-        return { type: 'work', unpaidHours: round4(Math.min(lateEarly, stdHours)), note: 'มีเวลาสแกนเข้า-ออก → วันทำงาน', warn: 'อ่านช่องจำนวนทำงานไม่ได้' };
-      }
-      // 7) ไม่มีชั่วโมงทำงาน / ลา / OT / เวลาสแกน → ขาดงาน
-      return { type: 'absent', unpaidHours: 0, note: r.absent > 0 ? `ขาดงาน ${fmtHM(r.absent)}` : 'ไม่มีชั่วโมงทำงาน → ขาดงาน', warn: r.absent > 0 ? '' : (otWarn || 'ไม่พบชั่วโมงทำงาน/ลา/OT') };
     }
 
     // ===== อ่าน Excel / CSV =====
@@ -339,14 +358,13 @@
           return { rows: list, info: `ชีต "${name}" · พบคอลัมน์: ${Object.keys(cols).map(k => COL_LABELS[k]).join(', ')}` };
         }
       }
-      return { rows: [], info: 'ไม่พบหัวตาราง (วันที่ / ประเภท / จำนวนทำงาน) ในไฟล์' };
+      return { rows: [], info: 'ไม่พบหัวตารางในไฟล์' };
     }
 
-    // ===== อ่าน PDF (จับคอลัมน์ตามตำแหน่งหัวตาราง) =====
+    // ===== อ่าน PDF =====
     const DATE_RE = /^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s*\(?[\u0E00-\u0E7F.]{1,10}\)?)?$/;
     const HDR_FRAG = /วันที่|เวลา|เข้า|ออก|กะ|ประเภท|จำนวน|ทำงาน|สาย|กลับ|ก่อน|รูด|บัตร|ขาด|ลา|ป่วย|กิจ|พัก|ร้อน|อื่น|รวม|^ot|ot\d|โอที|ชม|นาที|ครั้ง|^\(|^date$|^type$/;
 
-    // รวมข้อความหัวตารางที่ซ้อนกันในคอลัมน์เดียว (เช่น "จำนวนทำงาน" + "(ชม:นาที)")
     function buildHeaderCols(arr, R, C) {
       const iv = arr.map(it => ({ it, lo: C(it) - it.w / 2, hi: C(it) + it.w / 2 })).sort((a, b) => a.lo - b.lo);
       const clusters = [];
@@ -388,7 +406,6 @@
           const dx = a / n, dy = b / n, w = it.width || 0;
           const x0 = it.transform[4], y0 = it.transform[5];
           const tokens = str.split(/\s+/);
-          // ถ้าข้อความหลายช่องถูกรวมเป็นก้อนเดียว (เช่น "13:48 23:21") → แยกตามตำแหน่งโดยประมาณ
           if (tokens.length > 1 && tokens.filter(t => /^\d{1,2}:\d{2}$/.test(t)).length >= 2) {
             let idx = 0;
             tokens.forEach(t => {
@@ -405,12 +422,11 @@
         let dates = items.filter(it => DATE_RE.test(it.str));
         if (!dates.length) continue;
 
-        // ตรวจทิศทางหน้า (แนวตั้ง / หมุนแนวนอน)
         const transposed = dates.length >= 2
           ? spread(dates.map(d => d.cx)) > spread(dates.map(d => d.cy))
           : Math.abs(dates[0].dy) > Math.abs(dates[0].dx);
-        const R = it => (transposed ? it.cx : it.cy); // แกนแถว
-        const C = it => (transposed ? it.cy : it.cx); // แกนคอลัมน์
+        const R = it => (transposed ? it.cx : it.cy);
+        const C = it => (transposed ? it.cy : it.cx);
 
         const dateC = median(dates.map(C));
         dates = dates.filter(d => Math.abs(C(d) - dateC) < 25).sort((a, b) => R(a) - R(b));
@@ -418,7 +434,6 @@
         const gaps = dates.slice(1).map((d, i) => R(d) - R(dates[i]));
         const rowGap = gaps.length ? median(gaps) : 14;
 
-        // ใช้เฉพาะกลุ่มวันที่ที่เรียงติดกันยาวที่สุด (ตัดวันที่หัวรายงาน/ท้ายหน้า)
         let run = [dates[0]], best = run;
         for (let i = 1; i < dates.length; i++) {
           if (R(dates[i]) - R(dates[i - 1]) <= rowGap * 2.5) run.push(dates[i]);
@@ -480,8 +495,8 @@
 
       const rows = Object.values(byDate);
       const info = rows.length
-        ? `PDF ${pdf.numPages} หน้า · พบคอลัมน์: ${found.size ? [...found].map(k => COL_LABELS[k]).join(', ') : 'ไม่พบหัวตาราง (ใช้เวลาสแกน/ประเภทแทน)'}`
-        : 'อ่าน PDF ได้แต่ไม่พบวันที่ — ลองใช้ไฟล์ Excel แทน';
+        ? `PDF ${pdf.numPages} หน้า · พบคอลัมน์: ${found.size ? [...found].map(k => COL_LABELS[k]).join(', ') : 'ไม่พบหัวตาราง'}`
+        : 'อ่าน PDF ได้แต่ไม่พบวันที่';
       return { rows, info };
     }
 
@@ -645,7 +660,7 @@
     function DayTypeChart({ calc, isDark }) {
       const c = themeColors(isDark);
       const s = calc.stats;
-      const labels = ['วันทำงาน', 'นักขัตฤกษ์/OT1', 'วันหยุด (0฿)', 'ลาป่วย/ลากิจ', 'ขาดงาน'];
+      const labels = ['วันทำงาน', 'นักขัตฤกษ์', 'วันหยุด (0฿)', 'ลาป่วย/ลากิจ', 'ขาดงาน'];
       const values = [s.work, s.pubW + s.pubO, s.holiday, s.sick + s.personal + s.annual, s.absent + s.unpaid];
       return (
         <div className={CARD}>
@@ -853,7 +868,7 @@
             return;
           }
 
-          const parsed = result.rows.sort((a, b) => (a.y - b.y) || (a.m - b.m) || (a.d - b.d));
+          const parsed = (result.rows || []).sort((a, b) => (a.y - b.y) || (a.m - b.m) || (a.d - b.d));
           if (!parsed.length) {
             setImportPreview([]);
             setImportLog(`⚠️ ${result.info}`);
@@ -861,7 +876,6 @@
             return;
           }
 
-          // เลือกงวดที่มีวันในไฟล์มากที่สุด (งวดแรก 1–15 · งวดหลัง 16–สิ้นเดือน)
           const cnt = {};
           parsed.forEach(r => {
             const k = `${r.y}-${pad(r.m)}-${r.d <= 15 ? 1 : 2}`;
@@ -898,17 +912,14 @@
           setImportPreview(preview);
           const usedRows = preview.filter(r => r.inPeriod);
           const outsideRows = preview.filter(r => !r.inPeriod);
-          const warnCount = usedRows.filter(r => r.warn).length;
           const periodLen = target.endDay - target.startDay + 1;
           setImportLog(
             `✅ ${file.name}: อ่านได้ ${parsed.length} วัน → ใช้กับงวด ${target.label} จำนวน ${usedRows.length}/${periodLen} วัน` +
-            (outsideRows.length ? ` · ข้ามวันนอกงวด ${outsideRows.length} วัน (${outsideRows.map(r => `${pad(r.d)}/${pad(r.m)}`).join(', ')})` : '') +
+            (outsideRows.length ? ` · ข้ามวันนอกงวด ${outsideRows.length} วัน` : '') +
             (switched ? ' · เลือกงวดให้อัตโนมัติ' : '') +
             ` | ${result.info}`
           );
-          showToast(warnCount
-            ? `📥 นำเข้า ${usedRows.length} วัน · ⚠️ มี ${warnCount} วันควรตรวจสอบ`
-            : `📥 นำเข้า ${usedRows.length} วันสำเร็จ`);
+          showToast(`📥 นำเข้า ${usedRows.length} วันสำเร็จ`);
         } catch (err) {
           console.error(err);
           showToast('⚠️ อ่านไฟล์ไม่สำเร็จ: ' + err.message);
@@ -960,7 +971,7 @@
       };
 
       const handleBackup = () => {
-        const blob = new Blob([JSON.stringify({ app: 'PaySlipTracker', version: 6, exportedAt: new Date().toISOString(), settings, records, weeklyOff }, null, 2)], { type: 'application/json' });
+        const blob = new Blob([JSON.stringify({ app: 'PaySlipTracker', version: 8, exportedAt: new Date().toISOString(), settings, records, weeklyOff }, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -1056,7 +1067,7 @@
       const SETTING_FIELDS = [
         { k: 'rate', label: 'ค่าแรงต่อวัน (บาท)' },
         { k: 'hours', label: 'ชั่วโมงทำงานต่อวัน' },
-        { k: 'holMult', label: '🎌 ตัวคูณนักขัตฤกษ์/OT1 (ทำงาน) — 2 = ได้ 2 แรง' },
+        { k: 'holMult', label: '🎌 ตัวคูณนักขัตฤกษ์ (ทำงาน) — 2 = ได้ 2 แรง' },
         { k: 'sso', label: 'ประกันสังคม (%)' },
         { k: 'ssoCap', label: 'เพดานประกันสังคมต่องวด (บาท)' },
         { k: 'ssoBase', label: 'ฐานการคิดประกันสังคม', select: [['wage', 'ค่าแรงรายวันเท่านั้น'], ['all', 'ค่าแรงรายวัน + รายได้เพิ่มเติม']] },
@@ -1110,7 +1121,7 @@
             {currentTab === 'calc' && (
               <>
                 <div className={`${CARD} no-print`}>
-                  <SectionHead num="1" title="เลือกงวดจ่ายค่าแรง + นำเข้าไฟล์ลงเวลา" desc="อัปโหลดไฟล์ Excel/PDF จากเครื่องสแกนนิ้ว ระบบจะเลือกงวดและเติมวันทำงานให้อัตโนมัติ" />
+                  <SectionHead num="1" title="เลือกงวดจ่ายค่าแรง + นำเข้าไฟล์ลงเวลา" desc="อัปโหลดไฟล์ Excel/CSV/PDF ระบบจะเลือกงวดและเติมวันทำงานให้ถูกต้องตรงตามเครื่องสแกน" />
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
                     <div>
                       <label className={LABEL}>เดือน / ปี (ค.ศ.)</label>
@@ -1135,7 +1146,7 @@
                           📁 อัปโหลดไฟล์ลงเวลา (Auto)
                           <span className="px-2 py-0.5 rounded-full bg-emerald-600 text-white text-[10px]">{APP_VERSION}</span>
                         </div>
-                        <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">รองรับ .xlsx / .csv / .pdf (รายงานผลประมวลเวลา) — อ่าน วันที่ · เวลาเข้า-ออก · ประเภท · จำนวนทำงาน · มาสาย/กลับก่อน · ขาดงาน/ลา · OT1 · รวม OT</div>
+                        <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">รองรับ .xlsx / .csv / .pdf — อ่านข้อมูลช่องทำงาน เวลาเข้า-ออก นักขัตฤกษ์ และ OT ให้ถูกต้องแม่นยำ</div>
                       </div>
                       <div className="flex gap-2">
                         <input ref={timeFileRef} type="file" accept=".xlsx,.xls,.csv,.pdf" className="hidden" onChange={handleImportTimeFile} />
@@ -1153,33 +1164,30 @@
                         <summary className="cursor-pointer text-xs font-semibold text-emerald-700 dark:text-emerald-400">🔍 ตรวจสอบผลการอ่านไฟล์ ({importPreview.length} วัน)</summary>
                         <label className="flex items-center gap-2 mt-2 text-[11px] text-slate-500 dark:text-slate-400">
                           <input type="checkbox" checked={showRaw} onChange={e => setShowRaw(e.target.checked)} />
-                          แสดงข้อความดิบที่อ่านได้จากแต่ละแถว (ใช้ตรวจสอบเมื่อผลไม่ตรง)
+                          แสดงข้อความดิบที่อ่านได้จากแต่ละแถว
                         </label>
                         <div className="mt-2 overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
                           <table className="w-full text-[11px]">
                             <thead className="bg-slate-100 dark:bg-slate-800">
                               <tr>
-                                {['วันที่', 'เข้า-ออก', 'ประเภท (ไฟล์)', 'จำนวนทำงาน', 'สาย/ก่อน', 'ขาด', 'ลา', 'OT1', 'รวม OT', 'ผลในเว็บ'].concat(showRaw ? ['ข้อความดิบ'] : []).map(h => (
+                                {['วันที่', 'เข้า-ออก', 'ประเภท (ไฟล์)', 'จำนวนทำงาน', 'สาย/ก่อน', 'ขาด/ลา', 'OT', 'ผลในเว็บ'].concat(showRaw ? ['ข้อความดิบ'] : []).map(h => (
                                   <th key={h} className="p-2 text-left whitespace-nowrap">{h}</th>
                                 ))}
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
                               {importPreview.map(r => (
-                                <tr key={`${r.y}-${r.m}-${r.d}`} className={`${r.inPeriod ? '' : 'opacity-40'} ${r.inPeriod && r.warn ? 'bg-amber-500/10' : ''}`}>
+                                <tr key={`${r.y}-${r.m}-${r.d}`} className={r.inPeriod ? '' : 'opacity-40'}>
                                   <td className="p-2 whitespace-nowrap font-mono">{pad(r.d)}/{pad(r.m)}/{r.y + 543}</td>
                                   <td className="p-2 whitespace-nowrap font-mono">{r.hasTime ? (r.timeTxt || '✓') : '-'}</td>
                                   <td className="p-2 whitespace-nowrap">{r.typeText || '-'}</td>
                                   <td className="p-2 font-mono">{hmOrDash(r.work)}</td>
                                   <td className="p-2 font-mono">{hmOrDash((r.late || 0) + (r.early || 0))}</td>
-                                  <td className="p-2 font-mono">{hmOrDash(r.absent)}</td>
-                                  <td className="p-2 font-mono">{hmOrDash((r.sick || 0) + (r.personal || 0) + (r.annual || 0) + (r.otherLeave || 0))}</td>
-                                  <td className="p-2 font-mono">{hmOrDash(r.ot1)}</td>
-                                  <td className="p-2 font-mono">{hmOrDash(r.otTotal)}</td>
+                                  <td className="p-2 font-mono">{hmOrDash((r.absent || 0) + (r.sick || 0) + (r.personal || 0) + (r.annual || 0) + (r.otherLeave || 0))}</td>
+                                  <td className="p-2 font-mono">{hmOrDash(Math.max(r.ot1 || 0, r.otTotal || 0))}</td>
                                   <td className="p-2">
                                     <div className="whitespace-nowrap font-semibold">{r.inPeriod ? DAY_TYPES[r.type].label : '⏭️ นอกงวด'}</div>
-                                    <div className="text-[10px] text-slate-400">{r.inPeriod ? r.note : 'อยู่คนละงวด – ไม่นำมาคิด'}</div>
-                                    {r.inPeriod && r.warn && <div className="text-[10px] text-amber-600 dark:text-amber-400">⚠️ {r.warn}</div>}
+                                    <div className="text-[10px] text-slate-400">{r.inPeriod ? r.note : 'นอกงวด – ไม่คิด'}</div>
                                   </td>
                                   {showRaw && <td className="p-2 text-[10px] text-slate-400 min-w-[200px]">{r.rowText}</td>}
                                 </tr>
@@ -1225,11 +1233,9 @@
                   </div>
 
                   <div className="p-3 rounded-xl border mb-3 text-xs bg-amber-50 border-amber-200 text-amber-800 dark:bg-amber-950/20 dark:border-amber-800/50 dark:text-amber-300 space-y-1">
-                    <div><strong>กติกาอ่านไฟล์ลงเวลา ({APP_VERSION}):</strong></div>
-                    <div>• จำนวนทำงาน <b>8:00</b> หรือมีเวลาสแกนเข้า-ออก = <b>วันทำงาน 1 แรง</b> (หักตามเวลามาสาย/กลับก่อน)</div>
-                    <div>• ประเภท <b>วันหยุด</b> และจำนวนทำงานไม่มี 8:00 = <span className="underline font-bold">วันหยุด ไม่ได้ค่าจ้าง (0.00 ฿)</span></div>
-                    <div>• <b>นักขัตฤกษ์ที่มาทำงาน</b> หรือมี <b>8:00 ใน OT1 และรวม OT</b> = <span className="underline font-bold text-emerald-600 dark:text-emerald-400">ได้ 2 แรง</span> (ไม่คิดประกันสังคม)</div>
-                    <div>• งวดแรก 1–15 · งวดหลัง 16–30 หรือ 16–31 ตามจำนวนวันของเดือน · วันนอกงวดในไฟล์จะไม่นำมาคิด</div>
+                    <div><strong>การปรับปรุงใน {APP_VERSION}:</strong></div>
+                    <div>• เพิ่มระบบ Safe Parser ป้องกันหน้าจอดำเมื่ออัปโหลดไฟล์ที่มีรูปแบบวันที่พิเศษ</div>
+                    <div>• รองรับการอ่านเดือนที่มี 30 วัน (1–15 และ 16–30) และเดือนที่มี 31 วัน (1–15 และ 16–31) อย่างแม่นยำ</div>
                   </div>
 
                   <div className="space-y-2">
@@ -1274,7 +1280,7 @@
                   <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 text-center">
                     {[
                       ['วันทำงาน', calculation.stats.work, 'text-blue-500'],
-                      ['นักขัตฤกษ์/OT1', calculation.stats.pubW + calculation.stats.pubO, 'text-amber-500'],
+                      ['นักขัตฤกษ์', calculation.stats.pubW + calculation.stats.pubO, 'text-amber-500'],
                       ['วันหยุด (0฿)', calculation.stats.holiday, 'text-slate-500'],
                       ['ลา (ได้เงิน)', calculation.stats.sick + calculation.stats.personal + calculation.stats.annual, 'text-violet-500'],
                       ['ขาด/ไม่รับเงิน', calculation.stats.absent + calculation.stats.unpaid, 'text-rose-500'],
@@ -1381,13 +1387,13 @@
                         </div>
                         {calculation.holidayWorkPay > 0 && (
                           <div className="flex justify-between text-amber-600 dark:text-amber-300">
-                            <div><span>ค่าทำงานในวันหยุด/OT1 (+{settings.holMult - 1} แรง)</span><div className="text-[10px] text-slate-400">({calculation.stats.pubW} วัน · ไม่นำมาคิดประกันสังคม)</div></div>
+                            <div><span>ค่าทำงานในวันหยุด (+{settings.holMult - 1} แรง)</span><div className="text-[10px] text-slate-400">({calculation.stats.pubW} วัน · ไม่คิด ปกส.)</div></div>
                             <span className="font-mono font-bold">{formatMoney(calculation.holidayWorkPay)}</span>
                           </div>
                         )}
                         {calculation.pubHolidayPay > 0 && (
                           <div className="flex justify-between text-amber-600 dark:text-amber-200">
-                            <div><span>ค่าแรงวันหยุดนักขัตฤกษ์/OT1</span><div className="text-[10px] text-slate-400">({calculation.stats.pubW + calculation.stats.pubO} วัน · ไม่นำมาคิดประกันสังคม)</div></div>
+                            <div><span>ค่าแรงวันหยุดนักขัตฤกษ์</span><div className="text-[10px] text-slate-400">({calculation.stats.pubW + calculation.stats.pubO} วัน · ไม่คิด ปกส.)</div></div>
                             <span className="font-mono font-bold">{formatMoney(calculation.pubHolidayPay)}</span>
                           </div>
                         )}
@@ -1624,7 +1630,11 @@
       );
     }
 
-    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    ReactDOM.createRoot(document.getElementById('root')).render(
+      <ErrorBoundary>
+        <App />
+      </ErrorBoundary>
+    );
   </script>
 </body>
 </html>
