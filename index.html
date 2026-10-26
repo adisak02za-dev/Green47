@@ -141,6 +141,9 @@
       return `${Math.floor(mins / 60)}:${pad(mins % 60)}`;
     }
     const hmOrDash = (h) => (h > 0.001 ? fmtHM(h) : '-');
+    // มาสายน้อยกว่าค่านี้ (นาที) = ไม่หัก · ตั้งแต่ค่านี้ขึ้นไป = หักตามเวลาที่สายจริง
+const LATE_GRACE_MIN = 30;
+
 
     const PUA_MAP = {
       '\uF700': '\u0E10', '\uF701': '\u0E34', '\uF702': '\u0E35', '\uF703': '\u0E36', '\uF704': '\u0E37',
