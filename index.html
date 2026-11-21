@@ -88,6 +88,14 @@
   .ts-item{background:var(--green-l);border-radius:8px;padding:6px;text-align:center}
   .ts-item .tname{font-size:13px;font-weight:600;color:var(--green-d)}
   .ts-item .tval{font-size:17px;font-weight:700;color:var(--green-d)}
+  .ts-item.off{background:var(--orange-l)}
+  .ts-item.off .tname,.ts-item.off .tval{color:var(--orange)}
+  /* ปุ่มตั้งวันหยุดรายคน */
+  .team-off-box{margin-top:12px;background:#f9fbf8;border:1px solid var(--border);border-radius:10px;padding:10px 12px}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+  .chip{font:inherit;font-weight:600;border:2px solid #66bb6a;background:#e8f5e9;color:var(--green-d);border-radius:999px;padding:6px 14px;cursor:pointer}
+  .chip.off{border-color:var(--orange);background:var(--orange-l);color:var(--orange)}
+  .chip:active{transform:scale(.96)}
   .period-bar{display:flex;gap:8px;align-items:center;justify-content:space-between}
   .period-label{text-align:center;flex:1}
   .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:12px}
@@ -115,6 +123,9 @@
   .matrix td.mon{font-weight:700;color:var(--gold);background:var(--gold-l)}
   .matrix td.ow{font-weight:700;color:var(--slate);background:var(--slate-l)}
   .matrix td.me{font-weight:700;color:var(--green-d);background:#e8f5e9}
+  .matrix td.tgl{cursor:pointer;min-width:52px}
+  .matrix td.tgl:hover{outline:2px solid #81c784;outline-offset:-2px}
+  .matrix td.moff{background:#ffe0b2;color:var(--orange);font-weight:700}
   .trow{display:flex;gap:6px;align-items:center;padding:6px 0;border-bottom:1px solid #f0f0f0}
   .trow .tname{flex:1;min-width:80px}
   .trow.inactive .tname{color:#999;background:#f5f5f5}
@@ -161,7 +172,8 @@
     <div class="card">
       <div class="hint">
         กรอก <b>น้ำหนักรวม</b> และ <b>น้ำหนักถัง</b> → ระบบคำนวณน้ำยางได้จริง (<b>เก็บทศนิยม 0.1 กก. ไม่ปัดเป็นกิโล</b>) และคิดเงินตามราคา<br>
-        หักให้เจ้าของสวนตาม % แล้วส่วนของทีม (40%) จะถูก **หาร 3 คน (โอ็ต, กรีน, พี่นิ่ม) เท่า ๆ กัน** อัตโนมัติ
+        หักให้เจ้าของสวนตาม % แล้วส่วนของทีม (40%) จะถูก <b>หารเท่า ๆ กันเฉพาะทีมงานที่ทำงานวันนั้น</b> (โอ็ต, กรีน, พี่นิ่ม)<br>
+        ใครหยุดวันนี้ ให้แตะชื่อในช่อง “ทีมงานวันนี้” ด้านล่างเพื่อตั้งเป็น <b>หยุด</b>
       </div>
       <div class="scroll">
         <table class="entry">
@@ -187,6 +199,11 @@
             </tr>
           </tfoot>
         </table>
+      </div>
+
+      <div class="team-off-box">
+        <div><b>👥 ทีมงานวันนี้</b> <span class="sub">แตะชื่อเพื่อตั้งเป็น “หยุด” / ยกเลิกวันหยุด</span></div>
+        <div id="teamChips" class="chips"></div>
       </div>
 
       <div class="pay-box">
@@ -227,7 +244,7 @@
       <div class="scroll"><table id="perDay"></table></div>
     </div>
     <div class="card">
-      <h3>ตารางทีมงาน × รายวัน <span class="sub">(ส่วนแบ่งรายคน / วัน)</span></h3>
+      <h3>ตารางทีมงาน × รายวัน <span class="sub">(ส่วนแบ่งรายคน / วัน)</span> <span class="sub no-print">• แตะช่องของวันทำงานเพื่อตั้ง/ยกเลิก “หยุด” รายคน</span></h3>
       <div class="scroll"><table id="matrix" class="matrix"></table></div>
     </div>
     <div class="actions left no-print">
@@ -245,7 +262,7 @@
         <input type="text" id="newTeamName" placeholder="ชื่อทีมงานใหม่ เช่น  A">
         <button class="btn" id="addTeamMember">+ เพิ่มคน</button>
       </div>
-      <p class="sub">“พัก” = ไม่นำมาคำนวณส่วนแบ่ง • เงินส่วน 40% จะถูกหารเท่า ๆ กันกับทุกคนที่เปิดใช้งาน</p>
+      <p class="sub">“พัก” = ไม่นำมาคำนวณส่วนแบ่ง • เงินส่วน 40% จะถูกหารเท่า ๆ กันกับทุกคนที่เปิดใช้งานและไม่ได้ตั้งหยุดในวันนั้น (ตั้งหยุดรายวันได้ที่หน้ากรอกรายวัน หรือแตะช่องในตารางสรุปงวด)</p>
     </div>
     <div class="card">
       <h3>สัดส่วนแบ่งเงิน</h3>
@@ -324,10 +341,14 @@ const newId = () => 't' + Date.now().toString(36) + Math.random().toString(36).s
 const ownerPct  = () => { const p = Number(state.settings.ownerPct); return isFinite(p) && p >= 0 && p <= 100 ? p : DEFAULT_OWNER_PCT; };
 const tapperPct = () => r2(100 - ownerPct());
 
-function splitMoney(money){
+function splitMoney(money, offIds = []){
   const owner = r2(money * ownerPct() / 100);
   const tapperTotal = r2(money - owner); // เงินส่วน 40%
-  const activeTeam = state.team.filter(m => m.active);
+  const active = state.team.filter(m => m.active);
+  // หารเฉพาะคนที่ไม่ได้หยุดวันนั้น (ถ้าทุกคนถูกตั้งหยุด ให้หารทุกคนเพื่อไม่ให้เงินหาย)
+  let activeTeam = active.filter(m => !offIds.includes(m.id));
+  if (!activeTeam.length) activeTeam = active;
+  const teamOff = active.filter(m => !activeTeam.includes(m)).map(m => m.id);
   const count = activeTeam.length || 1;
   const each = r2(tapperTotal / count);
   const teamPer = {};
@@ -340,7 +361,7 @@ function splitMoney(money){
       teamPer[m.id] = each;
     }
   });
-  return { owner, tapperTotal, teamPer, activeTeamCount: count };
+  return { owner, tapperTotal, teamPer, teamOff, activeTeamCount: count };
 }
 
 let toastTimer;
@@ -403,7 +424,7 @@ function saveState(){
 }
 function cleanupEntry(key){
   const e = state.entries[key];
-  if (e && Object.keys(e.rows || {}).length === 0 && !e.note && !e.price) delete state.entries[key];
+  if (e && Object.keys(e.rows || {}).length === 0 && !e.note && !e.price && !(e.teamOff && e.teamOff.length)) delete state.entries[key];
 }
 function lastPriceBefore(key){
   const ks = Object.keys(state.entries).filter(k => k < key && parsePrice(state.entries[k].price)).sort();
@@ -434,7 +455,7 @@ function dayData(key){
   if (!count) return null;
   real = r1(real);
   const money = r2(real * price);
-  const split = splitMoney(money);
+  const split = splitMoney(money, e.teamOff || []);
   return { gross:r1(gross), bucket:r1(bucket), net:r1(net), real, count, per, price, money, ...split };
 }
 function statusOf(key, dd){ return dd ? 'work' : (key > todayKey() ? 'future' : 'off'); }
@@ -504,6 +525,14 @@ function updateDayInfo(){
   const p = getPeriod(curDate);
   const price = parsePrice($('#priceInput').value);
 
+  // ปุ่มตั้งวันหยุดรายคน
+  const eNow = state.entries[key];
+  const offNow = (eNow && eNow.teamOff) || [];
+  $('#teamChips').innerHTML = state.team.filter(m => m.active).map(m => {
+    const off = offNow.includes(m.id);
+    return `<button type="button" class="chip${off ? ' off' : ''}" data-id="${m.id}">${off ? '✕' : '✓'} ${esc(m.name)}${off ? ' · หยุด' : ''}</button>`;
+  }).join('') || '<span class="sub">ยังไม่มีทีมงาน — เพิ่มได้ที่หน้า ⚙️ ตั้งค่า</span>';
+
   $('#totCount').textContent = d ? `(${d.count} คน)` : '';
   $('#totGross').textContent = d ? fmt1(d.gross) : '-';
   $('#totBucket').textContent = d ? fmt1(d.bucket) : '-';
@@ -513,7 +542,11 @@ function updateDayInfo(){
 
   let html;
   if (d && price){
-    const teamHtml = state.team.filter(m => m.active).map(m => `
+    const teamHtml = state.team.filter(m => m.active).map(m => d.teamOff.includes(m.id) ? `
+      <div class="ts-item off">
+        <div class="tname">${esc(m.name)}</div>
+        <div class="tval">หยุด</div>
+      </div>` : `
       <div class="ts-item">
         <div class="tname">${esc(m.name)}</div>
         <div class="tval">${fmt2(d.teamPer[m.id] || 0)}</div>
@@ -532,7 +565,7 @@ function updateDayInfo(){
         </div>
       </div>
       <div class="team-split-box">
-        <div class="sub" style="font-weight:600;color:var(--green-d)">👥 แบ่งให้ทีมงาน ${state.team.filter(m=>m.active).length} คน (คนละเท่า ๆ กัน):</div>
+        <div class="sub" style="font-weight:600;color:var(--green-d)">👥 แบ่งให้ทีมงานที่ทำงาน ${d.activeTeamCount} คน (คนละเท่า ๆ กัน):</div>
         <div class="team-split-grid">${teamHtml}</div>
       </div>`;
   } else if (d){
@@ -607,6 +640,34 @@ $('#entryBody').addEventListener('keydown', ev => {
 $('#priceInput').addEventListener('input', ev => setPrice(ev.target.value, true));
 $('#priceInput').addEventListener('keydown', ev => { if (ev.key === 'Enter') ev.target.blur(); });
 $('#lastPriceBtn').onclick = ev => setPrice(ev.currentTarget.dataset.price, false);
+
+/* ตั้ง/ยกเลิกวันหยุดรายคน (ใช้ทั้งหน้ากรอกรายวันและตารางสรุปงวด) */
+function toggleTeamOff(key, id){
+  const m = state.team.find(t => t.id === id);
+  if (!m || !m.active){ toast('คนนี้อยู่สถานะ “พัก” ในหน้าตั้งค่า'); return false; }
+  const e = getEntry(key);
+  const off = (e.teamOff || []).filter(x => state.team.some(t => t.id === x && t.active));
+  const i = off.indexOf(id);
+  if (i >= 0){
+    off.splice(i, 1);
+  } else {
+    const others = state.team.filter(t => t.active && t.id !== id && !off.includes(t.id));
+    if (!others.length){
+      cleanupEntry(key);
+      toast('ต้องมีทีมงานทำงานอย่างน้อย 1 คน');
+      return false;
+    }
+    off.push(id);
+  }
+  if (off.length) e.teamOff = off; else delete e.teamOff;
+  cleanupEntry(key); saveState();
+  toast(i >= 0 ? `ยกเลิกวันหยุดของ ${m.name} แล้ว` : `ตั้ง ${m.name} หยุดวันที่ ${thShort(fromKey(key))} แล้ว`);
+  return true;
+}
+$('#teamChips').addEventListener('click', ev => {
+  const b = ev.target.closest('.chip'); if (!b) return;
+  if (toggleTeamOff(toKey(curDate), b.dataset.id)) updateDayInfo();
+});
 $('#dayNote').addEventListener('input', ev => {
   const key = toKey(curDate);
   const e = getEntry(key);
@@ -715,7 +776,12 @@ function renderPeriod(){
     days.forEach(x => {
       if (x.st === 'off') h += `<td class="off">หยุด</td>`;
       else if (x.st === 'future') h += `<td class="fut"></td>`;
-      else { const val = x.dd && x.dd.teamPer ? x.dd.teamPer[m.id] : 0; h += `<td class="me">${val ? fmt2(val) : ''}</td>`; }
+      else {
+        const isOff = x.dd.teamOff.includes(m.id);
+        const val = x.dd.teamPer[m.id] || 0;
+        const tgl = m.active ? ` tgl" data-key="${x.k}" data-mid="${m.id}" title="${isOff ? 'แตะเพื่อยกเลิกวันหยุด' : 'แตะเพื่อตั้งเป็นวันหยุด'}` : '';
+        h += isOff ? `<td class="moff${tgl}">หยุด</td>` : `<td class="me${tgl}">${val ? fmt2(val) : '–'}</td>`;
+      }
     });
     const totalMem = teamPer[m.id] ? teamPer[m.id].money : 0;
     h += `<td class="tot">${fmt2(totalMem)}</td></tr>`;
@@ -730,6 +796,10 @@ $('#perDay').addEventListener('click', ev => {
   const tr = ev.target.closest('tr[data-key]'); if (!tr) return;
   curDate = fromKey(tr.dataset.key); showTab('daily');
 });
+$('#matrix').addEventListener('click', ev => {
+  const td = ev.target.closest('td.tgl'); if (!td) return;
+  if (toggleTeamOff(td.dataset.key, td.dataset.mid)) renderPeriod();
+});
 $('#prevPeriod').onclick = () => { curPeriodDate = addDays(getPeriod(curPeriodDate).start, -1); renderPeriod(); };
 $('#nextPeriod').onclick = () => { curPeriodDate = addDays(getPeriod(curPeriodDate).end, 1); renderPeriod(); };
 $('#printBtn').onclick = () => window.print();
@@ -741,7 +811,7 @@ $('#csvBtn').onclick = () => {
   rows.push(['ชื่อ', ...days.map(x => `${x.d.getDate()}/${x.d.getMonth()+1}`), 'วันที่ทำ', 'รวมเงิน(บาท)']);
   teamList.forEach(m => {
     const s = teamPer[m.id];
-    rows.push([m.name, ...days.map(x => x.st === 'work' && x.dd && x.dd.teamPer ? (x.dd.teamPer[m.id] || 0) : ''),
+    rows.push([m.name, ...days.map(x => x.st === 'work' && x.dd && x.dd.teamPer ? (x.dd.teamOff.includes(m.id) ? 'หยุด' : (x.dd.teamPer[m.id] || 0)) : ''),
       s ? s.days : 0, s ? r2(s.money) : 0]);
   });
   const csv = '\ufeff' + rows.map(r => r.map(cell).join(',')).join('\r\n');
