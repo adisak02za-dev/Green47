@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>บันทึกน้ำยาง + คิดเงิน + แบ่งทีม 3 คน</title>
+<title>บันทึกน้ำยาง + คิดเงิน + แบ่งทีม</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
@@ -68,7 +68,7 @@
   .actions.left{justify-content:flex-start}
   .note-label{display:flex;gap:8px;align-items:center;margin-top:10px;font-size:14px;color:#555}
   .note-label input{flex:1}
-  
+  /* กล่องคิดเงิน + แบ่งเงิน */
   .pay-box{margin-top:12px;background:var(--gold-l);border:1px solid var(--gold-b);border-radius:10px;padding:10px 12px}
   .pay-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
   .pay-row input{width:110px;text-align:right;font-weight:700;font-size:18px}
@@ -88,7 +88,6 @@
   .ts-item{background:var(--green-l);border-radius:8px;padding:6px;text-align:center}
   .ts-item .tname{font-size:13px;font-weight:600;color:var(--green-d)}
   .ts-item .tval{font-size:17px;font-weight:700;color:var(--green-d)}
-
   .period-bar{display:flex;gap:8px;align-items:center;justify-content:space-between}
   .period-label{text-align:center;flex:1}
   .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:12px}
@@ -103,7 +102,6 @@
   .kpi.ow .v{color:var(--slate)}
   .kpi .l{font-size:13px;color:var(--gray)}
   .warnbox{background:#fdecea;color:#c62828;font-weight:600;border-left:4px solid #c62828}
-
   tr.click{cursor:pointer}
   tr.click:hover td{background:#f1f8f1}
   tr.off td{background:var(--orange-l)}
@@ -117,7 +115,6 @@
   .matrix td.mon{font-weight:700;color:var(--gold);background:var(--gold-l)}
   .matrix td.ow{font-weight:700;color:var(--slate);background:var(--slate-l)}
   .matrix td.me{font-weight:700;color:var(--green-d);background:#e8f5e9}
-
   .trow{display:flex;gap:6px;align-items:center;padding:6px 0;border-bottom:1px solid #f0f0f0}
   .trow .tname{flex:1;min-width:80px}
   .trow.inactive .tname{color:#999;background:#f5f5f5}
@@ -125,10 +122,8 @@
   .add-row input{flex:1}
   .split-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px}
   .split-row input{width:80px;text-align:right;font-weight:700}
-
   #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:10px 18px;border-radius:10px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:99;max-width:90%;text-align:center}
   #toast.show{opacity:1}
-
   @media print{
     header,.no-print,#toast{display:none!important}
     .tab{display:none!important}
@@ -165,7 +160,7 @@
 
     <div class="card">
       <div class="hint">
-        กรอก <b>น้ำหนักรวม</b> และ <b>น้ำหนักถัง</b> → ระบบคำนวณน้ำยางได้จริง และคิดเงินตามราคา<br>
+        กรอก <b>น้ำหนักรวม</b> และ <b>น้ำหนักถัง</b> → ระบบคำนวณน้ำยางได้จริง (<b>เก็บทศนิยม 0.1 กก. ไม่ปัดเป็นกิโล</b>) และคิดเงินตามราคา<br>
         หักให้เจ้าของสวนตาม % แล้วส่วนของทีม (40%) จะถูก **หาร 3 คน (โอ็ต, กรีน, พี่นิ่ม) เท่า ๆ กัน** อัตโนมัติ
       </div>
       <div class="scroll">
@@ -247,7 +242,7 @@
       <h3>รายชื่อทีมงานหาร 40%</h3>
       <div id="teamList"></div>
       <div class="add-row">
-        <input type="text" id="newTeamName" placeholder="ชื่อทีมงานใหม่">
+        <input type="text" id="newTeamName" placeholder="ชื่อทีมงานใหม่ เช่น  A">
         <button class="btn" id="addTeamMember">+ เพิ่มคน</button>
       </div>
       <p class="sub">“พัก” = ไม่นำมาคำนวณส่วนแบ่ง • เงินส่วน 40% จะถูกหารเท่า ๆ กันกับทุกคนที่เปิดใช้งาน</p>
@@ -291,6 +286,7 @@
 <div id="toast"></div>
 
 <script>
+/* ================= ค่าคงที่ ================= */
 const STORE_KEY = 'latexDailyApp_v3';
 const DEFAULT_OWNER_PCT = 60;
 const DEFAULT_TEAM = ['โอ็ต', 'กรีน', 'พี่นิ่ม'];
@@ -299,8 +295,10 @@ const TH_M_FULL = ['มกราคม','กุมภาพันธ์','มี
 const TH_D = ['อา.','จ.','อ.','พ.','พฤ.','ศ.','ส.'];
 const TH_D_FULL = ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
 const SAMPLE_DATE = '2026-11-14';
-const SAMPLE_ROWS = [ ['86.7','4.4'] ];
+const SAMPLE_ROWS = [ ['86.7','4.4'] ]; // ตี๋: 86.7 − 4.4 = 82.3 กก. (เก็บทศนิยม ไม่ปัด)
+const SAMPLE_PRICE = '40';
 
+/* ================= ตัวช่วย ================= */
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const pad = n => String(n).padStart(2,'0');
@@ -322,17 +320,19 @@ const fmtP = n => Number(n).toLocaleString('en-US',{maximumFractionDigits:2});
 const parsePrice = v => { const n = parseFloat(String(v ?? '').replace(/,/g,'')); return isFinite(n) && n > 0 ? n : 0; };
 const newId = () => 't' + Date.now().toString(36) + Math.random().toString(36).slice(2,5);
 
+/* ===== แบ่งเงิน ===== */
 const ownerPct  = () => { const p = Number(state.settings.ownerPct); return isFinite(p) && p >= 0 && p <= 100 ? p : DEFAULT_OWNER_PCT; };
 const tapperPct = () => r2(100 - ownerPct());
 
 function splitMoney(money){
   const owner = r2(money * ownerPct() / 100);
-  const tapperTotal = r2(money - owner);
+  const tapperTotal = r2(money - owner); // เงินส่วน 40%
   const activeTeam = state.team.filter(m => m.active);
   const count = activeTeam.length || 1;
   const each = r2(tapperTotal / count);
   const teamPer = {};
   activeTeam.forEach((m, idx) => {
+    // ป้องกันเศษสตางค์หาย ให้คนสุดท้ายรับเศษที่เหลือ
     if (idx === count - 1){
       const allocated = each * (count - 1);
       teamPer[m.id] = r2(tapperTotal - allocated);
@@ -356,6 +356,7 @@ function download(name, content, type){
   setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
 }
 
+/* ================= ข้อมูล ================= */
 let firstRun = false;
 function defaultState(){
   return {
@@ -398,7 +399,7 @@ function saveState(){
     localStorage.setItem(STORE_KEY, JSON.stringify(state));
     const n = new Date();
     $('#saveStatus').textContent = `✓ บันทึกแล้ว ${pad(n.getHours())}:${pad(n.getMinutes())}:${pad(n.getSeconds())}`;
-  }catch(e){ toast('บันทึกไม่สำเร็จ'); }
+  }catch(e){ toast('บันทึกไม่สำเร็จ (หน่วยความจำเบราว์เซอร์เต็ม?)'); }
 }
 function cleanupEntry(key){
   const e = state.entries[key];
@@ -411,6 +412,7 @@ function lastPriceBefore(key){
   return { key:k, price:parsePrice(state.entries[k].price) };
 }
 
+/* ================= คำนวณ ================= */
 function calcRow(r){
   if (!r) return null;
   const vals = String(r.gross || '').split(/[+,;\s]+/).filter(Boolean).map(Number).filter(v => isFinite(v));
@@ -418,7 +420,7 @@ function calcRow(r){
   const gross = r1(vals.reduce((a,b) => a+b, 0));
   const bucket = parseFloat(r.bucket) || 0;
   const net = r1(gross - bucket);
-  return { gross, bucket, net, real: Math.round(net), multi: vals.length > 1 };
+  return { gross, bucket, net, real: net, multi: vals.length > 1 }; // ได้จริง = น้ำยางที่ได้ (ไม่ปัดเป็นกิโล)
 }
 function dayData(key){
   const e = state.entries[key];
@@ -430,6 +432,7 @@ function dayData(key){
     per[t.id] = c; gross += c.gross; bucket += c.bucket; net += c.net; real += c.real; count++;
   }
   if (!count) return null;
+  real = r1(real);
   const money = r2(real * price);
   const split = splitMoney(money);
   return { gross:r1(gross), bucket:r1(bucket), net:r1(net), real, count, per, price, money, ...split };
@@ -454,6 +457,7 @@ function getPeriod(date){
   return { start: addDays(list[idx-1], 1), end: list[idx] };
 }
 
+/* ================= หน้ากรอกรายวัน ================= */
 let state = loadState();
 let curDate = firstRun ? fromKey(SAMPLE_DATE) : today();
 let curPeriodDate = curDate;
@@ -466,14 +470,14 @@ function renderDaily(){
   const list = state.tappers.filter(t => t.active || (e && e.rows && e.rows[t.id]));
   const tb = $('#entryBody'); tb.innerHTML = '';
   if (!list.length){
-    tb.innerHTML = '<tr><td colspan="6" class="name sub">ยังไม่มีรายชื่อ</td></tr>';
+    tb.innerHTML = '<tr><td colspan="6" class="name sub">ยังไม่มีรายชื่อ — เพิ่มได้ที่หน้า ⚙️ ตั้งค่า</td></tr>';
   }
   list.forEach((t,i) => {
     const r = (e && e.rows && e.rows[t.id]) || { gross:'', bucket:'' };
     const tr = document.createElement('tr'); tr.dataset.id = t.id;
     tr.innerHTML = `
       <td class="name"><span class="no">${i+1}</span>${esc(t.name)}</td>
-      <td><div class="gross-wrap"><input class="in-gross" type="text" inputmode="decimal" autocomplete="off" value="${esc(r.gross)}" placeholder="0.0"><button class="plus" type="button" title="ชั่งเพิ่ม">+</button></div><div class="sub gsum"></div></td>
+      <td><div class="gross-wrap"><input class="in-gross" type="text" inputmode="decimal" autocomplete="off" value="${esc(r.gross)}" placeholder="0.0"><button class="plus" type="button" title="ชั่งเพิ่มอีกครั้ง">+</button></div><div class="sub gsum"></div></td>
       <td><input class="in-bucket" type="text" inputmode="decimal" autocomplete="off" value="${esc(r.bucket)}" placeholder="0.0"></td>
       <td class="net">-</td>
       <td class="real">-</td>
@@ -488,7 +492,7 @@ function updateRow(tr){
   const c = calcRow({ gross: tr.querySelector('.in-gross').value, bucket: tr.querySelector('.in-bucket').value });
   const price = parsePrice($('#priceInput').value);
   tr.querySelector('.net').textContent = c ? fmt1(c.net) : '-';
-  tr.querySelector('.real').textContent = c ? fmt0(c.real) : '-';
+  tr.querySelector('.real').textContent = c ? fmt1(c.real) : '-';
   tr.querySelector('.money').textContent = c && price ? fmt2(r2(c.real * price)) : '-';
   tr.querySelector('.gsum').textContent = c && c.multi ? '= ' + fmt1(c.gross) : '';
 }
@@ -504,7 +508,7 @@ function updateDayInfo(){
   $('#totGross').textContent = d ? fmt1(d.gross) : '-';
   $('#totBucket').textContent = d ? fmt1(d.bucket) : '-';
   $('#totNet').textContent = d ? fmt1(d.net) : '-';
-  $('#totReal').textContent = d ? fmt0(d.real) : '-';
+  $('#totReal').textContent = d ? fmt1(d.real) : '-';
   $('#totMoney').textContent = d && price ? fmt2(d.money) : '-';
 
   let html;
@@ -515,7 +519,7 @@ function updateDayInfo(){
         <div class="tval">${fmt2(d.teamPer[m.id] || 0)}</div>
       </div>`).join('');
 
-    html = `น้ำยางได้จริง <span class="kg">${fmt0(d.real)}</span> กก. × ${fmtP(price)} บาท
+    html = `น้ำยางได้จริง <span class="kg">${fmt1(d.real)}</span> กก. × ${fmtP(price)} บาท
       = <span class="tot">${fmt2(d.money)}</span> บาท
       <div class="split">
         <div class="sp owner">
@@ -532,7 +536,7 @@ function updateDayInfo(){
         <div class="team-split-grid">${teamHtml}</div>
       </div>`;
   } else if (d){
-    html = `น้ำยางได้จริง <span class="kg">${fmt0(d.real)}</span> กก.<br><span class="warn">⚠️ ยังไม่ได้ใส่ราคาน้ำยางของวันนี้</span>`;
+    html = `น้ำยางได้จริง <span class="kg">${fmt1(d.real)}</span> กก.<br><span class="warn">⚠️ ยังไม่ได้ใส่ราคาน้ำยางของวันนี้ — ใส่ราคาเพื่อคิดเงินและแบ่งเงิน</span>`;
   } else {
     html = `<span class="sub">ยังไม่มีน้ำยางของวันนี้ (นับเป็นวันหยุด)</span>`;
   }
@@ -542,7 +546,7 @@ function updateDayInfo(){
   if (!price && lp){
     btn.hidden = false;
     btn.dataset.price = lp.price;
-    btn.textContent = `ใช้ราคาล่าสุด ${fmtP(lp.price)} บาท`;
+    btn.textContent = `ใช้ราคาล่าสุด ${fmtP(lp.price)} บาท (${thShort(fromKey(lp.key))})`;
   } else btn.hidden = true;
 
   $('#dayInfo').innerHTML = `
@@ -569,6 +573,7 @@ function onEntryInput(tr){
     if (lp){
       e.price = String(lp.price);
       $('#priceInput').value = e.price;
+      toast(`ใส่ราคาล่าสุด ${fmtP(lp.price)} บาท/กก. ให้แล้ว`);
     }
   }
   cleanupEntry(key); saveState(); refreshRows(); updateDayInfo();
@@ -616,9 +621,10 @@ $('#clearDay').onclick = () => {
   const key = toKey(curDate);
   if (!state.entries[key]) return toast('วันนี้ยังไม่มีข้อมูล');
   if (!confirm(`ลบข้อมูลของ ${thShort(curDate, true)} ทั้งหมด?`)) return;
-  delete state.entries[key]; saveState(); renderDaily(); toast('ลบแล้ว');
+  delete state.entries[key]; saveState(); renderDaily(); toast('ลบแล้ว — วันนี้เป็นวันหยุด');
 };
 
+/* ================= หน้าสรุปงวด ================= */
 function collectPeriod(){
   const p = getPeriod(curPeriodDate);
   const days = [];
@@ -648,7 +654,7 @@ function collectPeriod(){
     } else if (x.st === 'off') off++; else fut++;
   });
   const teamList = state.team.filter(m => (teamPer[m.id] && teamPer[m.id].days) || m.active);
-  return { p, days, teamPer, teamList, work, off, fut, tNet:r1(tNet), tReal,
+  return { p, days, teamPer, teamList, work, off, fut, tNet:r1(tNet), tReal:r1(tReal),
            tMoney:r2(tMoney), tOwner:r2(tOwner), tTapperTotal:r2(tTapperTotal),
            avgPrice: pricedReal ? r2(tMoney / pricedReal) : 0, noPrice };
 }
@@ -656,19 +662,20 @@ function collectPeriod(){
 function renderPeriod(){
   const P = collectPeriod(); const { p, days, teamPer, teamList } = P;
   $('#periodLabel').innerHTML = `<div class="big">งวด ${thShort(p.start)} – ${thShort(p.end)}</div>
-    <div class="sub">ตัดวีควันที่ ${p.end.getDate()} • ${days.length} วัน</div>`;
+    <div class="sub">ตัดวีควันที่ ${p.end.getDate()} ${TH_M_FULL[p.end.getMonth()]} ${p.end.getFullYear()+543} • ${days.length} วัน</div>`;
 
   $('#periodWarn').innerHTML = P.noPrice
-    ? `<div class="card warnbox">⚠️ มี ${P.noPrice} วันทำงานที่ยังไม่ได้ใส่ราคา</div>` : '';
+    ? `<div class="card warnbox">⚠️ มี ${P.noPrice} วันทำงานที่ยังไม่ได้ใส่ราคา — แตะที่วันนั้นเพื่อใส่ราคา</div>` : '';
 
   $('#periodKpis').innerHTML = `
     <div class="kpi me"><div class="l">👥 ทีมตัดรวม (40%)</div><div class="v">${fmt2(P.tTapperTotal)} <small>บาท</small></div></div>
     <div class="kpi ow"><div class="l">เจ้าของสวน (${fmtP(ownerPct())}%)</div><div class="v">${fmt2(P.tOwner)} <small>บาท</small></div></div>
     <div class="kpi m"><div class="l">💰 เงินรวมงวดนี้</div><div class="v">${fmt2(P.tMoney)} <small>บาท</small></div></div>
-    <div class="kpi"><div class="l">น้ำยางได้จริง</div><div class="v">${fmt0(P.tReal)} <small>กก.</small></div></div>
+    <div class="kpi"><div class="l">น้ำยางได้จริง</div><div class="v">${fmt1(P.tReal)} <small>กก.</small></div></div>
     <div class="kpi"><div class="l">ราคาเฉลี่ย</div><div class="v">${P.avgPrice ? fmtP(P.avgPrice) : '-'} <small>บาท</small></div></div>
     <div class="kpi o"><div class="l">ทำงาน / หยุด</div><div class="v">${P.work} / ${P.off} <small>วัน</small></div></div>`;
 
+  // สรุปรายคน (ทีม)
   let h = `<thead><tr><th class="name">#</th><th class="name">ชื่อทีมงาน</th><th>วันที่ทำ</th><th>ส่วนแบ่ง (บาท)</th><th>เฉลี่ย/วัน</th></tr></thead><tbody>`;
   teamList.forEach((m,i) => {
     const s = teamPer[m.id];
@@ -680,6 +687,7 @@ function renderPeriod(){
     <td class="mine">${fmt2(P.tTapperTotal)}</td><td>${P.work ? fmt2(P.tTapperTotal/P.work) : '-'}</td></tr></tfoot>`;
   $('#teamSummaryTable').innerHTML = h;
 
+  // รายวัน + แบ่งเงิน
   h = `<thead><tr><th class="name">วันที่</th><th class="name">สถานะ</th><th>ได้จริง (กก.)</th><th>ราคา</th><th>เงินรวม</th>
     <th class="th-own">เจ้าของสวน</th><th class="th-mine">ทีมตัด (40%)</th></tr></thead><tbody>`;
   days.forEach(x => {
@@ -688,17 +696,18 @@ function renderPeriod(){
     const priceCell = x.dd ? (x.dd.price ? fmtP(x.dd.price) : '<span class="warn">ยังไม่ใส่</span>') : '-';
     h += `<tr class="click ${x.st}" data-key="${x.k}">
       <td class="name">${thShort(x.d, true)}${note}</td><td class="name">${BADGE[x.st]}</td>
-      <td class="real">${x.dd ? fmt0(x.dd.real) : '-'}</td>
+      <td class="real">${x.dd ? fmt1(x.dd.real) : '-'}</td>
       <td>${priceCell}</td>
       <td class="money">${priced ? fmt2(x.dd.money) : '-'}</td>
       <td class="own">${priced ? fmt2(x.dd.owner) : '-'}</td>
       <td class="mine">${priced ? fmt2(x.dd.tapperTotal) : '-'}</td></tr>`;
   });
   h += `</tbody><tfoot><tr><td class="name">รวม</td><td class="name">ทำงาน ${P.work} / หยุด ${P.off}</td>
-    <td class="real">${fmt0(P.tReal)}</td><td>${P.avgPrice ? 'เฉลี่ย ' + fmtP(P.avgPrice) : '-'}</td>
+    <td class="real">${fmt1(P.tReal)}</td><td>${P.avgPrice ? 'เฉลี่ย ' + fmtP(P.avgPrice) : '-'}</td>
     <td class="money">${fmt2(P.tMoney)}</td><td class="own">${fmt2(P.tOwner)}</td><td class="mine">${fmt2(P.tTapperTotal)}</td></tr></tfoot>`;
   $('#perDay').innerHTML = h;
 
+  // ตารางทีมงาน × วัน
   const emptyCell = x => `<td class="${x.st === 'off' ? 'off' : 'fut'}"></td>`;
   h = `<thead><tr><th class="name">ชื่อ</th>${days.map(x => `<th>${x.d.getDate()}<br><span class="sub">${TH_D[x.d.getDay()]}</span></th>`).join('')}<th>รวม</th></tr></thead><tbody>`;
   teamList.forEach(m => {
@@ -739,6 +748,7 @@ $('#csvBtn').onclick = () => {
   download(`น้ำยาง_ทีม_${toKey(p.start)}_ถึง_${toKey(p.end)}.csv`, csv, 'text/csv;charset=utf-8');
 };
 
+/* ================= หน้าตั้งค่า ================= */
 function renderSettings(){
   const box = $('#teamList'); box.innerHTML = '';
   state.team.forEach((m,i) => {
@@ -764,7 +774,7 @@ $('#teamList').addEventListener('click', ev => {
   else if (b.classList.contains('down')){ if (i < T.length-1) [T[i+1], T[i]] = [T[i], T[i+1]]; }
   else if (b.classList.contains('toggle')){ T[i].active = !T[i].active; }
   else if (b.classList.contains('del')){
-    if (T.length <= 1) return toast('ต้องมีรายชื่ออย่างน้อย 1 คน');
+    if (T.length <= 1) return toast('ต้องมีรายชื่อทีมงานอย่างน้อย 1 คน');
     if (!confirm(`ลบ "${T[i].name}" ออกจากทีม?`)) return;
     T.splice(i,1);
   } else return;
@@ -792,11 +802,11 @@ $('#saveSplit').onclick = () => {
   const v = parseFloat($('#ownerPctInput').value);
   if (!isFinite(v) || v < 0 || v > 100) return toast('กรุณาใส่ตัวเลข 0–100');
   state.settings.ownerPct = r2(v); saveState(); renderSettings();
-  toast('บันทึกสัดส่วนแล้ว');
+  toast(`บันทึกสัดส่วนแล้ว: เจ้าของสวน ${v}% / ทีมตัด ${100-v}%`);
 };
 $('#saveCutoff').onclick = () => {
   const nums = [...new Set(($('#cutoffInput').value.match(/\d+/g) || []).map(Number).filter(n => n >= 1 && n <= 31))].sort((a,b) => a-b);
-  if (!nums.length) return toast('กรุณาใส่วันที่ 1–31');
+  if (!nums.length) return toast('กรุณาใส่วันที่ 1–31 เช่น 8, 25');
   state.settings.cutoffs = nums; saveState(); renderSettings();
   toast('ตั้งวันตัดวีคเรียบร้อย');
 };
@@ -811,21 +821,23 @@ $('#restoreFile').addEventListener('change', ev => {
     try{
       const s = JSON.parse(rd.result);
       if (!s || typeof s.entries !== 'object') throw 0;
-      if (!confirm('กู้คืนข้อมูล?')) return;
-      state = fixSettings(s); saveState(); renderSettings(); toast('กู้คืนสำเร็จ');
+      if (!confirm('กู้คืนข้อมูลจากไฟล์นี้?')) return;
+      state = fixSettings(s); saveState(); renderSettings(); toast('กู้คืนข้อมูลเรียบร้อย');
     }catch(e){ toast('ไฟล์ไม่ถูกต้อง'); }
     ev.target.value = '';
   };
   rd.readAsText(f);
 });
 $('#sampleBtn').onclick = () => {
-  applySample(state); saveState(); curDate = fromKey(SAMPLE_DATE); showTab('daily'); toast('ใส่ตัวอย่างแล้ว');
+  if (state.entries[SAMPLE_DATE] && !confirm('วันที่ 14-11-69 มีข้อมูลอยู่แล้ว เขียนทับ?')) return;
+  applySample(state); saveState(); curDate = fromKey(SAMPLE_DATE); showTab('daily'); toast('ใส่ข้อมูลตัวอย่างแล้ว');
 };
 $('#resetBtn').onclick = () => {
   if (!confirm('ล้างข้อมูลทั้งหมด?')) return;
-  state = defaultState(); saveState(); curDate = today(); renderSettings(); toast('ล้างแล้ว');
+  state = defaultState(); saveState(); curDate = today(); renderSettings(); toast('ล้างข้อมูลแล้ว');
 };
 
+/* ================= สลับแท็บ ================= */
 function showTab(name){
   document.querySelectorAll('nav button').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
   document.querySelectorAll('.tab').forEach(s => s.classList.toggle('active', s.id === 'tab-' + name));
@@ -839,7 +851,12 @@ document.querySelectorAll('nav button').forEach(b => b.onclick = () => {
   showTab(b.dataset.tab);
 });
 
+/* ================= เริ่มต้น ================= */
 renderDaily();
+if (firstRun){
+  saveState();
+  setTimeout(() => toast('ตัวอย่าง 14-11-69: 82.3 กก. × 40 = 3,292 → ทีมตัด 1,316.80 หาร 3 คน (โอ็ต, กรีน, พี่นิ่ม)'), 300);
+}
 </script>
 </body>
 </html>
