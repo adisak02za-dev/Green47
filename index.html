@@ -2,13 +2,11 @@
 <html lang="th">
 <head>
 <meta charset="UTF-8">
-<!-- ล็อกการซูม: ไม่ให้ pinch / double-tap ซูมเข้า-ออก -->
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#0E3F2F">
 <meta name="color-scheme" content="light dark">
 <title>บันทึกน้ำยาง + คิดเงิน + แบ่งทีม</title>
 <script>
-/* ตั้งโหมดสีก่อนหน้าเว็บแสดง เพื่อไม่ให้จอกระพริบขาว */
 (function(){
   try{
     var m = localStorage.getItem('rubber_theme_v1') || 'light';
@@ -23,88 +21,42 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Prompt:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
-  /* ============ โทเคนสี / ตัวอักษร (โหมดสว่าง) ============ */
   :root{
     color-scheme:light;
-    --ground:#E6ECE7;          /* พื้นหลังเขียวเทาอ่อน */
-    --surface:#FFFFFF;         /* พื้นผิวการ์ด สีขาวน้ำยาง */
-    --ink:#14221C;
-    --ink-2:#3F5148;
-    --ink-3:#55665D;
-    --line:rgba(20,34,28,.10);
-    --line-2:rgba(20,34,28,.24);
-    --green:#17624A;           /* ใบยาง */
-    --green-deep:#0E3F2F;
-    --green-tint:#DDEEE5;
-    --money:#8F5400;           /* เงิน / บาท */
-    --money-tint:#FFF1D2;
-    --off:#5B6B78;             /* พัก */
-    --off-tint:#E8ECEF;
-    --danger:#B3261E;          /* แดง: ลบ / คนหยุด */
-    --danger-tint:#FBE8E6;
-    --bar-bg:#0E3F2F;
-    --slip-bg:#0E3F2F;
-    --on-green:#FFFFFF;
-    --input-bg:#FFFFFF;
-    --placeholder:#8A9A91;
-    --tabbar-bg:rgba(255,255,255,.97);
-    --future-bg:#EEF0EE;
-    --warn-line:#F0C6C2;
-    --inactive-bg:#F3F5F3;
-    --knob-off:#9AA7B1;
-    --price-ring:#F7DFA6;
-    --price-ph:#C9A96A;
-    --toast-bg:#14221C;
-    --toast-ink:#FFFFFF;
-    --slip-shadow:rgba(14,63,47,.55);
+    --ground:#E6ECE7; --surface:#FFFFFF; --ink:#14221C; --ink-2:#3F5148; --ink-3:#55665D;
+    --line:rgba(20,34,28,.10); --line-2:rgba(20,34,28,.24);
+    --green:#17624A; --green-deep:#0E3F2F; --green-tint:#DDEEE5;
+    --money:#8F5400; --money-tint:#FFF1D2;
+    --off:#5B6B78; --off-tint:#E8ECEF;
+    --danger:#B3261E; --danger-tint:#FBE8E6;
+    --bar-bg:#0E3F2F; --slip-bg:#0E3F2F; --on-green:#FFFFFF;
+    --input-bg:#FFFFFF; --placeholder:#8A9A91; --tabbar-bg:rgba(255,255,255,.97);
+    --future-bg:#EEF0EE; --warn-line:#F0C6C2; --inactive-bg:#F3F5F3; --knob-off:#9AA7B1;
+    --toast-bg:#14221C; --toast-ink:#FFFFFF; --slip-shadow:rgba(14,63,47,.55);
     --r-card:20px;
     --f-body:'IBM Plex Sans Thai','Noto Sans Thai','Sarabun',system-ui,-apple-system,'Segoe UI',sans-serif;
     --f-disp:'Prompt','IBM Plex Sans Thai','Noto Sans Thai',system-ui,sans-serif;
     --safe-b:env(safe-area-inset-bottom,0px);
   }
-
-  /* ============ โหมดมืด (เฉพาะบนจอ เวลาพิมพ์จะเป็นสีสว่างเสมอ) ============ */
   @media screen{
     :root[data-theme="dark"]{
       color-scheme:dark;
-      --ground:#0E1512;
-      --surface:#18221D;
-      --ink:#E7EFEA;
-      --ink-2:#BCCBC2;
-      --ink-3:#93A59B;
-      --line:rgba(231,239,234,.10);
-      --line-2:rgba(231,239,234,.26);
-      --green:#4CC594;
-      --green-deep:#9BE3C2;
-      --green-tint:#1F3B30;
-      --money:#F5BC5C;
-      --money-tint:#33270F;
-      --off:#A3B1BC;
-      --off-tint:#262F37;
-      --danger:#FF8A80;
-      --danger-tint:#3A1D1B;
-      --bar-bg:#0A1310;
-      --slip-bg:#134433;
-      --on-green:#062A1D;
-      --input-bg:#111A16;
-      --placeholder:#6F8178;
-      --tabbar-bg:rgba(20,29,25,.97);
-      --future-bg:#232E29;
-      --warn-line:#6A2D28;
-      --inactive-bg:#1D2722;
-      --knob-off:#5E6C76;
-      --price-ring:#5A4519;
-      --price-ph:#8C7548;
-      --toast-bg:#E7EFEA;
-      --toast-ink:#0E1512;
-      --slip-shadow:rgba(0,0,0,.7);
+      --ground:#0E1512; --surface:#18221D; --ink:#E7EFEA; --ink-2:#BCCBC2; --ink-3:#93A59B;
+      --line:rgba(231,239,234,.10); --line-2:rgba(231,239,234,.26);
+      --green:#4CC594; --green-deep:#9BE3C2; --green-tint:#1F3B30;
+      --money:#F5BC5C; --money-tint:#33270F;
+      --off:#A3B1BC; --off-tint:#262F37;
+      --danger:#FF8A80; --danger-tint:#3A1D1B;
+      --bar-bg:#0A1310; --slip-bg:#134433; --on-green:#062A1D;
+      --input-bg:#111A16; --placeholder:#6F8178; --tabbar-bg:rgba(20,29,25,.97);
+      --future-bg:#232E29; --warn-line:#6A2D28; --inactive-bg:#1D2722; --knob-off:#5E6C76;
+      --toast-bg:#E7EFEA; --toast-ink:#0E1512; --slip-shadow:rgba(0,0,0,.7);
     }
     :root[data-theme="dark"] .appbar{border-bottom:1px solid var(--line)}
   }
 
-  /* ============ พื้นฐาน + ล็อกการซูม / เลื่อนแนวนอน ============ */
   *,*::before,*::after{box-sizing:border-box}
-  *{touch-action:pan-y;-webkit-tap-highlight-color:transparent}          /* ให้ลากได้แค่แนวตั้ง ไม่ซูม ไม่ลากซ้าย-ขวา */
+  *{touch-action:pan-y;-webkit-tap-highlight-color:transparent}
   html{overflow-x:hidden;overscroll-behavior-x:none;-webkit-text-size-adjust:100%;text-size-adjust:100%;scroll-padding-top:72px}
   body{margin:0;width:100%;min-height:100vh;overflow-x:clip;background:var(--ground);color:var(--ink);
        font:400 16px/1.55 var(--f-body);-webkit-font-smoothing:antialiased}
@@ -116,7 +68,6 @@
   b,strong{font-weight:600}
   small{font-size:inherit}
 
-  /* ============ โครงหน้า ============ */
   .appbar{position:sticky;top:0;z-index:20;background:var(--bar-bg);color:#fff;padding-top:env(safe-area-inset-top,0px)}
   .appbar-in{max-width:600px;margin:0 auto;height:56px;display:flex;align-items:center;gap:10px;padding:0 16px}
   .mark{width:34px;height:34px;border-radius:10px;background:#F1F7F3;color:#0E3F2F;display:grid;place-items:center;flex:none}
@@ -136,8 +87,6 @@
   .tab-btn.active{color:var(--green-deep);font-weight:600}
   .tab-btn.active .ic{background:var(--green-tint)}
 
-  /* ============ ส่วนประกอบทั่วไป ============ */
-  .block{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card);padding:16px}
   .bh{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:2px 12px;margin-bottom:12px}
   .bh h3{font:600 16px/1.35 var(--f-disp)}
   .hint,.sub{font-size:13.5px;color:var(--ink-3)}
@@ -155,56 +104,47 @@
   .btn.line{background:var(--surface);border:1.5px solid var(--line-2);color:var(--ink)}
   .btn.danger{background:var(--danger-tint);color:var(--danger)}
   .btn.wide{width:100%}
-  .btn:active,.iconbtn:active,.chip:active,.pchip:active,.pill-btn:active{transform:scale(.97)}
+  .btn:active,.iconbtn:active,.pchip:active,.pill-btn:active,.linkdel:active{transform:scale(.97)}
   .pill-btn{display:inline-flex;align-items:center;height:40px;padding:0 16px;border-radius:999px;background:var(--green-tint);color:var(--green-deep);font-weight:600;font-size:14.5px}
-  .pill-btn.gold{background:var(--money-tint);color:var(--money);margin-top:12px}
+  .pill-btn.gold{background:var(--money-tint);color:var(--money)}
   .iconbtn{width:48px;height:48px;flex:none;border-radius:14px;background:var(--surface);border:1px solid var(--line);display:grid;place-items:center}
 
-  .badge{display:inline-flex;align-items:center;height:26px;padding:0 10px;border-radius:999px;font-size:13px;font-weight:600;white-space:nowrap}
+  .badge{display:inline-flex;align-items:center;height:24px;padding:0 10px;border-radius:999px;font-size:12.5px;font-weight:600;white-space:nowrap}
   .badge.work{background:var(--green-tint);color:var(--green-deep)}
-  .badge.off{background:var(--off-tint);color:var(--off)}
-  .badge.future{background:var(--future-bg);color:var(--ink-3)}
 
   .notice{padding:14px 16px;border-radius:16px;background:var(--surface);border:1.5px dashed var(--line-2);color:var(--ink-2);font-size:15px}
   .notice.warn{background:var(--danger-tint);border:1px solid var(--warn-line);color:var(--danger);font-weight:500}
 
   /* ============ หน้ากรอกรายวัน ============ */
-  .datebar{display:flex;align-items:center;gap:8px}
-  .datepick{position:relative;flex:1;min-width:0;height:48px;border-radius:14px;background:var(--surface);border:1px solid var(--line);
-            display:flex;align-items:center;justify-content:center;gap:8px;padding:0 10px;font:600 17px/1 var(--f-disp);white-space:nowrap}
-  .datepick input{position:absolute;inset:0;width:100%;height:100%;opacity:0;font-size:16px;cursor:pointer}
-  .datepick .cal{color:var(--ink-3);display:grid}
   .tab > .daymeta{margin-top:12px}
   .daymeta{display:flex;align-items:center;flex-wrap:wrap;gap:8px 10px}
   .daymeta .pill-btn{margin-left:auto}
+  .pick{position:relative;min-height:48px;display:flex;flex-direction:column;justify-content:center;border-radius:14px;background:var(--surface);border:1px solid var(--line);cursor:pointer}
+  .pick input{position:absolute;inset:0;width:100%;height:100%;opacity:0;font-size:16px;cursor:pointer}
+  .dsumbar{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+  .dsumbar > div{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 12px;min-width:0}
+  .dsumbar span{display:block;font-size:12.5px;color:var(--ink-3)}
+  .dsumbar b{display:block;font:700 16px/1.3 var(--f-disp);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+  .dsumbar b small{font:400 12px var(--f-body);color:var(--ink-3);margin-left:3px}
 
-  .person{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card);padding:16px}
-  .person + .person{margin-top:12px}
-  .person-name{font:600 17px/1.3 var(--f-disp);margin-bottom:12px;overflow-wrap:anywhere}
-  .fields{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:12px}
+  .dcard{background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden;scroll-margin-top:72px}
+  .dcard.today{border:2px solid var(--green)}
+  .dhead{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:12px;align-items:center;padding:14px 14px 12px}
+  .dsum{display:flex;flex-direction:column;align-items:flex-start;gap:4px;min-width:0}
+  .dbody{display:grid;gap:12px;padding:0 14px 12px}
+  .trow-in{padding-top:12px;border-top:1.5px dashed var(--line-2)}
+  .tn{font:600 15px/1.3 var(--f-disp);color:var(--ink-2);margin-bottom:8px;overflow-wrap:anywhere}
+  .fields{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:10px}
   .fwrap{display:flex;gap:8px}
-  .plus{flex:none;width:50px;height:50px;border-radius:12px;background:var(--green-tint);color:var(--green-deep);display:grid;place-items:center}
-  .in-gross,.in-bucket{text-align:right}
-  .gsum{font-size:13px;color:var(--ink-3);margin-top:6px}
+  .dcard .inp{height:46px;font-size:16px}
+  .plus{flex:none;width:46px;height:46px;border-radius:12px;background:var(--green-tint);color:var(--green-deep);display:grid;place-items:center}
+  .in-gross,.in-bucket,.in-price{text-align:right}
+  .in-price{color:var(--money);font-weight:600}
+  .gsum{font-size:13.5px;color:var(--green);font-weight:500;margin-top:6px}
   .gsum:empty{display:none}
-  .readout{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:14px;padding-top:14px;border-top:1.5px dashed var(--line-2)}
-  .rl{display:block;font-size:13.5px;color:var(--ink-3)}
-  .readout b{display:block;font:700 22px/1.25 var(--f-disp);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
-  .readout b small{font:400 13px var(--f-body);color:var(--ink-3);margin-left:4px}
-  .real{color:var(--green)}
-  .money{color:var(--money)}
-
-  .chips{display:flex;flex-wrap:wrap;gap:8px}
-  .chip{display:inline-flex;align-items:center;gap:6px;height:44px;padding:0 16px 0 12px;border-radius:999px;background:var(--green-tint);color:var(--green-deep);font-weight:600;border:1.5px solid transparent;max-width:100%}
-  .chip .cn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  /* คนที่หยุด = สีแดง */
-  .chip.off{background:var(--danger-tint);border:1.5px solid var(--danger);color:var(--danger)}
-
-  .pricebox{display:flex;align-items:center;gap:10px;background:var(--money-tint);border-radius:14px;padding:6px 6px 6px 16px}
-  .pricebox:focus-within{box-shadow:0 0 0 4px var(--price-ring)}
-  .pricebox input{flex:1;min-width:0;height:48px;border:0;background:transparent;outline:none;font:700 28px/1 var(--f-disp);color:var(--money);font-variant-numeric:tabular-nums}
-  .pricebox input::placeholder{color:var(--price-ph)}
-  .unit{font-size:14px;color:var(--ink-2);padding-right:12px;white-space:nowrap}
+  .dfoot{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .linkdel{margin-left:auto;display:inline-flex;align-items:center;gap:6px;height:40px;padding:0 14px;border-radius:999px;background:var(--danger-tint);color:var(--danger);font-weight:600;font-size:14px}
+  .dcard .day-people{padding:0 14px 14px}
 
   /* ============ ใบชั่ง / สลิป ============ */
   .slip{position:relative;background:var(--surface);border-radius:6px;overflow:hidden;
@@ -217,37 +157,51 @@
   .slip-cap{display:block;font-size:14px;color:#BFD8CB}
   .slip-total{font:700 38px/1.1 var(--f-disp);font-variant-numeric:tabular-nums;margin-top:4px;overflow-wrap:anywhere}
   .slip-total small{font:400 15px var(--f-body);margin-left:8px;color:#BFD8CB}
-  .slip-calc{margin-top:6px;font-size:14.5px;color:#DCEBE3;font-variant-numeric:tabular-nums}
   .slip-body{padding:14px 20px 28px}
   .lines{list-style:none;margin:0;padding:0}
   .lines li{display:flex;align-items:baseline;gap:8px;padding:7px 0}
   .lines li > span{min-width:0;overflow-wrap:anywhere}
   .lines .lead{flex:1;min-width:12px;border-bottom:2px dotted var(--line-2);transform:translateY(-4px)}
   .lines b{flex:none;font:600 17px/1.3 var(--f-disp);font-variant-numeric:tabular-nums}
-  .lines li.strong > span{font-weight:600}
-  .lines li.strong b{color:var(--green);font-size:19px}
-  /* คนที่หยุดในใบแบ่งเงิน = สีแดง */
-  .lines li.off{color:var(--danger)}
-  .lines li.off > span{font-weight:600}
-  .lines li.off b{font:600 15px var(--f-body);color:var(--danger)}
-  .slip-sub{margin:12px 0 2px;padding-top:14px;border-top:2px dashed var(--line-2);font-size:13.5px;color:var(--ink-3)}
   .lines.payout li{align-items:center;padding:10px 0}
   .lines.payout .lead{transform:none}
   .lines.payout b{font-size:24px}
   .who{display:block;font-weight:600}
   .who small{display:block;font-size:13px;font-weight:400;color:var(--ink-3);font-variant-numeric:tabular-nums}
 
-  /* ============ หน้าสรุปงวด ============ */
+  /* ============ สรุปงวด ============ */
   .periodnav{display:flex;align-items:center;gap:8px}
   .period-label{flex:1;min-width:0;text-align:center;line-height:1.35}
   .period-label b{display:block;font:600 17px/1.3 var(--f-disp)}
   .period-label small{display:block;font-size:13px;color:var(--ink-3)}
-  .stats{margin:0;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card);padding:4px 16px}
-  .stats > div{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:12px 0}
-  .stats > div + div{border-top:1px solid var(--line)}
+  .money{color:var(--money)}
+
+  .stats{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card);padding:4px 16px 6px}
+  .stats-h{display:flex;align-items:baseline;justify-content:space-between;gap:8px;font:600 15px/1.3 var(--f-disp);color:var(--ink-2);padding:14px 0 6px}
+  .stats-h small{font:400 13px var(--f-body);color:var(--ink-3)}
+  .stats dl{margin:0}
+  .stats dl > div{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:11px 0}
+  .stats dl > div + div{border-top:1px solid var(--line)}
   .stats dt{color:var(--ink-2);font-size:15px}
-  .stats dd{margin:0;font:600 16px var(--f-disp);font-variant-numeric:tabular-nums;text-align:right}
+  .stats dt small{display:block;font-size:12.5px;color:var(--ink-3)}
+  .stats dd{margin:0;font:600 16px var(--f-disp);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
   .stats dd small{font:400 13px var(--f-body);color:var(--ink-3);margin-left:4px}
+  .stats .minus dd{color:var(--danger)}
+  .stats .total{border-top:2px solid var(--line-2)!important}
+  .stats .total dt{color:var(--ink);font-weight:600}
+  .stats .total dd{font-size:20px;color:var(--green)}
+  .stats .total dd.money{color:var(--money)}
+  .wbar{display:flex;height:10px;border-radius:999px;overflow:hidden;background:var(--danger-tint);margin:6px 0}
+  .wbar i{display:block;background:var(--green)}
+  .wlegend{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;color:var(--ink-3);padding-bottom:8px}
+  .wlegend .r{color:var(--green);font-weight:600}
+  .wlegend .b{color:var(--danger);font-weight:600}
+
+  .extra-box{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card);padding:16px}
+  .extra-list{list-style:none;margin:0;padding:0}
+  .extra-item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+  .extra-item:last-child{border-bottom:0}
+  .extra-form{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) auto;gap:8px;margin-top:12px}
 
   .daylist{display:flex;flex-direction:column;gap:10px}
   .day{background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden}
@@ -257,6 +211,7 @@
   .day-date small{font-size:12.5px;color:var(--ink-3);margin-top:4px;white-space:nowrap}
   .day-kg{display:block;font-weight:500;font-size:15px;font-variant-numeric:tabular-nums}
   .day-note{display:block;font-size:13px;color:var(--ink-3);overflow-wrap:anywhere}
+  .day-wt{display:block;font-size:13px;color:var(--ink-3);font-variant-numeric:tabular-nums}
   .day-money{text-align:right;font-variant-numeric:tabular-nums}
   .day-money b{display:block;font:700 18px/1.3 var(--f-disp);color:var(--money)}
   .day-money small{display:block;font-size:12.5px;color:var(--ink-3);white-space:nowrap}
@@ -265,12 +220,11 @@
   .pchip{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;min-height:54px;padding:6px;border-radius:12px;background:var(--green-tint);color:var(--green-deep);min-width:0;border:1.5px solid transparent}
   .pchip .pn{font-size:13px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .pchip .pv{font:600 15px var(--f-disp);font-variant-numeric:tabular-nums}
-  /* คนที่หยุดในหน้าสรุปงวด = สีแดง */
   .pchip.off{background:var(--danger-tint);border:1.5px solid var(--danger);color:var(--danger)}
   .pchip.off .pn{font-weight:600}
   .pchip.off .pv{font:600 14px var(--f-body)}
   .pchip:disabled{opacity:.55;cursor:default}
-  .day.thin{display:flex;align-items:center;gap:12px;width:100%;padding:10px 14px;background:transparent;border:1.5px dashed var(--line-2);border-radius:12px;color:var(--ink-3);text-align:left}
+  .day.thin{display:flex;align-items:center;gap:12px;width:100%;padding:10px 14px;background:transparent;border:1.5px dashed var(--line-2);border-radius:12px;color:var(--ink-3);text-align:left;scroll-margin-top:72px}
   .day.thin b{font:600 16px var(--f-disp);min-width:24px;text-align:right}
   .day.thin .day-state{margin-left:auto;font-size:13.5px}
   .stack{display:grid;gap:10px}
@@ -297,14 +251,11 @@
   .pct{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
   .pct .inp{width:110px;text-align:right;font-weight:600}
   .pct-note{font-size:15px;color:var(--ink-2)}
-
-  /* ปุ่มเลือกโหมดสี */
   .seg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;padding:5px;border-radius:16px;background:var(--ground)}
   .seg button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:64px;border-radius:12px;font-weight:600;font-size:14.5px;color:var(--ink-3);border:1.5px solid transparent}
   .seg button.active{background:var(--surface);color:var(--green-deep);border-color:var(--green)}
   .seg button:active{transform:scale(.97)}
 
-  /* ============ ข้อความแจ้งเตือน ============ */
   #toast{position:fixed;left:50%;bottom:calc(88px + var(--safe-b));transform:translateX(-50%);background:var(--toast-bg);color:var(--toast-ink);padding:12px 18px;border-radius:14px;
          font-size:14.5px;opacity:0;transition:opacity .25s;pointer-events:none;z-index:50;width:max-content;max-width:min(92vw,480px);text-align:center}
   #toast.show{opacity:1}
@@ -339,47 +290,20 @@
 
   <!-- ===== กรอกรายวัน ===== -->
   <section id="tab-daily" class="tab active" aria-label="กรอกรายวัน">
-    <div class="datebar">
-      <button type="button" class="iconbtn" id="prevDay" aria-label="วันก่อนหน้า" data-icon="chevL"></button>
-      <label class="datepick">
-        <input type="date" id="dateInput" aria-label="เลือกวันที่">
-        <span id="dateTitle"></span>
-        <span class="cal" data-icon="cal"></span>
+    <div class="periodnav">
+      <button type="button" class="iconbtn" id="dPrevPeriod" aria-label="งวดก่อน" data-icon="chevL"></button>
+      <label class="period-label pick">
+        <input type="date" id="dDateInput" aria-label="เลือกวันที่">
+        <span id="dPeriodLabel"></span>
       </label>
-      <button type="button" class="iconbtn" id="nextDay" aria-label="วันถัดไป" data-icon="chevR"></button>
+      <button type="button" class="iconbtn" id="dNextPeriod" aria-label="งวดถัดไป" data-icon="chevR"></button>
     </div>
+    <div id="dSum" class="dsumbar"></div>
     <div class="daymeta">
-      <span id="dayBadge"></span>
-      <span id="dayPeriod" class="sub"></span>
-      <button type="button" class="pill-btn" id="todayBtn" hidden>กลับมาวันนี้</button>
+      <span class="sub">ชั่งหลายครั้งกด + · แตะชื่อทีมงานเพื่อตั้งหยุด (สีแดง = หยุด)</span>
+      <button type="button" class="pill-btn" id="todayBtn" hidden>ไปวันนี้</button>
     </div>
-
-    <div>
-      <div class="bh"><h3>ชั่งน้ำยาง</h3><span class="hint">ชั่งหลายครั้ง กด + เพื่อรวมน้ำหนัก</span></div>
-      <div id="entryList"></div>
-    </div>
-
-    <div class="block">
-      <div class="bh"><h3><label for="priceInput">ราคาน้ำยางวันนี้</label></h3></div>
-      <div class="pricebox">
-        <input type="text" id="priceInput" inputmode="decimal" enterkeyhint="done" autocomplete="off" placeholder="0.00">
-        <span class="unit">บาท/กก.</span>
-      </div>
-      <button type="button" class="pill-btn gold" id="lastPriceBtn" hidden></button>
-    </div>
-
-    <div class="block">
-      <div class="bh"><h3>ทีมงานวันนี้</h3><span class="hint">แตะชื่อคนที่หยุด (สีแดง = หยุด)</span></div>
-      <div id="teamChips" class="chips"></div>
-    </div>
-
-    <div id="payCalc"></div>
-
-    <div class="block">
-      <label class="flabel" for="dayNote">หมายเหตุ</label>
-      <input type="text" id="dayNote" class="inp" enterkeyhint="done" placeholder="เช่น ฝนตก, ขายร้าน">
-    </div>
-    <button type="button" class="btn danger wide" id="clearDay">ลบข้อมูลวันนี้ (ให้เป็นวันหยุด)</button>
+    <div id="dayEntryList" class="daylist"></div>
   </section>
 
   <!-- ===== สรุปงวด ===== -->
@@ -391,7 +315,8 @@
     </div>
     <div id="periodWarn"></div>
     <div id="payoutSlip"></div>
-    <dl id="periodStats" class="stats"></dl>
+    <div id="extraIncomeSection"></div>
+    <div id="periodStats" class="stack"></div>
     <div>
       <div class="bh"><h3>รายวัน</h3></div>
       <p class="help no-print">แตะวันที่เพื่อแก้ข้อมูลวันนั้น และแตะชื่อคนเพื่อตั้งหยุดรายคน (สีแดง = หยุด)</p>
@@ -477,7 +402,7 @@
 <div id="toast" role="status" aria-live="polite"></div>
 
 <script>
-/* ================= ล็อกการซูม + เลื่อนได้เฉพาะแนวตั้ง ================= */
+/* ================= ล็อกการซูม ================= */
 (function lockViewport(){
   const stop = e => e.preventDefault();
   ['gesturestart','gesturechange','gestureend'].forEach(t => document.addEventListener(t, stop, { passive:false }));
@@ -489,13 +414,12 @@
     const codes = ['Equal','Minus','Digit0','NumpadAdd','NumpadSubtract','Numpad0'];
     if (keys.includes(e.key) || codes.includes(e.code)) e.preventDefault();
   });
-  const snapBack = () => { if (window.scrollX !== 0) window.scrollTo(0, window.scrollY); };
-  window.addEventListener('scroll', snapBack, { passive:true });
+  window.addEventListener('scroll', () => { if (window.scrollX !== 0) window.scrollTo(0, window.scrollY); }, { passive:true });
 })();
 
 /* ================= ไอคอน ================= */
 const PATHS = {
-  chevL:'<path d="M15 5l-7 7 7 7"/>', chevR:'<path d="M9 5l7 7-7 7"/>', chev:'<path d="M9 5l7 7-7 7"/>',
+  chevL:'<path d="M15 5l-7 7 7 7"/>', chevR:'<path d="M9 5l7 7-7 7"/>',
   cal:'<rect x="4" y="5.5" width="16" height="14.5" rx="3"/><path d="M8 3.5v4M16 3.5v4M4 10h16"/>',
   edit:'<path d="M4 20h4L18.5 9.5a2.1 2.1 0 0 0-3-3L5 17v3z"/><path d="M13.5 8.5l3 3"/>',
   receipt:'<path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3z"/><path d="M9.5 8h5M9.5 12h5"/>',
@@ -515,16 +439,15 @@ const ic = (name, size = 22) => `<svg viewBox="0 0 24 24" width="${size}" height
 document.querySelectorAll('[data-icon]').forEach(el => { el.insertAdjacentHTML('afterbegin', ic(el.dataset.icon, el.classList.contains('mark') ? 20 : 22)); });
 
 /* ================= ค่าคงที่ ================= */
-const STORE_KEY = '*************_**';
+const STORE_KEY = '*************_**';   // <-- ใส่ค่าเดิมจากไฟล์จริงของคุณ
 const THEME_KEY = 'rubber_theme_v1';
 const DEFAULT_OWNER_PCT = 60;
 const DEFAULT_TEAM = ['โอ็ต', 'กรีน', 'พี่นิ่ม'];
 const TH_M = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
 const TH_M_FULL = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
 const TH_D = ['อา.','จ.','อ.','พ.','พฤ.','ศ.','ส.'];
-const TH_D_FULL = ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
 const SAMPLE_DATE = '2026-11-14';
-const SAMPLE_ROWS = [ ['86.7','4.4'] ]; // ตี๋: 86.7 − 4.4 = 82.3 กก. (เก็บทศนิยม ไม่ปัด)
+const SAMPLE_ROWS = [ ['86.7','4.4'] ];
 const SAMPLE_PRICE = '40';
 
 /* ================= ตัวช่วย ================= */
@@ -538,7 +461,6 @@ const today = () => { const n = new Date(); return new Date(n.getFullYear(), n.g
 const todayKey = () => toKey(today());
 const beYY = d => String(d.getFullYear()+543).slice(-2);
 const thShort = (d, wd=false) => (wd ? TH_D[d.getDay()]+' ' : '') + `${d.getDate()} ${TH_M[d.getMonth()]} ${beYY(d)}`;
-const thLong = d => `วัน${TH_D_FULL[d.getDay()]}ที่ ${d.getDate()} ${TH_M_FULL[d.getMonth()]} ${d.getFullYear()+543}`;
 const r1 = x => Math.round(x*10)/10;
 const r2 = x => Math.round(x*100)/100;
 const fmt1 = n => Number(n).toLocaleString('en-US',{minimumFractionDigits:1, maximumFractionDigits:1});
@@ -560,17 +482,14 @@ function download(name, content, type){
   setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
 }
 
-/* ================= โหมดสี (สว่าง / มืด / ตามเครื่อง) ================= */
+/* ================= โหมดสี ================= */
 const darkMQ = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
 const THEME_NAME = { light:'โหมดสว่าง', dark:'โหมดมืด', auto:'ตามการตั้งค่าเครื่อง' };
 function themeMode(){
   try{ const m = localStorage.getItem(THEME_KEY); return ['light','dark','auto'].includes(m) ? m : 'light'; }
   catch(e){ return 'light'; }
 }
-function isDarkNow(){
-  const m = themeMode();
-  return m === 'dark' || (m === 'auto' && !!(darkMQ && darkMQ.matches));
-}
+function isDarkNow(){ const m = themeMode(); return m === 'dark' || (m === 'auto' && !!(darkMQ && darkMQ.matches)); }
 function applyTheme(){
   const mode = themeMode(), dark = isDarkNow();
   document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
@@ -587,10 +506,7 @@ function applyTheme(){
     b.classList.toggle('active', on); b.setAttribute('aria-pressed', on);
   });
 }
-function setTheme(mode){
-  try{ localStorage.setItem(THEME_KEY, mode); }catch(e){}
-  applyTheme();
-}
+function setTheme(mode){ try{ localStorage.setItem(THEME_KEY, mode); }catch(e){} applyTheme(); }
 $('#themeBtn').onclick = () => {
   const toDark = !isDarkNow();
   setTheme(toDark ? 'dark' : 'light');
@@ -598,8 +514,7 @@ $('#themeBtn').onclick = () => {
 };
 $('#themeSeg').addEventListener('click', ev => {
   const b = ev.target.closest('[data-mode]'); if (!b) return;
-  setTheme(b.dataset.mode);
-  toast(`ใช้${THEME_NAME[b.dataset.mode]}แล้ว`);
+  setTheme(b.dataset.mode); toast(`ใช้${THEME_NAME[b.dataset.mode]}แล้ว`);
 });
 if (darkMQ){
   const onSys = () => { if (themeMode() === 'auto') applyTheme(); };
@@ -622,12 +537,7 @@ function splitMoney(money, offIds = []){
   const each = r2(tapperTotal / count);
   const teamPer = {};
   activeTeam.forEach((m, idx) => {
-    if (idx === count - 1){
-      const allocated = each * (count - 1);
-      teamPer[m.id] = r2(tapperTotal - allocated);
-    } else {
-      teamPer[m.id] = each;
-    }
+    teamPer[m.id] = idx === count - 1 ? r2(tapperTotal - each * (count - 1)) : each;
   });
   return { owner, tapperTotal, teamPer, teamOff, activeTeamCount: count };
 }
@@ -639,6 +549,7 @@ function defaultState(){
     tappers: [{ id:newId(), name:'ตี๋', active:true }],
     team: DEFAULT_TEAM.map(n => ({ id:newId(), name:n, active:true })),
     entries: {},
+    extraIncomes: {},
     settings: { cutoffs:[8,25], ownerPct:DEFAULT_OWNER_PCT }
   };
 }
@@ -646,12 +557,9 @@ function fixSettings(s){
   s.settings = s.settings || {};
   if (!Array.isArray(s.settings.cutoffs) || !s.settings.cutoffs.length) s.settings.cutoffs = [8,25];
   if (s.settings.ownerPct === undefined || !isFinite(Number(s.settings.ownerPct))) s.settings.ownerPct = DEFAULT_OWNER_PCT;
-  if (!Array.isArray(s.team) || !s.team.length){
-    s.team = DEFAULT_TEAM.map(n => ({ id:newId(), name:n, active:true }));
-  }
-  if (!Array.isArray(s.tappers) || !s.tappers.length){
-    s.tappers = [{ id:newId(), name:'ตี๋', active:true }];
-  }
+  if (!Array.isArray(s.team) || !s.team.length) s.team = DEFAULT_TEAM.map(n => ({ id:newId(), name:n, active:true }));
+  if (!Array.isArray(s.tappers) || !s.tappers.length) s.tappers = [{ id:newId(), name:'ตี๋', active:true }];
+  if (!s.extraIncomes || typeof s.extraIncomes !== 'object') s.extraIncomes = {};
   return s;
 }
 function applySample(s){
@@ -687,6 +595,12 @@ function lastPriceBefore(key){
   const k = ks[ks.length-1];
   return { key:k, price:parsePrice(state.entries[k].price) };
 }
+function getEntry(key){
+  let e = state.entries[key];
+  if (!e) e = state.entries[key] = { rows:{}, note:'' };
+  if (!e.rows) e.rows = {};
+  return e;
+}
 
 /* ================= คำนวณ ================= */
 function calcRow(r){
@@ -714,11 +628,6 @@ function dayData(key){
   return { gross:r1(gross), bucket:r1(bucket), net:r1(net), real, count, per, price, money, ...split };
 }
 function statusOf(key, dd){ return dd ? 'work' : (key > todayKey() ? 'future' : 'off'); }
-const BADGE = {
-  work:'<span class="badge work">วันทำงาน</span>',
-  off:'<span class="badge off">วันหยุด</span>',
-  future:'<span class="badge future">ยังไม่ถึง</span>'
-};
 
 function getPeriod(date){
   const cuts = state.settings.cutoffs;
@@ -732,169 +641,13 @@ function getPeriod(date){
   const idx = list.findIndex(d => d.getTime() >= date.getTime());
   return { start: addDays(list[idx-1], 1), end: list[idx] };
 }
-
-/* ================= หน้ากรอกรายวัน ================= */
-let state = loadState();
-let curDate = firstRun ? fromKey(SAMPLE_DATE) : today();
-let curPeriodDate = curDate;
-
-function renderDaily(){
-  const key = toKey(curDate);
-  $('#dateInput').value = key;
-  const e = state.entries[key];
-  $('#priceInput').value = (e && e.price) || '';
-  const list = state.tappers.filter(t => t.active || (e && e.rows && e.rows[t.id]));
-  const box = $('#entryList'); box.innerHTML = '';
-  if (!list.length){
-    box.innerHTML = '<div class="notice">ยังไม่มีรายชื่อคนกรีด</div>';
-  }
-  list.forEach(t => {
-    const r = (e && e.rows && e.rows[t.id]) || { gross:'', bucket:'' };
-    const card = document.createElement('article'); card.className = 'person'; card.dataset.id = t.id;
-    card.innerHTML = `
-      <h4 class="person-name">${esc(t.name)}</h4>
-      <div class="fields">
-        <div>
-          <label class="flabel" for="g-${esc(t.id)}">น้ำหนักรวม <span>กก.</span></label>
-          <div class="fwrap">
-            <input id="g-${esc(t.id)}" class="inp in-gross" type="text" inputmode="decimal" enterkeyhint="next" autocomplete="off" value="${esc(r.gross)}" placeholder="0.0">
-            <button class="plus" type="button" aria-label="ชั่งเพิ่มอีกครั้ง">${ic('plus')}</button>
-          </div>
-          <div class="gsum"></div>
-        </div>
-        <div>
-          <label class="flabel" for="b-${esc(t.id)}">น้ำหนักถัง <span>กก.</span></label>
-          <input id="b-${esc(t.id)}" class="inp in-bucket" type="text" inputmode="decimal" enterkeyhint="next" autocomplete="off" value="${esc(r.bucket)}" placeholder="0.0">
-        </div>
-      </div>
-      <div class="readout">
-        <div><span class="rl">น้ำยางที่ได้จริง</span><b class="real">–</b></div>
-        <div><span class="rl">เป็นเงิน</span><b class="money">–</b></div>
-      </div>`;
-    box.appendChild(card);
-    updateRow(card);
-  });
-  $('#dayNote').value = (e && e.note) || '';
-  updateDayInfo();
-}
-function updateRow(card){
-  const c = calcRow({ gross: card.querySelector('.in-gross').value, bucket: card.querySelector('.in-bucket').value });
-  const price = parsePrice($('#priceInput').value);
-  card.querySelector('.real').innerHTML = c ? `${fmt1(c.real)}<small>กก.</small>` : '–';
-  card.querySelector('.money').innerHTML = c && price ? `${fmt2(r2(c.real * price))}<small>บาท</small>` : '–';
-  card.querySelector('.gsum').textContent = c && c.multi ? `รวมจากหลายครั้ง = ${fmt1(c.gross)}` : '';
-}
-function refreshRows(){ document.querySelectorAll('#entryList .person').forEach(updateRow); }
-
-function updateDayInfo(){
-  const key = toKey(curDate);
-  const d = dayData(key);
-  const p = getPeriod(curDate);
-  const price = parsePrice($('#priceInput').value);
-
-  $('#dateTitle').textContent = `${TH_D_FULL[curDate.getDay()]} ${curDate.getDate()} ${TH_M[curDate.getMonth()]} ${curDate.getFullYear()+543}`;
-  $('#dayBadge').innerHTML = BADGE[statusOf(key, d)];
-  $('#dayPeriod').textContent = `งวด ${thShort(p.start)} – ${thShort(p.end)}`;
-  $('#todayBtn').hidden = key === todayKey();
-
-  // ปุ่มตั้งวันหยุดรายคน (หยุด = สีแดง)
-  const eNow = state.entries[key];
-  const offNow = (eNow && eNow.teamOff) || [];
-  $('#teamChips').innerHTML = state.team.filter(m => m.active).map(m => {
-    const off = offNow.includes(m.id);
-    return `<button type="button" class="chip${off ? ' off' : ''}" data-id="${m.id}" aria-pressed="${off}">${ic(off ? 'x' : 'check', 18)}<span class="cn">${esc(m.name)}${off ? ' · หยุด' : ''}</span></button>`;
-  }).join('') || '<span class="sub">ยังไม่มีทีมงาน เพิ่มได้ที่แท็บตั้งค่า</span>';
-
-  let html;
-  if (d && price){
-    const teamLines = state.team.filter(m => m.active).map(m => d.teamOff.includes(m.id)
-      ? `<li class="off"><span>${esc(m.name)}</span><i class="lead"></i><b>หยุด</b></li>`
-      : `<li><span>${esc(m.name)}</span><i class="lead"></i><b>${fmt2(d.teamPer[m.id] || 0)}</b></li>`).join('');
-    html = `
-      <div class="slip">
-        <div class="slip-head">
-          <span class="slip-cap">เงินรวมวันนี้</span>
-          <div class="slip-total">${fmt2(d.money)}<small>บาท</small></div>
-          <div class="slip-calc">${fmt1(d.real)} กก. × ${fmtP(price)} บาท</div>
-        </div>
-        <div class="slip-body">
-          <ul class="lines">
-            <li><span>เจ้าของสวน ${fmtP(ownerPct())}%</span><i class="lead"></i><b>${fmt2(d.owner)}</b></li>
-            <li class="strong"><span>ทีมตัด ${fmtP(tapperPct())}%</span><i class="lead"></i><b>${fmt2(d.tapperTotal)}</b></li>
-          </ul>
-          <div class="slip-sub">แบ่งให้ทีมงานที่ทำงาน ${d.activeTeamCount} คน คนละเท่า ๆ กัน</div>
-          <ul class="lines">${teamLines}</ul>
-        </div>
-      </div>`;
-  } else if (d){
-    html = `<div class="notice warn">น้ำยางได้จริง ${fmt1(d.real)} กก. ใส่ราคาน้ำยางด้านบนเพื่อคิดเงินและแบ่งเงิน</div>`;
-  } else {
-    html = `<div class="notice">ยังไม่มีน้ำยางของวันนี้ (นับเป็นวันหยุด) กรอกน้ำหนักด้านบนเพื่อบันทึกวันทำงาน</div>`;
-  }
-  $('#payCalc').innerHTML = html;
-
-  const lp = lastPriceBefore(key), btn = $('#lastPriceBtn');
-  if (!price && lp){
-    btn.hidden = false;
-    btn.dataset.price = lp.price;
-    btn.textContent = `ใช้ราคาล่าสุด ${fmtP(lp.price)} บาท (${thShort(fromKey(lp.key))})`;
-  } else btn.hidden = true;
-}
-function getEntry(key){
-  let e = state.entries[key];
-  if (!e) e = state.entries[key] = { rows:{}, note:'' };
-  if (!e.rows) e.rows = {};
-  return e;
-}
-function onEntryInput(card){
-  const key = toKey(curDate);
-  const g = card.querySelector('.in-gross').value.trim();
-  const b = card.querySelector('.in-bucket').value.trim();
-  const e = getEntry(key);
-  if (!g && !b) delete e.rows[card.dataset.id];
-  else e.rows[card.dataset.id] = { gross:g, bucket:b };
-
-  if (Object.keys(e.rows).length && e.price === undefined){
-    const lp = lastPriceBefore(key);
-    if (lp){
-      e.price = String(lp.price);
-      $('#priceInput').value = e.price;
-      toast(`ใส่ราคาล่าสุด ${fmtP(lp.price)} บาท/กก. ให้แล้ว`);
-    }
-  }
-  cleanupEntry(key); saveState(); refreshRows(); updateDayInfo();
-}
-function setPrice(v, fromInput){
-  const key = toKey(curDate);
-  const e = getEntry(key);
-  e.price = String(v).trim();
-  if (!fromInput) $('#priceInput').value = e.price;
-  cleanupEntry(key); saveState(); refreshRows(); updateDayInfo();
+function periodKeys(date){
+  const p = getPeriod(date), keys = [];
+  for (let d = new Date(p.start); d <= p.end; d = addDays(d,1)) keys.push(toKey(d));
+  return keys;
 }
 
-$('#entryList').addEventListener('input', ev => {
-  const card = ev.target.closest('.person'); if (card) onEntryInput(card);
-});
-$('#entryList').addEventListener('click', ev => {
-  const b = ev.target.closest('.plus'); if (!b) return;
-  const inp = b.parentElement.querySelector('.in-gross');
-  const v = inp.value.trim();
-  if (v && !v.endsWith('+')) inp.value = v + '+';
-  inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length);
-  onEntryInput(inp.closest('.person'));
-});
-$('#entryList').addEventListener('keydown', ev => {
-  if (ev.key !== 'Enter' || ev.target.tagName !== 'INPUT') return;
-  ev.preventDefault();
-  const ins = [...$('#entryList').querySelectorAll('input'), $('#priceInput')];
-  const next = ins[ins.indexOf(ev.target) + 1];
-  if (next){ next.focus(); next.select(); } else ev.target.blur();
-});
-$('#priceInput').addEventListener('input', ev => setPrice(ev.target.value, true));
-$('#priceInput').addEventListener('keydown', ev => { if (ev.key === 'Enter') ev.target.blur(); });
-$('#lastPriceBtn').onclick = ev => setPrice(ev.currentTarget.dataset.price, false);
-
-/* ตั้ง/ยกเลิกวันหยุดรายคน */
+/* ================= ตั้ง/ยกเลิกวันหยุดรายคน ================= */
 function toggleTeamOff(key, id){
   const m = state.team.find(t => t.id === id);
   if (!m || !m.active){ toast('คนนี้อยู่สถานะ “พัก” ในหน้าตั้งค่า'); return false; }
@@ -905,11 +658,7 @@ function toggleTeamOff(key, id){
     off.splice(i, 1);
   } else {
     const others = state.team.filter(t => t.active && t.id !== id && !off.includes(t.id));
-    if (!others.length){
-      cleanupEntry(key);
-      toast('ต้องมีทีมงานทำงานอย่างน้อย 1 คน');
-      return false;
-    }
+    if (!others.length){ cleanupEntry(key); toast('ต้องมีทีมงานทำงานอย่างน้อย 1 คน'); return false; }
     off.push(id);
   }
   if (off.length) e.teamOff = off; else delete e.teamOff;
@@ -917,31 +666,228 @@ function toggleTeamOff(key, id){
   toast(i >= 0 ? `ยกเลิกวันหยุดของ ${m.name} แล้ว` : `ตั้ง ${m.name} หยุดวันที่ ${thShort(fromKey(key))} แล้ว`);
   return true;
 }
-$('#teamChips').addEventListener('click', ev => {
-  const b = ev.target.closest('.chip'); if (!b) return;
-  if (toggleTeamOff(toKey(curDate), b.dataset.id)) updateDayInfo();
+
+/* ================= หน้ากรอกรายวัน (เรียงเป็นวัน ๆ ทั้งงวด) ================= */
+let state = loadState();
+let dPeriodDate = firstRun ? fromKey(SAMPLE_DATE) : today();
+let curPeriodDate = dPeriodDate;
+const openKeys = new Set();
+let scrollToKey = toKey(dPeriodDate);
+
+function dayCardHTML(k){
+  const d = fromKey(k), dd = dayData(k), isToday = k === todayKey();
+  const dn = d.getDate(), wd = TH_D[d.getDay()], mo = TH_M[d.getMonth()];
+
+  if (!dd && !isToday && !openKeys.has(k)){
+    const st = statusOf(k, dd);
+    return `<button type="button" class="day thin" data-act="open" data-key="${k}"><b>${dn}</b><span>${wd} ${mo}</span><span class="day-state">${st === 'future' ? 'ยังไม่ถึง' : 'วันหยุด'} · แตะเพื่อกรอก</span></button>`;
+  }
+
+  const e = state.entries[k] || {};
+  const rows = e.rows || {};
+  const tlist = state.tappers.filter(t => t.active || rows[t.id]);
+  const tHTML = tlist.map(t => {
+    const r = rows[t.id] || {};
+    const gid = esc(`g-${k}-${t.id}`), bid = esc(`b-${k}-${t.id}`);
+    return `<div class="trow-in" data-tid="${esc(t.id)}">
+      <div class="tn">${esc(t.name)}</div>
+      <div class="fields">
+        <div>
+          <label class="flabel" for="${gid}">น้ำหนักรวม <span>กก.</span></label>
+          <div class="fwrap">
+            <input id="${gid}" class="inp in-gross" data-f="gross" type="text" inputmode="decimal" enterkeyhint="next" autocomplete="off" value="${esc(r.gross)}" placeholder="0.0">
+            <button class="plus" type="button" data-act="plus" aria-label="ชั่งเพิ่มอีกครั้ง">${ic('plus')}</button>
+          </div>
+        </div>
+        <div>
+          <label class="flabel" for="${bid}">น้ำหนักถัง <span>กก.</span></label>
+          <input id="${bid}" class="inp in-bucket" data-f="bucket" type="text" inputmode="decimal" enterkeyhint="next" autocomplete="off" value="${esc(r.bucket)}" placeholder="0.0">
+        </div>
+      </div>
+      <div class="gsum"></div>
+    </div>`;
+  }).join('') || '<div class="notice">ยังไม่มีรายชื่อคนกรีด</div>';
+
+  return `<article class="dcard${isToday ? ' today' : ''}" data-key="${k}">
+    <div class="dhead">
+      <span class="day-date"><b>${dn}</b><small>${wd} ${mo}</small></span>
+      <span class="dsum"></span>
+      <span class="day-money"></span>
+    </div>
+    <div class="dbody">
+      ${tHTML}
+      <div class="fields">
+        <div>
+          <label class="flabel" for="p-${k}">ราคา <span>บาท/กก.</span></label>
+          <input id="p-${k}" class="inp in-price" data-f="price" type="text" inputmode="decimal" enterkeyhint="next" autocomplete="off" value="${esc(e.price)}" placeholder="0.00">
+        </div>
+        <div>
+          <label class="flabel" for="n-${k}">หมายเหตุ</label>
+          <input id="n-${k}" class="inp in-note" data-f="note" type="text" enterkeyhint="done" value="${esc(e.note)}" placeholder="เช่น ฝนตก">
+        </div>
+      </div>
+      <div class="dfoot">
+        <button type="button" class="pill-btn gold" data-act="lastprice" hidden></button>
+        <button type="button" class="linkdel" data-act="clear">${ic('trash', 18)}ลบข้อมูลวันนี้</button>
+      </div>
+    </div>
+    <div class="day-people"></div>
+  </article>`;
+}
+
+function updateDayCard(card){
+  const k = card.dataset.key, dd = dayData(k), e = state.entries[k];
+  const isToday = k === todayKey();
+  const tag = isToday ? '<span class="badge work">วันนี้</span>' : '';
+  const stText = isToday ? 'ยังไม่กรอก' : (statusOf(k, dd) === 'future' ? 'ยังไม่ถึง' : 'วันหยุด');
+
+  card.querySelector('.dsum').innerHTML = dd
+    ? `<span class="day-kg">${fmt1(dd.real)} กก.${dd.price ? ' × ' + fmtP(dd.price) : ''}</span><span class="day-wt">รวม ${fmt1(dd.gross)} − ถัง ${fmt1(dd.bucket)}</span>${tag}`
+    : `<span class="day-kg sub">${stText}</span>${tag}`;
+
+  card.querySelector('.day-money').innerHTML = dd
+    ? (dd.price
+        ? `<b>${fmt2(dd.money)}</b><small>ทีม ${fmt2(dd.tapperTotal)}</small><small>เจ้าของ ${fmt2(dd.owner)}</small>`
+        : `<span class="nop">ยังไม่ใส่ราคา</span>`)
+    : '';
+
+  card.querySelectorAll('.trow-in').forEach(row => {
+    const c = calcRow({ gross: row.querySelector('.in-gross').value, bucket: row.querySelector('.in-bucket').value });
+    row.querySelector('.gsum').textContent = c ? `ได้จริง ${fmt1(c.real)} กก.${c.multi ? ` (รวมหลายครั้ง ${fmt1(c.gross)})` : ''}` : '';
+  });
+
+  const lpBtn = card.querySelector('[data-act="lastprice"]');
+  const lp = !parsePrice(e && e.price) ? lastPriceBefore(k) : null;
+  if (lp){
+    lpBtn.hidden = false; lpBtn.dataset.price = lp.price;
+    lpBtn.textContent = `ใช้ราคาล่าสุด ${fmtP(lp.price)} บาท (${thShort(fromKey(lp.key))})`;
+  } else lpBtn.hidden = true;
+  const clr = card.querySelector('[data-act="clear"]');
+  clr.hidden = !e;
+  card.querySelector('.dfoot').hidden = lpBtn.hidden && clr.hidden;
+
+  const offList = dd ? dd.teamOff : ((e && e.teamOff) || []);
+  card.querySelector('.day-people').innerHTML = state.team.filter(m => m.active).map(m => {
+    const isOff = offList.includes(m.id);
+    const val = dd && dd.price ? (dd.teamPer[m.id] || 0) : 0;
+    return `<button type="button" class="pchip${isOff ? ' off' : ''}" data-act="off" data-mid="${m.id}" aria-pressed="${isOff}" title="${isOff ? 'แตะเพื่อยกเลิกวันหยุด' : 'แตะเพื่อตั้งเป็นวันหยุด'}"><span class="pn">${esc(m.name)}</span><span class="pv">${isOff ? 'หยุด' : (val ? fmt2(val) : '–')}</span></button>`;
+  }).join('');
+}
+
+function updateDailySummary(){
+  const P = collectPeriod(dPeriodDate);
+  $('#dSum').innerHTML = `
+    <div><span>ทำงาน</span><b>${P.work}<small>วัน</small></b></div>
+    <div><span>น้ำยางได้จริง</span><b>${fmt1(P.tReal)}<small>กก.</small></b></div>
+    <div><span>เงินรวม</span><b class="money">${fmt2(P.tMoney)}<small>บาท</small></b></div>`;
+}
+
+function renderDaily(){
+  const p = getPeriod(dPeriodDate);
+  $('#dPeriodLabel').innerHTML = `<b>งวด ${thShort(p.start)} – ${thShort(p.end)}</b><small>แตะเพื่อเลือกวันที่</small>`;
+  $('#dDateInput').value = toKey(dPeriodDate);
+  const keys = periodKeys(dPeriodDate);
+  const list = $('#dayEntryList');
+  list.innerHTML = keys.map(dayCardHTML).join('');
+  list.querySelectorAll('.dcard').forEach(updateDayCard);
+  $('#todayBtn').hidden = keys.includes(todayKey());
+  updateDailySummary();
+  if (scrollToKey){
+    const k = scrollToKey; scrollToKey = null;
+    requestAnimationFrame(() => {
+      const el = list.querySelector(`[data-key="${k}"]`);
+      if (el) el.scrollIntoView({ block:'start' });
+    });
+  }
+}
+function replaceCard(k){
+  const old = $('#dayEntryList').querySelector(`[data-key="${k}"]`); if (!old) return null;
+  old.outerHTML = dayCardHTML(k);
+  const card = $('#dayEntryList').querySelector(`.dcard[data-key="${k}"]`);
+  if (card) updateDayCard(card);
+  return card;
+}
+
+$('#dayEntryList').addEventListener('input', ev => {
+  const inp = ev.target, f = inp.dataset.f; if (!f) return;
+  const card = inp.closest('.dcard'), k = card.dataset.key;
+  const e = getEntry(k);
+  if (f === 'gross' || f === 'bucket'){
+    const row = inp.closest('.trow-in'), tid = row.dataset.tid;
+    const g = row.querySelector('.in-gross').value.trim();
+    const b = row.querySelector('.in-bucket').value.trim();
+    if (!g && !b) delete e.rows[tid]; else e.rows[tid] = { gross:g, bucket:b };
+    if (Object.keys(e.rows).length && e.price === undefined){
+      const lp = lastPriceBefore(k);
+      if (lp){
+        e.price = String(lp.price);
+        card.querySelector('.in-price').value = e.price;
+        toast(`ใส่ราคาล่าสุด ${fmtP(lp.price)} บาท/กก. ให้แล้ว`);
+      }
+    }
+  } else if (f === 'price'){
+    e.price = inp.value.trim();
+  } else if (f === 'note'){
+    e.note = inp.value.trim();
+  }
+  cleanupEntry(k); saveState(); updateDayCard(card); updateDailySummary();
 });
-$('#dayNote').addEventListener('input', ev => {
-  const key = toKey(curDate);
-  const e = getEntry(key);
-  e.note = ev.target.value.trim();
-  cleanupEntry(key); saveState();
+
+$('#dayEntryList').addEventListener('click', ev => {
+  const b = ev.target.closest('[data-act]'); if (!b) return;
+  const act = b.dataset.act;
+
+  if (act === 'open'){
+    const k = b.dataset.key; openKeys.add(k);
+    const card = replaceCard(k);
+    if (card){ const g = card.querySelector('.in-gross'); if (g) g.focus(); }
+    return;
+  }
+  const card = b.closest('.dcard'); if (!card) return;
+  const k = card.dataset.key;
+
+  if (act === 'plus'){
+    const inp = b.parentElement.querySelector('.in-gross');
+    const v = inp.value.trim();
+    if (v && !v.endsWith('+')) inp.value = v + '+';
+    inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length);
+    inp.dispatchEvent(new Event('input', { bubbles:true }));
+  } else if (act === 'lastprice'){
+    const inp = card.querySelector('.in-price');
+    inp.value = b.dataset.price;
+    inp.dispatchEvent(new Event('input', { bubbles:true }));
+  } else if (act === 'off'){
+    if (toggleTeamOff(k, b.dataset.mid)){ updateDayCard(card); updateDailySummary(); }
+  } else if (act === 'clear'){
+    if (!state.entries[k]) return;
+    if (!confirm(`ลบข้อมูลของ ${thShort(fromKey(k), true)} ทั้งหมด?`)) return;
+    delete state.entries[k]; openKeys.delete(k); saveState();
+    replaceCard(k); updateDailySummary();
+    toast('ลบแล้ว วันนั้นเป็นวันหยุด');
+  }
 });
-$('#dateInput').addEventListener('change', ev => { if (ev.target.value){ curDate = fromKey(ev.target.value); renderDaily(); } });
-$('#dateInput').addEventListener('click', ev => { try{ if (ev.target.showPicker) ev.target.showPicker(); }catch(_){} });
-$('#prevDay').onclick = () => { curDate = addDays(curDate,-1); renderDaily(); };
-$('#nextDay').onclick = () => { curDate = addDays(curDate, 1); renderDaily(); };
-$('#todayBtn').onclick = () => { curDate = today(); renderDaily(); };
-$('#clearDay').onclick = () => {
-  const key = toKey(curDate);
-  if (!state.entries[key]) return toast('วันนี้ยังไม่มีข้อมูล');
-  if (!confirm(`ลบข้อมูลของ ${thShort(curDate, true)} ทั้งหมด?`)) return;
-  delete state.entries[key]; saveState(); renderDaily(); toast('ลบแล้ว วันนี้เป็นวันหยุด');
-};
+
+$('#dayEntryList').addEventListener('keydown', ev => {
+  if (ev.key !== 'Enter' || ev.target.tagName !== 'INPUT') return;
+  ev.preventDefault();
+  const ins = [...ev.target.closest('.dcard').querySelectorAll('input')];
+  const next = ins[ins.indexOf(ev.target) + 1];
+  if (next){ next.focus(); next.select(); } else ev.target.blur();
+});
+
+$('#dPrevPeriod').onclick = () => { dPeriodDate = addDays(getPeriod(dPeriodDate).start, -1); renderDaily(); window.scrollTo(0,0); };
+$('#dNextPeriod').onclick = () => { dPeriodDate = addDays(getPeriod(dPeriodDate).end, 1); renderDaily(); window.scrollTo(0,0); };
+$('#todayBtn').onclick = () => { dPeriodDate = today(); scrollToKey = todayKey(); renderDaily(); };
+$('#dDateInput').addEventListener('change', ev => {
+  const v = ev.target.value; if (!v) return;
+  dPeriodDate = fromKey(v); openKeys.add(v); scrollToKey = v; renderDaily();
+});
+$('#dDateInput').addEventListener('click', ev => { try{ if (ev.target.showPicker) ev.target.showPicker(); }catch(_){} });
 
 /* ================= หน้าสรุปงวด ================= */
-function collectPeriod(){
-  const p = getPeriod(curPeriodDate);
+function collectPeriod(date = curPeriodDate){
+  const p = getPeriod(date);
+  const pKey = toKey(p.start);
   const days = [];
   for (let d = new Date(p.start); d <= p.end; d = addDays(d,1)){
     const k = toKey(d), dd = dayData(k);
@@ -950,63 +896,141 @@ function collectPeriod(){
   const teamPer = {};
   state.team.forEach(m => teamPer[m.id] = { days:0, money:0 });
 
-  let work=0, off=0, fut=0, tNet=0, tReal=0, tMoney=0, tOwner=0, tTapperTotal=0, pricedReal=0, noPrice=0;
+  let work=0, off=0, fut=0, tGross=0, tBucket=0, tNet=0, tReal=0,
+      tMoney=0, tOwner=0, tTapperTotal=0, pricedReal=0, noPrice=0;
   days.forEach(x => {
     if (x.st === 'work'){
-      work++; tNet += x.dd.net; tReal += x.dd.real;
+      work++;
+      tGross += x.dd.gross; tBucket += x.dd.bucket;
+      tNet += x.dd.net; tReal += x.dd.real;
       if (x.dd.price){
-        tMoney += x.dd.money;
-        tOwner += x.dd.owner;
-        tTapperTotal += x.dd.tapperTotal;
-        pricedReal += x.dd.real;
+        tMoney += x.dd.money; tOwner += x.dd.owner; tTapperTotal += x.dd.tapperTotal; pricedReal += x.dd.real;
         for (const mid in x.dd.teamPer){
-          if (teamPer[mid]){
-            teamPer[mid].days++;
-            teamPer[mid].money += x.dd.teamPer[mid];
-          }
+          if (teamPer[mid]){ teamPer[mid].days++; teamPer[mid].money += x.dd.teamPer[mid]; }
         }
       } else noPrice++;
     } else if (x.st === 'off') off++; else fut++;
   });
-  const teamList = state.team.filter(m => (teamPer[m.id] && teamPer[m.id].days) || m.active);
-  return { p, days, teamPer, teamList, work, off, fut, tNet:r1(tNet), tReal:r1(tReal),
-           tMoney:r2(tMoney), tOwner:r2(tOwner), tTapperTotal:r2(tTapperTotal),
+
+  // บวกรายได้เพิ่มเติม (เช่น ค่าขี้ยาง) เข้าทีมตัด
+  const extras = (state.extraIncomes && state.extraIncomes[pKey]) || [];
+  const totalExtra = r2(extras.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0));
+  tTapperTotal = r2(tTapperTotal + totalExtra);
+
+  // เฉลี่ยเงินเพิ่มให้ทีมงานทุกคนที่มีสิทธิ์ได้รับ (หารเท่า ๆ กัน)
+  if (totalExtra > 0){
+    const activeTeamList = state.team.filter(m => m.active);
+    const count = activeTeamList.length || 1;
+    const addPerPerson = r2(totalExtra / count);
+    activeTeamList.forEach((m, idx) => {
+      if (!teamPer[m.id]) teamPer[m.id] = { days:0, money:0 };
+      const add = idx === count - 1 ? r2(totalExtra - addPerPerson * (count - 1)) : addPerPerson;
+      teamPer[m.id].money = r2(teamPer[m.id].money + add);
+    });
+  }
+
+  const teamList = state.team.filter(m => (teamPer[m.id] && (teamPer[m.id].days || teamPer[m.id].money)) || m.active);
+  tGross = r1(tGross); tBucket = r1(tBucket); tReal = r1(tReal);
+  return { p, pKey, days, teamPer, teamList, work, off, fut,
+           tGross, tBucket, tNet:r1(tNet), tReal,
+           avgReal: work ? r1(tReal / work) : 0,
+           realPct: tGross ? r1(tReal / tGross * 100) : 0,
+           bucketPct: tGross ? r1(tBucket / tGross * 100) : 0,
+           pricedReal: r1(pricedReal),
+           tMoney:r2(tMoney), tOwner:r2(tOwner), tTapperTotal, totalExtra, extras,
            avgPrice: pricedReal ? r2(tMoney / pricedReal) : 0, noPrice };
 }
 
 function renderPeriod(){
-  const P = collectPeriod(); const { p, days, teamPer, teamList } = P;
+  const P = collectPeriod(); const { p, pKey, days, teamPer, teamList, extras } = P;
   $('#periodLabel').innerHTML = `<b>${thShort(p.start)} – ${thShort(p.end)}</b><small>ตัดวีควันที่ ${p.end.getDate()} ${TH_M_FULL[p.end.getMonth()]} ${p.end.getFullYear()+543} (${days.length} วัน)</small>`;
-
   $('#periodWarn').innerHTML = P.noPrice
     ? `<div class="notice warn">มี ${P.noPrice} วันทำงานที่ยังไม่ได้ใส่ราคา แตะวันนั้นในรายการเพื่อใส่ราคา</div>` : '';
 
-  if (!P.work){
-    $('#payoutSlip').innerHTML = `<div class="notice">งวดนี้ยังไม่มีวันทำงาน กรอกน้ำหนักน้ำยางที่แท็บกรอกรายวัน</div>`;
-  } else {
-    const payLines = teamList.map(m => {
-      const s = teamPer[m.id];
-      const dn = s ? s.days : 0;
-      const avg = s && s.days ? ` เฉลี่ยวันละ ${fmt2(s.money / s.days)}` : '';
-      return `<li><span class="who">${esc(m.name)}<small>${dn} วัน${avg}</small></span><i class="lead"></i><b>${s ? fmt2(r2(s.money)) : '–'}</b></li>`;
-    }).join('');
-    $('#payoutSlip').innerHTML = `
-      <div class="slip">
-        <div class="slip-head">
-          <span class="slip-cap">ทีมตัดได้รวมงวดนี้ (${fmtP(tapperPct())}%)</span>
-          <div class="slip-total">${fmt2(P.tTapperTotal)}<small>บาท</small></div>
-        </div>
-        <div class="slip-body"><ul class="lines payout">${payLines}</ul></div>
-      </div>`;
-  }
+  /* ---- ใบแบ่งเงินทีม ---- */
+  const payLines = teamList.map(m => {
+    const s = teamPer[m.id];
+    const dn = s ? s.days : 0;
+    const avg = s && s.days ? ` เฉลี่ยวันละ ${fmt2(s.money / s.days)}` : '';
+    return `<li><span class="who">${esc(m.name)}<small>${dn} วัน${avg}</small></span><i class="lead"></i><b>${s ? fmt2(r2(s.money)) : '–'}</b></li>`;
+  }).join('');
+  
+  const extraSlipLine = P.totalExtra > 0 ? `<li><span class="who">รวมรายได้เพิ่ม<small>เฉลี่ยหาร ${teamList.length} คน</small></span><i class="lead"></i><b>+${fmt2(P.totalExtra)}</b></li>` : '';
+
+  $('#payoutSlip').innerHTML = `
+    <div class="slip">
+      <div class="slip-head">
+        <span class="slip-cap">ทีมตัดได้รวมงวดนี้ (น้ำยาง ${fmtP(tapperPct())}% + รายได้เพิ่ม)</span>
+        <div class="slip-total">${fmt2(P.tTapperTotal)}<small>บาท</small></div>
+      </div>
+      <div class="slip-body">
+        <ul class="lines payout">${payLines}</ul>
+      </div>
+    </div>`;
+
+  /* ---- ส่วนเพิ่มรายได้ (ค่าขี้ยาง ฯลฯ) ---- */
+  const extraItemsHTML = extras.length ? extras.map(item => `
+    <li class="extra-item">
+      <span><b>${esc(item.name)}</b></span>
+      <span class="money"><b>+${fmt2(item.amount)} บาท</b></span>
+      <button type="button" class="iconbtn" data-act="delexpand" data-id="${item.id}" aria-label="ลบ" style="width:36px;height:36px;border-radius:10px">${ic('trash',16)}</button>
+    </li>
+  `).join('') : '<div class="sub" style="padding:4px 0">ยังไม่มีรายได้เพิ่มเติมในงวดนี้</div>';
+
+  $('#extraIncomeSection').innerHTML = `
+    <div class="extra-box">
+      <div class="bh" style="margin-bottom:8px">
+        <h3>รายได้เพิ่มเติม</h3>
+        <span class="hint">เข้าทีมตัดเต็มจำนวน</span>
+      </div>
+      <ul class="extra-list">${extraItemsHTML}</ul>
+      <form id="extraForm" class="extra-form" autocomplete="off">
+        <input type="text" id="extraName" class="inp" placeholder="ชื่อ เช่น ค่าขี้ยาง" aria-label="ชื่อรายได้" value="ค่าขี้ยาง" style="height:46px;font-size:15px">
+        <input type="text" id="extraAmount" class="inp" inputmode="decimal" placeholder="จำนวนเงิน" aria-label="จำนวนเงิน" style="height:46px;font-size:15px">
+        <button type="submit" class="btn" style="height:46px;padding:0 16px"><span data-icon="plus"></span>เพิ่ม</button>
+      </form>
+    </div>`;
+
+  /* ---- สรุปละเอียด ---- */
+  const weightBar = P.tGross ? `
+    <div class="wbar" aria-hidden="true"><i style="width:${Math.min(100, Math.max(0, P.realPct))}%"></i></div>
+    <div class="wlegend"><span class="r">น้ำยาง ${fmtP(P.realPct)}%</span><span class="b">ถัง ${fmtP(P.bucketPct)}%</span></div>` : '';
 
   $('#periodStats').innerHTML = `
-    <div><dt>เงินรวมงวดนี้</dt><dd class="money">${fmt2(P.tMoney)}<small>บาท</small></dd></div>
-    <div><dt>เจ้าของสวน ${fmtP(ownerPct())}%</dt><dd>${fmt2(P.tOwner)}<small>บาท</small></dd></div>
-    <div><dt>น้ำยางได้จริง</dt><dd>${fmt1(P.tReal)}<small>กก.</small></dd></div>
-    <div><dt>ราคาเฉลี่ย</dt><dd>${P.avgPrice ? fmtP(P.avgPrice) : '–'}<small>บาท/กก.</small></dd></div>
-    <div><dt>ทำงาน / หยุด</dt><dd>${P.work} / ${P.off}<small>วัน</small></dd></div>`;
+    <section class="stats">
+      <h3 class="stats-h">น้ำยาง <small>${P.work} วันทำงาน</small></h3>
+      <dl>
+        <div><dt>น้ำหนักรวม<small>ยังไม่หักน้ำหนักถัง</small></dt><dd>${fmt1(P.tGross)}<small>กก.</small></dd></div>
+        <div class="minus"><dt>หักน้ำหนักถัง</dt><dd>− ${fmt1(P.tBucket)}<small>กก.</small></dd></div>
+        <div class="total"><dt>น้ำยางได้จริง</dt><dd>${fmt1(P.tReal)}<small>กก.</small></dd></div>
+        <div><dt>เฉลี่ยต่อวันทำงาน</dt><dd>${P.work ? fmt1(P.avgReal) : '–'}<small>กก./วัน</small></dd></div>
+      </dl>
+      ${weightBar}
+    </section>
 
+    <section class="stats">
+      <h3 class="stats-h">เงิน</h3>
+      <dl>
+        ${P.noPrice ? `<div><dt>น้ำยางที่คิดเงินแล้ว<small>ไม่รวม ${P.noPrice} วันที่ยังไม่ใส่ราคา</small></dt><dd>${fmt1(P.pricedReal)}<small>กก.</small></dd></div>` : ''}
+        <div><dt>ราคาเฉลี่ย</dt><dd>${P.avgPrice ? fmtP(P.avgPrice) : '–'}<small>บาท/กก.</small></dd></div>
+        <div class="total"><dt>เงินรวมน้ำยางงวดนี้</dt><dd class="money">${fmt2(P.tMoney)}<small>บาท</small></dd></div>
+        <div><dt>เจ้าของสวน ${fmtP(ownerPct())}%</dt><dd>${fmt2(P.tOwner)}<small>บาท</small></dd></div>
+        <div><dt>ทีมตัด ${fmtP(tapperPct())}% (จากน้ำยาง)</dt><dd>${fmt2(P.tTapperTotal - P.totalExtra)}<small>บาท</small></dd></div>
+        ${P.totalExtra ? `<div><dt>รายได้เพิ่มเติมรวม</dt><dd class="money">+${fmt2(P.totalExtra)}<small>บาท</small></dd></div>` : ''}
+        <div class="total"><dt>ทีมตัดได้รวมทั้งหมด</dt><dd class="money">${fmt2(P.tTapperTotal)}<small>บาท</small></dd></div>
+      </dl>
+    </section>
+
+    <section class="stats">
+      <h3 class="stats-h">วัน <small>ทั้งงวด ${days.length} วัน</small></h3>
+      <dl>
+        <div><dt>วันทำงาน</dt><dd>${P.work}<small>วัน</small></dd></div>
+        <div><dt>วันหยุด</dt><dd>${P.off}<small>วัน</small></dd></div>
+        ${P.fut ? `<div><dt>ยังไม่ถึง</dt><dd>${P.fut}<small>วัน</small></dd></div>` : ''}
+      </dl>
+    </section>`;
+
+  /* ---- รายวัน ---- */
   $('#dayList').innerHTML = days.map(x => {
     const dn = x.d.getDate(), wd = TH_D[x.d.getDay()], mo = TH_M[x.d.getMonth()];
     if (x.st !== 'work'){
@@ -1027,13 +1051,47 @@ function renderPeriod(){
     return `<article class="day">
       <button type="button" class="day-main" data-key="${x.k}">
         <span class="day-date"><b>${dn}</b><small>${wd} ${mo}</small></span>
-        <span><span class="day-kg">${fmt1(x.dd.real)} กก.${priced ? ' × ' + fmtP(x.dd.price) : ''}</span>${note}</span>
+        <span>
+          <span class="day-kg">${fmt1(x.dd.real)} กก.${priced ? ' × ' + fmtP(x.dd.price) : ''}</span>
+          <span class="day-wt">รวม ${fmt1(x.dd.gross)} − ถัง ${fmt1(x.dd.bucket)}</span>
+          ${note}
+        </span>
         <span class="day-money">${money}</span>
       </button>
       <div class="day-people">${chips}</div>
     </article>`;
   }).join('');
 }
+
+/* จัดการเพิ่ม/ลบ รายได้เพิ่มเติม */
+$('#periodStats').parentElement.addEventListener('submit', ev => {
+  if (ev.target.id !== 'extraForm') return;
+  ev.preventDefault();
+  const nameInput = $('#extraName'), amtInput = $('#extraAmount');
+  const name = nameInput.value.trim() || 'รายได้เพิ่มเติม';
+  const amount = parseFloat(amtInput.value.trim());
+  if (!isFinite(amount) || amount <= 0) return toast('กรุณาใส่จำนวนเงินให้ถูกต้อง');
+
+  const pKey = collectPeriod().pKey;
+  if (!state.extraIncomes) state.extraIncomes = {};
+  if (!Array.isArray(state.extraIncomes[pKey])) state.extraIncomes[pKey] = [];
+  state.extraIncomes[pKey].push({ id: newId(), name, amount });
+  saveState(); renderPeriod();
+  amtInput.value = '';
+  toast(`เพิ่ม "${name}" ${fmt2(amount)} บาทแล้ว`);
+});
+
+$('#periodStats').parentElement.addEventListener('click', ev => {
+  const btn = ev.target.closest('[data-act="delexpand"]');
+  if (!btn) return;
+  const id = btn.dataset.id;
+  const pKey = collectPeriod().pKey;
+  if (!state.extraIncomes || !state.extraIncomes[pKey]) return;
+  state.extraIncomes[pKey] = state.extraIncomes[pKey].filter(x => x.id !== id);
+  if (!state.extraIncomes[pKey].length) delete state.extraIncomes[pKey];
+  saveState(); renderPeriod();
+  toast('ลบรายได้เพิ่มเติมแล้ว');
+});
 
 $('#dayList').addEventListener('click', ev => {
   const chip = ev.target.closest('.pchip');
@@ -1042,24 +1100,48 @@ $('#dayList').addEventListener('click', ev => {
     return;
   }
   const row = ev.target.closest('.day-main, .day.thin');
-  if (row){ curDate = fromKey(row.dataset.key); showTab('daily'); }
+  if (row){
+    const k = row.dataset.key;
+    dPeriodDate = fromKey(k); openKeys.add(k); scrollToKey = k;
+    showTab('daily');
+  }
 });
 $('#prevPeriod').onclick = () => { curPeriodDate = addDays(getPeriod(curPeriodDate).start, -1); renderPeriod(); };
 $('#nextPeriod').onclick = () => { curPeriodDate = addDays(getPeriod(curPeriodDate).end, 1); renderPeriod(); };
 $('#printBtn').onclick = () => window.print();
 $('#csvBtn').onclick = () => {
-  const P = collectPeriod(); const { p, days, teamPer, teamList } = P;
+  const P = collectPeriod(); const { p, days, teamPer, teamList, extras } = P;
   const cell = v => { const s = String(v ?? ''); return /[",\n]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s; };
+  const work = x => x.st === 'work' && x.dd;
   const rows = [];
   rows.push([`งวด ${thShort(p.start)} - ${thShort(p.end)}`]);
-  rows.push(['ชื่อ', ...days.map(x => `${x.d.getDate()}/${x.d.getMonth()+1}`), 'วันที่ทำ', 'รวมเงิน(บาท)']);
+  const head = ['รายการ', ...days.map(x => `${x.d.getDate()}/${x.d.getMonth()+1}`), 'วันที่ทำ', 'รวม'];
+
+  rows.push(head);
   teamList.forEach(m => {
     const s = teamPer[m.id];
-    rows.push([m.name, ...days.map(x => x.st === 'work' && x.dd && x.dd.teamPer ? (x.dd.teamOff.includes(m.id) ? 'หยุด' : (x.dd.teamPer[m.id] || 0)) : ''),
+    rows.push([m.name, ...days.map(x => work(x) ? (x.dd.teamOff.includes(m.id) ? 'หยุด' : (x.dd.teamPer[m.id] || 0)) : ''),
       s ? s.days : 0, s ? r2(s.money) : 0]);
   });
+
+  if (extras.length){
+    rows.push([]);
+    rows.push(['รายได้เพิ่มเติม:']);
+    extras.forEach(ex => rows.push([ex.name, ex.amount]));
+  }
+
+  rows.push([]);
+  rows.push(head);
+  rows.push(['น้ำหนักรวม (กก.)',   ...days.map(x => work(x) ? x.dd.gross  : ''), P.work, P.tGross]);
+  rows.push(['น้ำหนักถัง (กก.)',   ...days.map(x => work(x) ? x.dd.bucket : ''), P.work, P.tBucket]);
+  rows.push(['น้ำยางได้จริง (กก.)', ...days.map(x => work(x) ? x.dd.real   : ''), P.work, P.tReal]);
+  rows.push(['ราคา (บาท/กก.)',     ...days.map(x => work(x) ? (x.dd.price || '') : ''), '', P.avgPrice || '']);
+  rows.push(['เงินรวม (บาท)',      ...days.map(x => work(x) && x.dd.price ? x.dd.money : ''), '', P.tMoney]);
+  rows.push([`เจ้าของสวน ${fmtP(ownerPct())}%`, ...days.map(x => work(x) && x.dd.price ? x.dd.owner : ''), '', P.tOwner]);
+  rows.push([`ทีมตัด ${fmtP(tapperPct())}%`,     ...days.map(x => work(x) && x.dd.price ? x.dd.tapperTotal : ''), '', P.tTapperTotal]);
+
   const csv = '\uFEFF' + rows.map(r => r.map(cell).join(',')).join('\r\n');
-  download(`น้ำยาง_ทีม_${toKey(p.start)}_ถึง_${toKey(p.end)}.csv`, csv, 'text/csv;charset=utf-8');
+  download(`น้ำยาง_${toKey(p.start)}_ถึง_${toKey(p.end)}.csv`, csv, 'text/csv;charset=utf-8');
 };
 
 /* ================= หน้าตั้งค่า ================= */
@@ -1149,24 +1231,31 @@ $('#restoreFile').addEventListener('change', ev => {
 });
 $('#sampleBtn').onclick = () => {
   if (state.entries[SAMPLE_DATE] && !confirm('วันที่ 14-11-69 มีข้อมูลอยู่แล้ว เขียนทับ?')) return;
-  applySample(state); saveState(); curDate = fromKey(SAMPLE_DATE); showTab('daily'); toast('ใส่ข้อมูลตัวอย่างแล้ว');
+  applySample(state); saveState();
+  dPeriodDate = fromKey(SAMPLE_DATE); curPeriodDate = dPeriodDate; scrollToKey = SAMPLE_DATE;
+  showTab('daily'); toast('ใส่ข้อมูลตัวอย่างแล้ว');
 };
 $('#resetBtn').onclick = () => {
   if (!confirm('ล้างข้อมูลทั้งหมด?')) return;
-  state = defaultState(); saveState(); curDate = today(); renderSettings(); toast('ล้างข้อมูลแล้ว');
+  state = defaultState(); saveState(); dPeriodDate = today(); curPeriodDate = dPeriodDate; openKeys.clear();
+  renderSettings(); toast('ล้างข้อมูลแล้ว');
 };
 
 /* ================= สลับแท็บ ================= */
 function showTab(name){
   document.querySelectorAll('.tab-btn').forEach(b => { const on = b.dataset.tab === name; b.classList.toggle('active', on); b.setAttribute('aria-current', on ? 'page' : 'false'); });
   document.querySelectorAll('.tab').forEach(s => s.classList.toggle('active', s.id === 'tab-' + name));
+  window.scrollTo(0,0);
   if (name === 'daily') renderDaily();
   if (name === 'period') renderPeriod();
   if (name === 'settings') renderSettings();
-  window.scrollTo(0,0);
 }
 document.querySelectorAll('.tab-btn').forEach(b => b.onclick = () => {
-  if (b.dataset.tab === 'period') curPeriodDate = curDate;
+  if (b.dataset.tab === 'period') curPeriodDate = dPeriodDate;
+  if (b.dataset.tab === 'daily'){
+    dPeriodDate = curPeriodDate;
+    if (periodKeys(dPeriodDate).includes(todayKey())) scrollToKey = todayKey();
+  }
   showTab(b.dataset.tab);
 });
 
