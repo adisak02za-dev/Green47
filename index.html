@@ -153,24 +153,53 @@
         background:radial-gradient(circle at 9px 0,var(--ground) 6px,transparent 6.5px) 0 0/18px 9px repeat-x}
   .slip::before{top:0}
   .slip::after{bottom:0;transform:scaleY(-1)}
-  .slip-head{background:var(--slip-bg);color:#fff;padding:26px 20px 18px}
-  .slip-cap{display:block;font-size:14px;color:#BFD8CB}
-  .slip-total{font:700 38px/1.1 var(--f-disp);font-variant-numeric:tabular-nums;margin-top:4px;overflow-wrap:anywhere}
-  .slip-total small{font:400 15px var(--f-body);margin-left:8px;color:#BFD8CB}
-  .slip-body{padding:14px 20px 28px}
-  .slip-sub{margin:10px 0 2px;padding-top:12px;border-top:2px dashed var(--line-2);font-size:13.5px;color:#BFD8CB}
-  .lines{list-style:none;margin:0;padding:0}
-  .lines li{display:flex;align-items:baseline;gap:8px;padding:7px 0}
-  .lines li > span{min-width:0;overflow-wrap:anywhere}
-  .lines .lead{flex:1;min-width:12px;border-bottom:2px dotted var(--line-2);transform:translateY(-4px)}
-  .lines b{flex:none;font:600 17px/1.3 var(--f-disp);font-variant-numeric:tabular-nums}
-  .lines li.plusline b{color:#FFD27C}
-  .lines.payout li{align-items:flex-start;padding:12px 0}
-  .lines.payout .lead{transform:translateY(4px)}
-  .lines.payout b{font-size:20px}
-  .who{display:block;font-weight:600;font-size:16px}
-  .who small{display:block;font-size:13px;font-weight:400;color:#DCEBE3;font-variant-numeric:tabular-nums;margin-top:2px;line-height:1.4}
-  .who small .x{color:#FFD27C;font-weight:500}
+  .slip-head{background:var(--slip-bg);color:#fff;padding:24px 16px 16px}
+  .slip-cap{display:block;font-size:15px;font-weight:500;color:#DCEBE3}
+  .slip-total{margin-top:10px;padding:10px 0;border-top:4px double rgba(255,255,255,.35);border-bottom:4px double rgba(255,255,255,.35);text-align:center}
+  .slip-total span{display:inline-block;max-width:100%;padding:6px 18px;border-radius:12px;background:rgba(0,0,0,.24);
+        font:700 36px/1.2 var(--f-disp);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+  .slip-total small{font:500 16px var(--f-body);margin-left:8px;color:#DCEBE3}
+  .slip-body{padding:8px 16px 24px}
+
+  /* ที่มาของเงิน */
+  .income{list-style:none;margin:0;padding:6px 0}
+  .income li{display:grid;grid-template-columns:24px minmax(0,1fr) auto auto;column-gap:8px;align-items:center;padding:6px 0}
+  .income .emo{font-size:18px;line-height:1}
+  .income .lb{font-weight:500;overflow-wrap:anywhere}
+  .income .ar{font-size:10px;color:var(--ink-3)}
+  .income b{min-width:108px;text-align:right;font:600 17px/1.3 var(--f-disp);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .income b small{font:400 13px var(--f-body);color:var(--ink-3);margin-left:3px}
+  .income .ex b{color:var(--money)}
+  .income .per{grid-column:2 / -1;font-size:13.5px;color:var(--ink-3);font-variant-numeric:tabular-nums}
+
+  /* การ์ดรายคน */
+  .crew{list-style:none;margin:0;padding:6px 0 2px;border-top:2px dashed var(--line-2)}
+  .crew li{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:10px;align-items:start;padding:10px 0}
+  .cw{display:grid;grid-template-columns:12px minmax(0,1fr);column-gap:8px;align-items:center;padding-top:1px}
+  .cw .dot{width:12px;height:12px;border-radius:50%;background:#2F80ED}
+  .cw .dot.fewer{background:#F2882B}
+  .cw .cn{font:600 17px/1.4 var(--f-disp);overflow-wrap:anywhere}
+  .cw small{grid-column:2;font-size:13.5px;line-height:1.5;color:var(--ink-2);font-variant-numeric:tabular-nums}
+  .cbox{margin-top:12px;padding:0 12px 8px;border:1.5px solid var(--line-2);border-radius:12px;font-variant-numeric:tabular-nums}
+  .ctotal{display:table;margin:-14px auto 4px;padding:0 8px;background:var(--surface);white-space:nowrap;font-size:13px;color:var(--ink-3);line-height:26px}
+  .ctotal b{font:700 20px/26px var(--f-disp);color:var(--ink);margin-right:4px}
+  .cbox dl{margin:0}
+  .cbox dl > div{display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:1px 0;font-size:14px}
+  .cbox dt{min-width:0;color:var(--ink-2);overflow-wrap:anywhere}
+  .cbox dd{margin:0;font-weight:600;white-space:nowrap}
+  .cbox .ex dd{color:var(--money)}
+  .income.sum{border-top:2px dashed var(--line-2);padding-bottom:0}
+
+  @media (max-width:359px){
+    .slip-total span{font-size:30px}
+    .crew li{grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:8px}
+    .cbox{padding:0 8px 8px}
+    .ctotal{padding:0 5px;font-size:12px}
+    .ctotal b{font-size:17px}
+    .income{font-size:14.5px}
+    .income li{column-gap:6px}
+    .income b{min-width:0;font-size:15.5px}
+  }
 
   /* ============ สรุปงวด ============ */
   .periodnav{display:flex;align-items:center;gap:8px}
@@ -978,45 +1007,67 @@ function renderPeriod(){
   if (!P.work && !P.totalExtra){
     $('#payoutSlip').innerHTML = `<div class="notice">งวดนี้ยังไม่มีวันทำงาน กรอกน้ำหนักน้ำยางที่แท็บกรอกรายวัน</div>`;
   } else {
-    const slipExtrasHTML = extras.map(x => {
-      const perPerson = P.extraCount ? r2(x.amount / P.extraCount) : 0;
-      return `<li class="plusline"><span>รายได้${esc(x.name)}</span><i class="lead"></i><b>+${fmt2(x.amount)}</b></li>`
-           + `<div class="slip-sub" style="margin:0 0 4px;padding:0;border:0;font-size:13px;color:#DCEBE3">${esc(x.name)} ${fmt2(x.amount)} ÷ ${P.extraCount} คน = คนละ ${fmt2(perPerson)} บาท</div>`;
+    /* รายได้เพิ่มที่ชื่อเดียวกันรวมเป็นบรรทัดเดียว */
+    const groups = new Map();
+    extras.forEach(x => groups.set(x.name, r2((groups.get(x.name) || 0) + (parseFloat(x.amount) || 0))));
+    const shortName = n => String(n).replace(/^ค่า(?=.)/, '');
+    const incomeLine = (icon, label, amount, cls = '', note = '') =>
+      `<li class="${cls}"><span class="emo" aria-hidden="true">${icon}</span><span class="lb">${label}</span>`
+      + `<span class="ar" aria-hidden="true">▶\uFE0E</span><b>${amount}<small>บาท</small></b>${note}</li>`;
+
+    const extraLines = [...groups].map(([name, total]) => {
+      const per = P.extraCount ? r2(total / P.extraCount) : 0;
+      const approx = r2(per * P.extraCount) !== total ? 'ประมาณ ' : '';
+      const note = P.extraCount ? `<span class="per">แบ่งได้คนละ ${approx}${fmtP(per)} บาท</span>` : '';
+      return incomeLine('🧴', esc(name), `+${fmt2(total)}`, 'ex', note);
     }).join('');
 
-    const breakdown = `
-      <ul class="lines">
-        <li><span>จากน้ำยาง 40%</span><i class="lead"></i><b>${fmt2(P.tTapperLatex)}</b></li>
-        ${slipExtrasHTML}
-      </ul>`;
+    const maxDays = Math.max(0, ...teamList.map(m => teamPer[m.id].days));
 
-    const payLines = teamList.map(m => {
+    const crewLines = teamList.map(m => {
       const s = teamPer[m.id];
-      const avg = s.days ? ` เฉลี่ยตกวันละ ${fmt2(s.latex / s.days)}` : '';
-      const latexLine = `รายได้น้ำยาง ${fmt2(s.latex)} บาท`;
-      const extraLines = s.extrasDetail.map(ed => `รายได้${esc(ed.name)} ${fmt2(ed.amount)} บาท`).join('<br>');
-      const details = [
-        `${s.days} วัน ${avg}`,
-        latexLine,
-        extraLines
-      ].filter(Boolean).join('<br>');
+      const avg = s.days ? `<small>วันละ ${fmt2(s.latex / s.days)}</small>` : '';
+      const extraRows = [...groups.keys()].map(name => {
+        const mine = s.extrasDetail.filter(ed => ed.name === name);
+        if (!mine.length) return '';
+        const sum = r2(mine.reduce((t, ed) => t + ed.amount, 0));
+        return `<div class="ex"><dt>${esc(shortName(name))}</dt><dd>${fmt2(sum)}</dd></div>`;
+      }).join('');
 
       return `<li>
-        <span class="who">${esc(m.name)}<small>${details}</small></span>
-        <i class="lead"></i>
-        <b>${s.money ? fmt2(s.money) : '–'}</b>
+        <div class="cw">
+          <i class="dot${s.days < maxDays ? ' fewer' : ''}" aria-hidden="true"></i>
+          <span class="cn">${esc(m.name)}</span>
+          <small>${s.days} วัน</small>
+          ${avg}
+        </div>
+        <div class="cbox">
+          <div class="ctotal"><b>${s.money ? fmt2(s.money) : '–'}</b>บาท</div>
+          <dl>
+            <div><dt>น้ำยาง</dt><dd>${fmt2(s.latex)}</dd></div>
+            ${extraRows}
+          </dl>
+        </div>
       </li>`;
     }).join('');
+
+    const sumName = groups.size === 1 ? esc([...groups.keys()][0]) : 'รายได้เพิ่ม';
+    const extraSum = P.totalExtra
+      ? `<ul class="income sum">${incomeLine('🧴', `รวม${sumName}`, `+${fmt2(P.totalExtra)}`, 'ex')}</ul>` : '';
 
     $('#payoutSlip').innerHTML = `
       <div class="slip">
         <div class="slip-head">
-          <span class="slip-cap">ทีมตัดได้รวมงวดนี้ (${fmtP(tapperPct())}%${P.totalExtra ? ' + รายได้เพิ่ม' : ''})</span>
-          <div class="slip-total">${fmt2(P.tTapperTotal)}<small>บาท</small></div>
+          <span class="slip-cap">ทีมตัดได้รวมงวดนี้</span>
+          <div class="slip-total"><span>${fmt2(P.tTapperTotal)}<small>บาท</small></span></div>
         </div>
         <div class="slip-body">
-          ${breakdown}
-          <ul class="lines payout" style="margin-top:10px;border-top:2px dashed var(--line-2)">${payLines}</ul>
+          <ul class="income">
+            ${incomeLine('📦', `จากน้ำยาง ${fmtP(tapperPct())}%`, fmt2(P.tTapperLatex))}
+            ${extraLines}
+          </ul>
+          <ul class="crew">${crewLines}</ul>
+          ${extraSum}
         </div>
       </div>`;
   }
