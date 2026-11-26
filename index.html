@@ -286,7 +286,6 @@
   .tcard-h h3 svg{color:var(--green)}
   .tcard-h .hint{margin-left:auto;font-size:12.5px}
 
-  /* ทั้งหน้าตั้ง touch-action:pan-y ไว้ ต้องเปิดให้เลื่อนแนวนอนในตารางได้ */
   .tscroll,.tscroll *{touch-action:pan-x pan-y}
   .tscroll{overflow-x:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
 
@@ -451,6 +450,17 @@
     </div>
 
     <div class="group">
+      <h3>ซิงค์ข้อมูลข้ามเครื่อง (ด้วยรหัสคีย์)</h3>
+      <p class="help">ตั้งรหัสคีย์ลับของคุณเอง (เช่น ชื่อสวน + ตัวเลข) เพื่ออัปโหลดและดึงข้อมูลข้ามมือถือได้ทันทีโดยไม่ต้องใช้ไฟล์</p>
+      <label class="flabel" for="syncKeyInput">รหัสคีย์ซิงค์ (Sync Key)</label>
+      <input type="text" id="syncKeyInput" class="inp" placeholder="เช่น my-rubber-2026" autocomplete="off" style="margin-bottom:12px">
+      <div class="stack">
+        <button type="button" class="btn wide" id="cloudUploadBtn">อัปโหลดข้อมูลขึ้นคลาวด์</button>
+        <button type="button" class="btn soft wide" id="cloudDownloadBtn">ดึงข้อมูลลงเครื่องนี้</button>
+      </div>
+    </div>
+
+    <div class="group">
       <h3>รายชื่อทีมงานหาร 40%</h3>
       <p class="help">“พัก” คือไม่นำมาคิดส่วนแบ่ง เงินส่วนทีมจะหารเท่า ๆ กันกับทุกคนที่ใช้งานและไม่ได้ตั้งหยุดในวันนั้น</p>
       <div id="teamList"></div>
@@ -482,11 +492,11 @@
     </div>
 
     <div class="group">
-      <h3>สำรองและกู้คืนข้อมูล</h3>
-      <p class="help">ไฟล์สำรองเก็บทุกวัน ทุกราคา วันหยุดรายคน และรายได้เพิ่มเติม</p>
+      <h3>สำรองและกู้คืนข้อมูล (แบบไฟล์)</h3>
+      <p class="help">เผื่อกรณีต้องการเก็บสำรองเป็นไฟล์ไว้ในเครื่อง</p>
       <div class="stack">
-        <button type="button" class="btn wide" id="backupBtn"><span data-icon="download"></span>สำรองข้อมูล (.json)</button>
-        <button type="button" class="btn soft wide" id="restoreBtn"><span data-icon="upload"></span>กู้คืนจากไฟล์</button>
+        <button type="button" class="btn line wide" id="backupBtn"><span data-icon="download"></span>สำรองข้อมูล (.json)</button>
+        <button type="button" class="btn line wide" id="restoreBtn"><span data-icon="upload"></span>กู้คืนจากไฟล์</button>
       </div>
       <input type="file" id="restoreFile" accept=".json,application/json" hidden>
     </div>
@@ -552,6 +562,7 @@ document.querySelectorAll('[data-icon]').forEach(el => { el.insertAdjacentHTML('
 /* ================= ค่าคงที่ ================= */
 const STORE_KEY = '*************_**';   // <-- ใส่ค่าเดิมจากไฟล์จริงของคุณ
 const THEME_KEY = 'rubber_theme_v1';
+const SYNC_KEY_STORE = 'rubber_sync_key_v1';
 const DEFAULT_OWNER_PCT = 60;
 const DEFAULT_TEAM = ['โอ็ต', 'กรีน', 'พี่นิ่ม'];
 const TH_M = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
@@ -1222,7 +1233,6 @@ function renderDayTable(P){
   const cols = 5 + teamList.length;
   const show = st => dayFilter === 'all' || (dayFilter === 'work' ? st === 'work' : st !== 'work');
 
-  /* รวมวันหยุด / วันที่ยังไม่ถึง ที่ติดกันเป็นแถวเดียว */
   const groups = [];
   days.forEach((x, i) => {
     if (!show(x.st)) return;
@@ -1389,6 +1399,10 @@ function renderSettings(){
   $('#cutoffInput').value = state.settings.cutoffs.join(', ');
   $('#ownerPctInput').value = fmtP(ownerPct());
   $('#tapperPctLabel').textContent = fmtP(tapperPct());
+  
+  const savedKey = localStorage.getItem(SYNC_KEY_STORE);
+  if (savedKey && !$('#syncKeyInput').value) $('#syncKeyInput').value = savedKey;
+
   applyTheme();
 }
 $('#teamList').addEventListener('click', ev => {
@@ -1418,6 +1432,53 @@ function addTeamMember(){
 }
 $('#addTeamMember').onclick = addTeamMember;
 $('#newTeamName').addEventListener('keydown', ev => { if (ev.key === 'Enter') addTeamMember(); });
+
+/* ================= ซิงค์ผ่านคลาวด์ด้วยคีย์ ================= */
+$('#cloudUploadBtn').onclick = async () => {
+  const key = $('#syncKeyInput').value.trim();
+  if (!key) return toast('กรุณาใส่รหัสคีย์ซิงค์ก่อน');
+  if (!confirm(`อัปโหลดข้อมูลขึ้นคลาวด์ด้วยคีย์ "${key}"?`)) return;
+  toast('กำลังอัปโหลด...');
+  try {
+    const res = await fetch(`https://kvdb.io/${encodeURIComponent(key)}/data`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(state)
+    });
+    if (res.ok) {
+      localStorage.setItem(SYNC_KEY_STORE, key);
+      toast('อัปโหลดขึ้นคลาวด์สำเร็จ!');
+    } else {
+      throw new Error();
+    }
+  } catch(e) {
+    toast('อัปโหลดไม่สำเร็จ ตรวจสอบอินเทอร์เน็ต');
+  }
+};
+
+$('#cloudDownloadBtn').onclick = async () => {
+  const key = $('#syncKeyInput').value.trim();
+  if (!key) return toast('กรุณาใส่รหัสคีย์ซิงค์ก่อน');
+  if (!confirm(`ดึงข้อมูลจากคลาวด์ด้วยคีย์ "${key}" มาทับเครื่องนี้?`)) return;
+  toast('กำลังดึงข้อมูล...');
+  try {
+    const res = await fetch(`https://kvdb.io/${encodeURIComponent(key)}/data`);
+    if (res.ok) {
+      const data = await res.json();
+      if (!data || typeof data.entries !== 'object') throw new Error();
+      state = fixSettings(data);
+      saveState();
+      localStorage.setItem(SYNC_KEY_STORE, key);
+      renderDaily();
+      renderSettings();
+      toast('ดึงข้อมูลสำเร็จ!');
+    } else {
+      toast('ไม่พบคีย์นี้บนคลาวด์');
+    }
+  } catch(e) {
+    toast('ดึงข้อมูลไม่สำเร็จ ตรวจสอบคีย์หรืออินเทอร์เน็ต');
+  }
+};
 
 $('#ownerPctInput').addEventListener('input', ev => {
   const v = parseFloat(ev.target.value);
