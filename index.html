@@ -450,14 +450,11 @@
     </div>
 
     <div class="group">
-      <h3>ซิงค์ข้อมูลข้ามเครื่อง (ด้วยรหัสคีย์)</h3>
-      <p class="help">ตั้งรหัสคีย์เอง อย่างน้อย 6 ตัวอักษร ยิ่งยาวยิ่งปลอดภัย เช่น adisak-suan-2569 แล้วใช้รหัสเดียวกันทุกเครื่อง</p>
+      <h3>ซิงค์ข้อมูลอัตโนมัติ (Real-time)</h3>
+      <p class="help">ใส่รหัสคีย์เดียวกันในทุกเครื่อง (เช่น adisak-suan-2569) เมื่อแก้ไขเครื่องหนึ่ง อีกเครื่องจะเปลี่ยนตามทันทีโดยอัตโนมัติ</p>
       <label class="flabel" for="syncKeyInput">รหัสคีย์ซิงค์</label>
       <input type="text" id="syncKeyInput" class="inp" placeholder="เช่น adisak-suan-2569" autocomplete="off" autocapitalize="none" spellcheck="false" style="margin-bottom:12px">
-      <div class="stack">
-        <button type="button" class="btn wide" id="cloudUploadBtn"><span data-icon="upload"></span>อัปโหลดขึ้นคลาวด์</button>
-        <button type="button" class="btn soft wide" id="cloudDownloadBtn"><span data-icon="download"></span>ดึงข้อมูลลงเครื่องนี้</button>
-      </div>
+      <button type="button" class="btn wide" id="connectSyncBtn"><span data-icon="check"></span>เชื่อมต่อและซิงค์</button>
       <p id="syncStatus" class="sync-status"></p>
     </div>
 
@@ -494,7 +491,7 @@
 
     <div class="group">
       <h3>สำรองและกู้คืนข้อมูล (แบบไฟล์)</h3>
-      <p class="help">ใช้สำรองเผื่อไว้ แม้จะซิงค์ผ่านคลาวด์แล้ว</p>
+      <p class="help">ใช้สำรองเผื่อไว้</p>
       <div class="stack">
         <button type="button" class="btn line wide" id="backupBtn"><span data-icon="download"></span>สำรองข้อมูล (.json)</button>
         <button type="button" class="btn line wide" id="restoreBtn"><span data-icon="upload"></span>กู้คืนจากไฟล์</button>
@@ -562,10 +559,7 @@ document.querySelectorAll('[data-icon]').forEach(el => { el.insertAdjacentHTML('
 
 /* ================= ค่าคงที่ ================= */
 const STORE_KEY = '*************_**';   // <-- ใส่ค่าเดิมจากไฟล์จริงของคุณ
-
-/* ลิงก์ Firebase Realtime Database ของคุณ (คัดลอกจากแท็บ Data)
-   ตัวอย่าง: 'https://rubber-sync-default-rtdb.asia-southeast1.firebasedatabase.app' */
-const FIREBASE_DB_URL = 'https://adisak47-d0714-default-rtdb.asia-southeast1.firebasedatabase.app';
+const FIREBASE_DB_URL = 'https://adisak47-d0714-default-rtdb.asia-southeast1.firebasedatabase.app'; // <-- ใส่ลิงก์ Realtime Database
 
 const THEME_KEY = 'rubber_theme_v1';
 const SYNC_KEY_STORE = 'rubber_sync_key_v1';
@@ -671,8 +665,11 @@ function splitMoney(money, offIds = []){
   return { owner, tapperTotal, teamPer, teamOff, activeTeamCount: count };
 }
 
-/* ================= ข้อมูล ================= */
+/* ================= ข้อมูลและการซิงค์อัตโนมัติ ================= */
 let firstRun = false;
+let isRemoteUpdating = false;
+let autoSyncTimer = null;
+
 function defaultState(){
   return {
     tappers: [{ id:newId(), name:'ตี๋', active:true }],
@@ -708,11 +705,31 @@ function loadState(){
   const s = defaultState(); applySample(s); firstRun = true;
   return s;
 }
+
+function triggerAutoSync(){
+  if (isRemoteUpdating) return;
+  const key = localStorage.getItem(SYNC_KEY_STORE);
+  if (!key || !FIREBASE_DB_URL || !navigator.onLine) return;
+  clearTimeout(autoSyncTimer);
+  autoSyncTimer = setTimeout(async () => {
+    try {
+      const now = Date.now();
+      await fetch(`${FIREBASE_DB_URL.replace(/\/+$/, '')}/sync/${encodeURIComponent(key)}.json`, {
+        method:'PUT',
+        headers:{ 'Content-Type':'application/json' },
+        body: JSON.stringify({ updatedAt: now, data: JSON.stringify(state) })
+      });
+      localStorage.setItem(SYNC_LAST_STORE, String(now));
+    } catch(e){}
+  }, 800);
+}
+
 function saveState(){
   try{
     localStorage.setItem(STORE_KEY, JSON.stringify(state));
     const n = new Date();
     $('#saveStatus').textContent = `บันทึกแล้ว ${pad(n.getHours())}:${pad(n.getMinutes())}`;
+    triggerAutoSync();
   }catch(e){ toast('บันทึกไม่สำเร็จ (หน่วยความจำเบราว์เซอร์เต็ม?)'); }
 }
 function cleanupEntry(key){
@@ -1437,7 +1454,8 @@ function addTeamMember(){
 $('#addTeamMember').onclick = addTeamMember;
 $('#newTeamName').addEventListener('keydown', ev => { if (ev.key === 'Enter') addTeamMember(); });
 
-/* ================= ซิงค์ผ่าน Firebase (Real-time) ================= */
+/* ================= ระบบซิงค์อัตโนมัติ Real-time ================= */
+let liveEventSource = null;
 const thTime = ts => new Date(ts).toLocaleString('th-TH', { dateStyle:'medium', timeStyle:'short' });
 
 function cleanSyncKey(raw){
@@ -1451,34 +1469,13 @@ function showSyncStatus(msg, isErr){
   el.classList.toggle('err', !!isErr);
   if (msg){ el.textContent = msg; return; }
   const last = Number(localStorage.getItem(SYNC_LAST_STORE));
-  el.innerHTML = last ? `ซิงค์ล่าสุดบนเครื่องนี้: <b>${thTime(last)}</b> (เชื่อมต่อแบบ Real-time)` : 'พร้อมซิงค์แบบ Real-time';
-}
-function syncPrecheck(){
-  if (!FIREBASE_DB_URL){
-    showSyncStatus('ยังไม่ได้ใส่ลิงก์ Firebase ในโค้ด', true);
-    toast('ยังไม่ได้ตั้งค่าลิงก์ Firebase');
-    return null;
-  }
-  const key = cleanSyncKey($('#syncKeyInput').value);
-  if (key.length < 6){ toast('รหัสคีย์ต้องยาวอย่างน้อย 6 ตัวอักษร'); return null; }
-  if (!navigator.onLine){ toast('ไม่มีอินเทอร์เน็ต'); return null; }
-  $('#syncKeyInput').value = key;
-  return key;
-}
-function httpErrorText(status){
-  if (status === 401 || status === 403) return 'ถูกปฏิเสธสิทธิ์: ตรวจ Rules ใน Firebase';
-  if (status === 404) return 'ไม่พบฐานข้อมูล: ตรวจลิงก์ FIREBASE_DB_URL';
-  return `เซิร์ฟเวอร์ตอบกลับผิดพลาด (รหัส ${status})`;
-}
-function setSyncBusy(on){
-  $('#cloudUploadBtn').disabled = on;
-  $('#cloudDownloadBtn').disabled = on;
+  el.innerHTML = last ? `เชื่อมต่อ Real-time แล้ว (ซิงค์ล่าสุด: <b>${thTime(last)}</b>)` : 'พร้อมเชื่อมต่อ Real-time';
 }
 
-let liveEventSource = null;
 function startLiveSync(key){
   if (liveEventSource) liveEventSource.close();
   liveEventSource = new EventSource(syncUrl(key));
+  
   liveEventSource.addEventListener('put', e => {
     try {
       const pkt = JSON.parse(e.data);
@@ -1486,10 +1483,15 @@ function startLiveSync(key){
         const remoteState = JSON.parse(pkt.data);
         const remoteTime = pkt.updatedAt || 0;
         const localTime = Number(localStorage.getItem(SYNC_LAST_STORE)) || 0;
-        if (remoteTime > localTime) {
+        
+        // ถ้าข้อมูลใหม่กว่า และไม่ใช่ข้อมูลที่เราเพิ่งส่งขึ้นไปเอง
+        if (remoteTime > localTime + 300) {
+          isRemoteUpdating = true;
           state = fixSettings(remoteState);
           saveState();
           localStorage.setItem(SYNC_LAST_STORE, String(remoteTime));
+          isRemoteUpdating = false;
+
           openKeys.clear();
           if ($('#tab-daily').classList.contains('active')) renderDaily();
           if ($('#tab-period').classList.contains('active')) renderPeriod();
@@ -1497,65 +1499,117 @@ function startLiveSync(key){
           toast('ได้รับข้อมูลอัปเดตจากอีกเครื่องแล้ว!');
         }
       }
-    } catch(err){}
+    } catch(err){ isRemoteUpdating = false; }
   });
 }
 
-$('#cloudUploadBtn').onclick = async () => {
-  const key = syncPrecheck(); if (!key) return;
-  setSyncBusy(true); showSyncStatus('กำลังอัปโหลด...');
-  try{
+$('#connectSyncBtn').onclick = async () => {
+  if (!FIREBASE_DB_URL || FIREBASE_DB_URL.includes('วางลิงก์')){
+    showSyncStatus('ยังไม่ได้ใส่ลิงก์ Firebase ในโค้ด', true);
+    toast('ยังไม่ได้ใส่ลิงก์ Firebase');
+    return;
+  }
+  const key = cleanSyncKey($('#syncKeyInput').value);
+  if (key.length < 6){ toast('รหัสคีย์ต้องยาวอย่างน้อย 6 ตัวอักษร'); return; }
+  if (!navigator.onLine){ toast('ไม่มีอินเทอร์เน็ต'); return; }
+  $('#syncKeyInput').value = key;
+
+  showSyncStatus('กำลังเชื่อมต่อ...');
+  try {
+    const res = await fetch(syncUrl(key), { cache:'no-store' });
+    if (!res.ok) throw new Error();
+    const remote = await res.json();
+    
+    if (remote && remote.data){
+      // ถ้าบนคลาวด์มีข้อมูลอยู่แล้ว ดึงลงมา
+      const s = JSON.parse(remote.data);
+      if (s && typeof s.entries === 'object'){
+        isRemoteUpdating = true;
+        state = fixSettings(s);
+        saveState();
+        isRemoteUpdating = false;
+        localStorage.setItem(SYNC_KEY_STORE, key);
+        localStorage.setItem(SYNC_LAST_STORE, String(remote.updatedAt || Date.now()));
+        startLiveSync(key);
+        renderDaily();
+        renderSettings();
+        toast('เชื่อมต่อและดึงข้อมูลสำเร็จ!');
+        return;
+      }
+    }
+    
+    // ถ้าบนคลาวด์ยังไม่มี ให้ส่งข้อมูลเครื่องนี้ขึ้นไปตั้งต้น
     const now = Date.now();
-    const res = await fetch(syncUrl(key), {
+    await fetch(syncUrl(key), {
       method:'PUT',
       headers:{ 'Content-Type':'application/json' },
       body: JSON.stringify({ updatedAt: now, data: JSON.stringify(state) })
     });
-    if (!res.ok) throw { status: res.status };
     localStorage.setItem(SYNC_KEY_STORE, key);
     localStorage.setItem(SYNC_LAST_STORE, String(now));
     startLiveSync(key);
     showSyncStatus();
-    toast('อัปโหลดขึ้นคลาวด์สำเร็จ');
-  }catch(e){
-    showSyncStatus('อัปโหลดไม่สำเร็จ: ตรวจเน็ตหรือ Rules', true);
-    toast('อัปโหลดไม่สำเร็จ');
-  }finally{ setSyncBusy(false); }
+    toast('เชื่อมต่อและสร้างข้อมูลบนคลาวด์สำเร็จ!');
+  } catch(e) {
+    showSyncStatus('เชื่อมต่อไม่สำเร็จ ตรวจสอบอินเทอร์เน็ตหรือ Rules', true);
+    toast('เชื่อมต่อไม่สำเร็จ');
+  }
 };
 
-$('#cloudDownloadBtn').onclick = async () => {
-  const key = syncPrecheck(); if (!key) return;
-  setSyncBusy(true); showSyncStatus('กำลังดึงข้อมูล...');
-  try{
-    const res = await fetch(syncUrl(key), { cache:'no-store' });
-    if (!res.ok) throw { status: res.status };
-    const remote = await res.json();
-    if (!remote || !remote.data){
-      showSyncStatus('ไม่พบข้อมูลของรหัสคีย์นี้', true);
-      toast('ไม่พบข้อมูล'); return;
-    }
-    const s = JSON.parse(remote.data);
-    if (!s || typeof s.entries !== 'object') throw new Error();
-    state = fixSettings(s);
-    saveState();
-    localStorage.setItem(SYNC_KEY_STORE, key);
-    localStorage.setItem(SYNC_LAST_STORE, String(remote.updatedAt || Date.now()));
-    startLiveSync(key);
-    openKeys.clear();
-    renderDaily();
-    renderSettings();
-    toast('ดึงข้อมูลสำเร็จและเชื่อมต่อ Real-time แล้ว');
-  }catch(e){
-    showSyncStatus('ดึงข้อมูลไม่สำเร็จ', true);
-    toast('ดึงข้อมูลไม่สำเร็จ');
-  }finally{ setSyncBusy(false); }
-};
-
-// เริ่มเปิดฟังอัตโนมัติถ้ามีคีย์เดิมบันทึกไว้
 window.addEventListener('DOMContentLoaded', () => {
   const savedKey = localStorage.getItem(SYNC_KEY_STORE);
-  if (savedKey && FIREBASE_DB_URL) startLiveSync(savedKey);
+  if (savedKey && FIREBASE_DB_URL && !FIREBASE_DB_URL.includes('วางลิงก์')){
+    $('#syncKeyInput').value = savedKey;
+    startLiveSync(savedKey);
+    showSyncStatus();
+  }
 });
+
+$('#ownerPctInput').addEventListener('input', ev => {
+  const v = parseFloat(ev.target.value);
+  $('#tapperPctLabel').textContent = isFinite(v) && v >= 0 && v <= 100 ? fmtP(r2(100 - v)) : '?';
+});
+$('#saveSplit').onclick = () => {
+  const v = parseFloat($('#ownerPctInput').value);
+  if (!isFinite(v) || v < 0 || v > 100) return toast('กรุณาใส่ตัวเลข 0–100');
+  state.settings.ownerPct = r2(v); saveState(); renderSettings();
+  toast(`บันทึกสัดส่วนแล้ว: เจ้าของสวน ${v}% / ทีมตัด ${r2(100-v)}%`);
+};
+$('#saveCutoff').onclick = () => {
+  const nums = [...new Set(($('#cutoffInput').value.match(/\d+/g) || []).map(Number).filter(n => n >= 1 && n <= 31))].sort((a,b) => a-b);
+  if (!nums.length) return toast('กรุณาใส่วันที่ 1–31 เช่น 8, 25');
+  state.settings.cutoffs = nums; saveState(); renderSettings();
+  toast('ตั้งวันตัดวีคเรียบร้อย');
+};
+$('#backupBtn').onclick = () => {
+  download(`สำรองน้ำยาง_${todayKey()}.json`, JSON.stringify(state, null, 2), 'application/json');
+};
+$('#restoreBtn').onclick = () => $('#restoreFile').click();
+$('#restoreFile').addEventListener('change', ev => {
+  const f = ev.target.files[0]; if (!f) return;
+  const rd = new FileReader();
+  rd.onload = () => {
+    try{
+      const s = JSON.parse(rd.result);
+      if (!s || typeof s.entries !== 'object') throw 0;
+      if (!confirm('กู้คืนข้อมูลจากไฟล์นี้?')) return;
+      state = fixSettings(s); saveState(); renderSettings(); toast('กู้คืนข้อมูลเรียบร้อย');
+    }catch(e){ toast('ไฟล์ไม่ถูกต้อง'); }
+    ev.target.value = '';
+  };
+  rd.readAsText(f);
+});
+$('#sampleBtn').onclick = () => {
+  if (state.entries[SAMPLE_DATE] && !confirm('วันที่ 14-11-69 มีข้อมูลอยู่แล้ว เขียนทับ?')) return;
+  applySample(state); saveState();
+  dPeriodDate = fromKey(SAMPLE_DATE); curPeriodDate = dPeriodDate; scrollToKey = SAMPLE_DATE;
+  showTab('daily'); toast('ใส่ข้อมูลตัวอย่างแล้ว');
+};
+$('#resetBtn').onclick = () => {
+  if (!confirm('ล้างข้อมูลทั้งหมด?')) return;
+  state = defaultState(); saveState(); dPeriodDate = today(); curPeriodDate = dPeriodDate; openKeys.clear();
+  renderSettings(); toast('ล้างข้อมูลแล้ว');
+};
 
 /* ================= สลับแท็บ ================= */
 function showTab(name){
