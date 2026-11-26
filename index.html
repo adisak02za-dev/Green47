@@ -104,7 +104,7 @@
   .btn.line{background:var(--surface);border:1.5px solid var(--line-2);color:var(--ink)}
   .btn.danger{background:var(--danger-tint);color:var(--danger)}
   .btn.wide{width:100%}
-  .btn:active,.iconbtn:active,.pchip:active,.pill-btn:active,.linkdel:active{transform:scale(.97)}
+  .btn:active,.iconbtn:active,.pchip:active,.pill-btn:active,.linkdel:active,.xdel:active{transform:scale(.97)}
   .pill-btn{display:inline-flex;align-items:center;height:40px;padding:0 16px;border-radius:999px;background:var(--green-tint);color:var(--green-deep);font-weight:600;font-size:14.5px}
   .pill-btn.gold{background:var(--money-tint);color:var(--money)}
   .iconbtn{width:48px;height:48px;flex:none;border-radius:14px;background:var(--surface);border:1px solid var(--line);display:grid;place-items:center}
@@ -158,16 +158,19 @@
   .slip-total{font:700 38px/1.1 var(--f-disp);font-variant-numeric:tabular-nums;margin-top:4px;overflow-wrap:anywhere}
   .slip-total small{font:400 15px var(--f-body);margin-left:8px;color:#BFD8CB}
   .slip-body{padding:14px 20px 28px}
+  .slip-sub{margin:10px 0 2px;padding-top:12px;border-top:2px dashed var(--line-2);font-size:13.5px;color:var(--ink-3)}
   .lines{list-style:none;margin:0;padding:0}
   .lines li{display:flex;align-items:baseline;gap:8px;padding:7px 0}
   .lines li > span{min-width:0;overflow-wrap:anywhere}
   .lines .lead{flex:1;min-width:12px;border-bottom:2px dotted var(--line-2);transform:translateY(-4px)}
   .lines b{flex:none;font:600 17px/1.3 var(--f-disp);font-variant-numeric:tabular-nums}
+  .lines li.plusline b{color:var(--money)}
   .lines.payout li{align-items:center;padding:10px 0}
   .lines.payout .lead{transform:none}
   .lines.payout b{font-size:24px}
   .who{display:block;font-weight:600}
   .who small{display:block;font-size:13px;font-weight:400;color:var(--ink-3);font-variant-numeric:tabular-nums}
+  .who small .x{color:var(--money);font-weight:500}
 
   /* ============ สรุปงวด ============ */
   .periodnav{display:flex;align-items:center;gap:8px}
@@ -197,12 +200,21 @@
   .wlegend .r{color:var(--green);font-weight:600}
   .wlegend .b{color:var(--danger);font-weight:600}
 
+  /* รายได้เพิ่มเติม */
   .extra-box{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card);padding:16px}
   .extra-list{list-style:none;margin:0;padding:0}
-  .extra-item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+  .extra-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
   .extra-item:last-child{border-bottom:0}
-  .extra-form{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) auto;gap:8px;margin-top:12px}
+  .extra-item .xn{flex:1;min-width:0;font-weight:600;overflow-wrap:anywhere}
+  .extra-item .xn small{display:block;font-size:12.5px;font-weight:400;color:var(--ink-3)}
+  .extra-item .xa{font:700 17px var(--f-disp);color:var(--money);white-space:nowrap}
+  .xdel{width:40px;height:40px;flex:none;border-radius:12px;background:var(--danger-tint);color:var(--danger);display:grid;place-items:center}
+  .extra-form{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) auto;gap:8px;margin-top:12px}
+  .extra-form .inp{height:46px;font-size:15px}
+  .extra-form #extraAmount{text-align:right;color:var(--money);font-weight:600}
+  .extra-form .btn{min-height:46px;padding:0 14px}
 
+  /* รายการวัน */
   .daylist{display:flex;flex-direction:column;gap:10px}
   .day{background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden}
   .day-main{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:12px;align-items:center;width:100%;padding:14px 14px 12px;text-align:left}
@@ -211,7 +223,12 @@
   .day-date small{font-size:12.5px;color:var(--ink-3);margin-top:4px;white-space:nowrap}
   .day-kg{display:block;font-weight:500;font-size:15px;font-variant-numeric:tabular-nums}
   .day-note{display:block;font-size:13px;color:var(--ink-3);overflow-wrap:anywhere}
-  .day-wt{display:block;font-size:13px;color:var(--ink-3);font-variant-numeric:tabular-nums}
+  .day-wt{display:block;font-size:13px;color:var(--ink-3);font-variant-numeric:tabular-nums;margin-top:2px}
+  /* น้ำยางได้จริง (เด่น) */
+  .day-real{display:flex;align-items:baseline;flex-wrap:wrap;gap:2px 6px;font-variant-numeric:tabular-nums;color:var(--ink-2);font-size:15px;line-height:1.3}
+  .day-real .lbl{display:inline-flex;align-items:center;align-self:center;height:24px;padding:0 9px;border-radius:999px;background:var(--green-tint);color:var(--green-deep);font-size:13px;font-weight:600;white-space:nowrap}
+  .day-real b{font:700 23px/1.15 var(--f-disp);color:var(--green)}
+  .day-real .u{white-space:nowrap}
   .day-money{text-align:right;font-variant-numeric:tabular-nums}
   .day-money b{display:block;font:700 18px/1.3 var(--f-disp);color:var(--money)}
   .day-money small{display:block;font-size:12.5px;color:var(--ink-3);white-space:nowrap}
@@ -269,7 +286,7 @@
     #tab-period{display:block!important}
     body{background:#fff}
     .shell{padding:0;max-width:none}
-    .slip,.day,.stats{box-shadow:none;border:1px solid #bbb}
+    .slip,.day,.stats,.extra-box{box-shadow:none;border:1px solid #bbb}
     .slip::before,.slip::after{display:none}
     *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
   }
@@ -373,7 +390,7 @@
 
     <div class="group">
       <h3>สำรองและกู้คืนข้อมูล</h3>
-      <p class="help">ไฟล์สำรองเก็บทุกวัน ทุกราคา และวันหยุดรายคน</p>
+      <p class="help">ไฟล์สำรองเก็บทุกวัน ทุกราคา วันหยุดรายคน และรายได้เพิ่มเติม</p>
       <div class="stack">
         <button type="button" class="btn wide" id="backupBtn"><span data-icon="download"></span>สำรองข้อมูล (.json)</button>
         <button type="button" class="btn soft wide" id="restoreBtn"><span data-icon="upload"></span>กู้คืนจากไฟล์</button>
@@ -629,6 +646,12 @@ function dayData(key){
 }
 function statusOf(key, dd){ return dd ? 'work' : (key > todayKey() ? 'future' : 'off'); }
 
+/* บรรทัด "ได้จริง 122.9 กก. × 25" (ใช้ทั้ง 2 หน้า) */
+function realLineHTML(dd){
+  return `<span class="day-real"><span class="lbl">ได้จริง</span><b>${fmt1(dd.real)}</b><span class="u">กก.${dd.price ? ' × ' + fmtP(dd.price) : ''}</span></span>`
+       + `<span class="day-wt">รวม ${fmt1(dd.gross)} − ถัง ${fmt1(dd.bucket)}</span>`;
+}
+
 function getPeriod(date){
   const cuts = state.settings.cutoffs;
   const y = date.getFullYear(), m = date.getMonth();
@@ -667,7 +690,7 @@ function toggleTeamOff(key, id){
   return true;
 }
 
-/* ================= หน้ากรอกรายวัน (เรียงเป็นวัน ๆ ทั้งงวด) ================= */
+/* ================= หน้ากรอกรายวัน ================= */
 let state = loadState();
 let dPeriodDate = firstRun ? fromKey(SAMPLE_DATE) : today();
 let curPeriodDate = dPeriodDate;
@@ -742,7 +765,7 @@ function updateDayCard(card){
   const stText = isToday ? 'ยังไม่กรอก' : (statusOf(k, dd) === 'future' ? 'ยังไม่ถึง' : 'วันหยุด');
 
   card.querySelector('.dsum').innerHTML = dd
-    ? `<span class="day-kg">${fmt1(dd.real)} กก.${dd.price ? ' × ' + fmtP(dd.price) : ''}</span><span class="day-wt">รวม ${fmt1(dd.gross)} − ถัง ${fmt1(dd.bucket)}</span>${tag}`
+    ? `${realLineHTML(dd)}${tag}`
     : `<span class="day-kg sub">${stText}</span>${tag}`;
 
   card.querySelector('.day-money').innerHTML = dd
@@ -894,100 +917,112 @@ function collectPeriod(date = curPeriodDate){
     days.push({ d, k, dd, st: statusOf(k, dd) });
   }
   const teamPer = {};
-  state.team.forEach(m => teamPer[m.id] = { days:0, money:0 });
+  state.team.forEach(m => teamPer[m.id] = { days:0, latex:0, extra:0, money:0 });
 
   let work=0, off=0, fut=0, tGross=0, tBucket=0, tNet=0, tReal=0,
-      tMoney=0, tOwner=0, tTapperTotal=0, pricedReal=0, noPrice=0;
+      tMoney=0, tOwner=0, tTapperLatex=0, pricedReal=0, noPrice=0;
   days.forEach(x => {
     if (x.st === 'work'){
       work++;
       tGross += x.dd.gross; tBucket += x.dd.bucket;
       tNet += x.dd.net; tReal += x.dd.real;
       if (x.dd.price){
-        tMoney += x.dd.money; tOwner += x.dd.owner; tTapperTotal += x.dd.tapperTotal; pricedReal += x.dd.real;
+        tMoney += x.dd.money; tOwner += x.dd.owner; tTapperLatex += x.dd.tapperTotal; pricedReal += x.dd.real;
         for (const mid in x.dd.teamPer){
-          if (teamPer[mid]){ teamPer[mid].days++; teamPer[mid].money += x.dd.teamPer[mid]; }
+          if (teamPer[mid]){ teamPer[mid].days++; teamPer[mid].latex += x.dd.teamPer[mid]; }
         }
       } else noPrice++;
     } else if (x.st === 'off') off++; else fut++;
   });
 
-  // บวกรายได้เพิ่มเติม (เช่น ค่าขี้ยาง) เข้าทีมตัด
+  /* รายได้เพิ่มเติม (เช่น ค่าขี้ยาง) เข้าทีมตัดเต็มจำนวน หารเท่ากันทุกคนที่ใช้งาน */
   const extras = (state.extraIncomes && state.extraIncomes[pKey]) || [];
-  const totalExtra = r2(extras.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0));
-  tTapperTotal = r2(tTapperTotal + totalExtra);
-
-  // เฉลี่ยเงินเพิ่มให้ทีมงานทุกคนที่มีสิทธิ์ได้รับ (หารเท่า ๆ กัน)
-  if (totalExtra > 0){
-    const activeTeamList = state.team.filter(m => m.active);
-    const count = activeTeamList.length || 1;
-    const addPerPerson = r2(totalExtra / count);
-    activeTeamList.forEach((m, idx) => {
-      if (!teamPer[m.id]) teamPer[m.id] = { days:0, money:0 };
-      const add = idx === count - 1 ? r2(totalExtra - addPerPerson * (count - 1)) : addPerPerson;
-      teamPer[m.id].money = r2(teamPer[m.id].money + add);
+  const totalExtra = r2(extras.reduce((s, it) => s + (parseFloat(it.amount) || 0), 0));
+  const activeTeam = state.team.filter(m => m.active);
+  const extraCount = activeTeam.length;
+  const extraEach = extraCount ? r2(totalExtra / extraCount) : 0;
+  if (totalExtra > 0 && extraCount){
+    activeTeam.forEach((m, idx) => {
+      teamPer[m.id].extra = idx === extraCount - 1 ? r2(totalExtra - extraEach * (extraCount - 1)) : extraEach;
     });
   }
+  state.team.forEach(m => {
+    const s = teamPer[m.id];
+    s.latex = r2(s.latex); s.money = r2(s.latex + s.extra);
+  });
 
-  const teamList = state.team.filter(m => (teamPer[m.id] && (teamPer[m.id].days || teamPer[m.id].money)) || m.active);
-  tGross = r1(tGross); tBucket = r1(tBucket); tReal = r1(tReal);
+  const teamList = state.team.filter(m => teamPer[m.id].days || teamPer[m.id].extra || m.active);
+  tGross = r1(tGross); tBucket = r1(tBucket); tReal = r1(tReal); tTapperLatex = r2(tTapperLatex);
   return { p, pKey, days, teamPer, teamList, work, off, fut,
            tGross, tBucket, tNet:r1(tNet), tReal,
            avgReal: work ? r1(tReal / work) : 0,
            realPct: tGross ? r1(tReal / tGross * 100) : 0,
            bucketPct: tGross ? r1(tBucket / tGross * 100) : 0,
            pricedReal: r1(pricedReal),
-           tMoney:r2(tMoney), tOwner:r2(tOwner), tTapperTotal, totalExtra, extras,
+           tMoney:r2(tMoney), tOwner:r2(tOwner),
+           tTapperLatex, totalExtra, extras, extraEach, extraCount,
+           tTapperTotal: r2(tTapperLatex + totalExtra),
            avgPrice: pricedReal ? r2(tMoney / pricedReal) : 0, noPrice };
 }
 
 function renderPeriod(){
-  const P = collectPeriod(); const { p, pKey, days, teamPer, teamList, extras } = P;
+  const P = collectPeriod(); const { p, days, teamPer, teamList, extras } = P;
   $('#periodLabel').innerHTML = `<b>${thShort(p.start)} – ${thShort(p.end)}</b><small>ตัดวีควันที่ ${p.end.getDate()} ${TH_M_FULL[p.end.getMonth()]} ${p.end.getFullYear()+543} (${days.length} วัน)</small>`;
   $('#periodWarn').innerHTML = P.noPrice
     ? `<div class="notice warn">มี ${P.noPrice} วันทำงานที่ยังไม่ได้ใส่ราคา แตะวันนั้นในรายการเพื่อใส่ราคา</div>` : '';
 
   /* ---- ใบแบ่งเงินทีม ---- */
-  const payLines = teamList.map(m => {
-    const s = teamPer[m.id];
-    const dn = s ? s.days : 0;
-    const avg = s && s.days ? ` เฉลี่ยวันละ ${fmt2(s.money / s.days)}` : '';
-    return `<li><span class="who">${esc(m.name)}<small>${dn} วัน${avg}</small></span><i class="lead"></i><b>${s ? fmt2(r2(s.money)) : '–'}</b></li>`;
-  }).join('');
-  
-  const extraSlipLine = P.totalExtra > 0 ? `<li><span class="who">รวมรายได้เพิ่ม<small>เฉลี่ยหาร ${teamList.length} คน</small></span><i class="lead"></i><b>+${fmt2(P.totalExtra)}</b></li>` : '';
+  if (!P.work && !P.totalExtra){
+    $('#payoutSlip').innerHTML = `<div class="notice">งวดนี้ยังไม่มีวันทำงาน กรอกน้ำหนักน้ำยางที่แท็บกรอกรายวัน</div>`;
+  } else {
+    const breakdown = P.totalExtra ? `
+      <ul class="lines">
+        <li><span>จากน้ำยาง ${fmtP(tapperPct())}%</span><i class="lead"></i><b>${fmt2(P.tTapperLatex)}</b></li>
+        ${extras.map(x => `<li class="plusline"><span>${esc(x.name)}</span><i class="lead"></i><b>+${fmt2(x.amount)}</b></li>`).join('')}
+      </ul>
+      <div class="slip-sub">รายได้เพิ่ม ${fmt2(P.totalExtra)} ÷ ${P.extraCount} คน = คนละ ${fmt2(P.extraEach)} บาท</div>` : '';
 
-  $('#payoutSlip').innerHTML = `
-    <div class="slip">
-      <div class="slip-head">
-        <span class="slip-cap">ทีมตัดได้รวมงวดนี้ (น้ำยาง ${fmtP(tapperPct())}% + รายได้เพิ่ม)</span>
-        <div class="slip-total">${fmt2(P.tTapperTotal)}<small>บาท</small></div>
-      </div>
-      <div class="slip-body">
-        <ul class="lines payout">${payLines}</ul>
-      </div>
-    </div>`;
+    const payLines = teamList.map(m => {
+      const s = teamPer[m.id];
+      const avg = s.days ? ` เฉลี่ยวันละ ${fmt2(s.latex / s.days)}` : '';
+      const ex = s.extra ? `<br><span class="x">+ รายได้เพิ่ม ${fmt2(s.extra)}</span>` : '';
+      return `<li><span class="who">${esc(m.name)}<small>${s.days} วัน${avg}${ex}</small></span><i class="lead"></i><b>${s.money ? fmt2(s.money) : '–'}</b></li>`;
+    }).join('');
 
-  /* ---- ส่วนเพิ่มรายได้ (ค่าขี้ยาง ฯลฯ) ---- */
-  const extraItemsHTML = extras.length ? extras.map(item => `
-    <li class="extra-item">
-      <span><b>${esc(item.name)}</b></span>
-      <span class="money"><b>+${fmt2(item.amount)} บาท</b></span>
-      <button type="button" class="iconbtn" data-act="delexpand" data-id="${item.id}" aria-label="ลบ" style="width:36px;height:36px;border-radius:10px">${ic('trash',16)}</button>
-    </li>
-  `).join('') : '<div class="sub" style="padding:4px 0">ยังไม่มีรายได้เพิ่มเติมในงวดนี้</div>';
+    $('#payoutSlip').innerHTML = `
+      <div class="slip">
+        <div class="slip-head">
+          <span class="slip-cap">ทีมตัดได้รวมงวดนี้ (${fmtP(tapperPct())}%${P.totalExtra ? ' + รายได้เพิ่ม' : ''})</span>
+          <div class="slip-total">${fmt2(P.tTapperTotal)}<small>บาท</small></div>
+        </div>
+        <div class="slip-body">
+          ${breakdown}
+          <ul class="lines payout">${payLines}</ul>
+        </div>
+      </div>`;
+  }
+
+  /* ---- รายได้เพิ่มเติม ---- */
+  const itemsHTML = extras.length
+    ? extras.map(x => `
+      <li class="extra-item">
+        <span class="xn">${esc(x.name)}<small>หาร ${P.extraCount} คน ≈ คนละ ${fmt2(r2(x.amount / (P.extraCount || 1)))}</small></span>
+        <span class="xa">+${fmt2(x.amount)}</span>
+        <button type="button" class="xdel no-print" data-act="delextra" data-id="${esc(x.id)}" aria-label="ลบ ${esc(x.name)}">${ic('trash', 18)}</button>
+      </li>`).join('')
+    : '<li class="sub" style="padding:4px 0">ยังไม่มีรายได้เพิ่มเติมในงวดนี้</li>';
 
   $('#extraIncomeSection').innerHTML = `
     <div class="extra-box">
       <div class="bh" style="margin-bottom:8px">
         <h3>รายได้เพิ่มเติม</h3>
-        <span class="hint">เข้าทีมตัดเต็มจำนวน</span>
+        <span class="hint">เข้าทีมตัดเต็มจำนวน หารเท่ากัน</span>
       </div>
-      <ul class="extra-list">${extraItemsHTML}</ul>
-      <form id="extraForm" class="extra-form" autocomplete="off">
-        <input type="text" id="extraName" class="inp" placeholder="ชื่อ เช่น ค่าขี้ยาง" aria-label="ชื่อรายได้" value="ค่าขี้ยาง" style="height:46px;font-size:15px">
-        <input type="text" id="extraAmount" class="inp" inputmode="decimal" placeholder="จำนวนเงิน" aria-label="จำนวนเงิน" style="height:46px;font-size:15px">
-        <button type="submit" class="btn" style="height:46px;padding:0 16px"><span data-icon="plus"></span>เพิ่ม</button>
+      <ul class="extra-list">${itemsHTML}</ul>
+      <form id="extraForm" class="extra-form no-print" autocomplete="off">
+        <input type="text" id="extraName" class="inp" value="ค่าขี้ยาง" placeholder="ชื่อ เช่น ค่าขี้ยาง" aria-label="ชื่อรายได้" enterkeyhint="next">
+        <input type="text" id="extraAmount" class="inp" inputmode="decimal" placeholder="จำนวนเงิน" aria-label="จำนวนเงิน" enterkeyhint="done">
+        <button type="submit" class="btn">${ic('plus', 18)}เพิ่ม</button>
       </form>
     </div>`;
 
@@ -1015,9 +1050,10 @@ function renderPeriod(){
         <div><dt>ราคาเฉลี่ย</dt><dd>${P.avgPrice ? fmtP(P.avgPrice) : '–'}<small>บาท/กก.</small></dd></div>
         <div class="total"><dt>เงินรวมน้ำยางงวดนี้</dt><dd class="money">${fmt2(P.tMoney)}<small>บาท</small></dd></div>
         <div><dt>เจ้าของสวน ${fmtP(ownerPct())}%</dt><dd>${fmt2(P.tOwner)}<small>บาท</small></dd></div>
-        <div><dt>ทีมตัด ${fmtP(tapperPct())}% (จากน้ำยาง)</dt><dd>${fmt2(P.tTapperTotal - P.totalExtra)}<small>บาท</small></dd></div>
-        ${P.totalExtra ? `<div><dt>รายได้เพิ่มเติมรวม</dt><dd class="money">+${fmt2(P.totalExtra)}<small>บาท</small></dd></div>` : ''}
-        <div class="total"><dt>ทีมตัดได้รวมทั้งหมด</dt><dd class="money">${fmt2(P.tTapperTotal)}<small>บาท</small></dd></div>
+        <div><dt>ทีมตัด ${fmtP(tapperPct())}%<small>จากน้ำยาง</small></dt><dd>${fmt2(P.tTapperLatex)}<small>บาท</small></dd></div>
+        ${P.totalExtra ? `
+        <div><dt>รายได้เพิ่มเติม<small>${extras.map(x => esc(x.name)).join(', ')}</small></dt><dd class="money">+${fmt2(P.totalExtra)}<small>บาท</small></dd></div>
+        <div class="total"><dt>ทีมตัดได้รวมทั้งหมด</dt><dd>${fmt2(P.tTapperTotal)}<small>บาท</small></dd></div>` : ''}
       </dl>
     </section>
 
@@ -1051,11 +1087,7 @@ function renderPeriod(){
     return `<article class="day">
       <button type="button" class="day-main" data-key="${x.k}">
         <span class="day-date"><b>${dn}</b><small>${wd} ${mo}</small></span>
-        <span>
-          <span class="day-kg">${fmt1(x.dd.real)} กก.${priced ? ' × ' + fmtP(x.dd.price) : ''}</span>
-          <span class="day-wt">รวม ${fmt1(x.dd.gross)} − ถัง ${fmt1(x.dd.bucket)}</span>
-          ${note}
-        </span>
+        <span>${realLineHTML(x.dd)}${note}</span>
         <span class="day-money">${money}</span>
       </button>
       <div class="day-people">${chips}</div>
@@ -1063,34 +1095,29 @@ function renderPeriod(){
   }).join('');
 }
 
-/* จัดการเพิ่ม/ลบ รายได้เพิ่มเติม */
-$('#periodStats').parentElement.addEventListener('submit', ev => {
+/* เพิ่ม / ลบ รายได้เพิ่มเติม */
+$('#extraIncomeSection').addEventListener('submit', ev => {
   if (ev.target.id !== 'extraForm') return;
   ev.preventDefault();
-  const nameInput = $('#extraName'), amtInput = $('#extraAmount');
-  const name = nameInput.value.trim() || 'รายได้เพิ่มเติม';
-  const amount = parseFloat(amtInput.value.trim());
-  if (!isFinite(amount) || amount <= 0) return toast('กรุณาใส่จำนวนเงินให้ถูกต้อง');
-
-  const pKey = collectPeriod().pKey;
-  if (!state.extraIncomes) state.extraIncomes = {};
+  const name = $('#extraName').value.trim() || 'รายได้เพิ่มเติม';
+  const amount = r2(parseFloat($('#extraAmount').value.replace(/,/g,'')));
+  if (!isFinite(amount) || amount <= 0){ toast('กรุณาใส่จำนวนเงินให้ถูกต้อง'); return; }
+  const pKey = toKey(getPeriod(curPeriodDate).start);
   if (!Array.isArray(state.extraIncomes[pKey])) state.extraIncomes[pKey] = [];
-  state.extraIncomes[pKey].push({ id: newId(), name, amount });
+  state.extraIncomes[pKey].push({ id:newId(), name, amount });
   saveState(); renderPeriod();
-  amtInput.value = '';
-  toast(`เพิ่ม "${name}" ${fmt2(amount)} บาทแล้ว`);
+  const n = state.team.filter(m => m.active).length || 1;
+  toast(`เพิ่ม "${name}" ${fmt2(amount)} บาท → คนละ ${fmt2(r2(amount / n))} บาท`);
 });
-
-$('#periodStats').parentElement.addEventListener('click', ev => {
-  const btn = ev.target.closest('[data-act="delexpand"]');
-  if (!btn) return;
-  const id = btn.dataset.id;
-  const pKey = collectPeriod().pKey;
-  if (!state.extraIncomes || !state.extraIncomes[pKey]) return;
-  state.extraIncomes[pKey] = state.extraIncomes[pKey].filter(x => x.id !== id);
+$('#extraIncomeSection').addEventListener('click', ev => {
+  const btn = ev.target.closest('[data-act="delextra"]'); if (!btn) return;
+  const pKey = toKey(getPeriod(curPeriodDate).start);
+  const list = state.extraIncomes[pKey] || [];
+  const item = list.find(x => x.id === btn.dataset.id); if (!item) return;
+  if (!confirm(`ลบ "${item.name}" ${fmt2(item.amount)} บาท?`)) return;
+  state.extraIncomes[pKey] = list.filter(x => x.id !== item.id);
   if (!state.extraIncomes[pKey].length) delete state.extraIncomes[pKey];
-  saveState(); renderPeriod();
-  toast('ลบรายได้เพิ่มเติมแล้ว');
+  saveState(); renderPeriod(); toast('ลบรายได้เพิ่มเติมแล้ว');
 });
 
 $('#dayList').addEventListener('click', ev => {
@@ -1113,32 +1140,37 @@ $('#csvBtn').onclick = () => {
   const P = collectPeriod(); const { p, days, teamPer, teamList, extras } = P;
   const cell = v => { const s = String(v ?? ''); return /[",\n]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s; };
   const work = x => x.st === 'work' && x.dd;
+  const dayCols = days.map(x => `${x.d.getDate()}/${x.d.getMonth()+1}`);
   const rows = [];
   rows.push([`งวด ${thShort(p.start)} - ${thShort(p.end)}`]);
-  const head = ['รายการ', ...days.map(x => `${x.d.getDate()}/${x.d.getMonth()+1}`), 'วันที่ทำ', 'รวม'];
 
-  rows.push(head);
+  // ส่วนแบ่งทีม
+  rows.push(['ชื่อ', ...dayCols, 'วันที่ทำ', 'จากน้ำยาง', 'รายได้เพิ่ม', 'รวม(บาท)']);
   teamList.forEach(m => {
     const s = teamPer[m.id];
     rows.push([m.name, ...days.map(x => work(x) ? (x.dd.teamOff.includes(m.id) ? 'หยุด' : (x.dd.teamPer[m.id] || 0)) : ''),
-      s ? s.days : 0, s ? r2(s.money) : 0]);
+      s.days, s.latex, s.extra, s.money]);
   });
 
+  // รายได้เพิ่มเติม
   if (extras.length){
     rows.push([]);
-    rows.push(['รายได้เพิ่มเติม:']);
-    extras.forEach(ex => rows.push([ex.name, ex.amount]));
+    rows.push(['รายได้เพิ่มเติม', 'จำนวนเงิน(บาท)']);
+    extras.forEach(x => rows.push([x.name, x.amount]));
+    rows.push(['รวม', P.totalExtra]);
   }
 
+  // น้ำหนัก / ราคา / เงิน
   rows.push([]);
-  rows.push(head);
+  rows.push(['รายการ', ...dayCols, 'วันที่ทำ', 'รวม']);
   rows.push(['น้ำหนักรวม (กก.)',   ...days.map(x => work(x) ? x.dd.gross  : ''), P.work, P.tGross]);
   rows.push(['น้ำหนักถัง (กก.)',   ...days.map(x => work(x) ? x.dd.bucket : ''), P.work, P.tBucket]);
   rows.push(['น้ำยางได้จริง (กก.)', ...days.map(x => work(x) ? x.dd.real   : ''), P.work, P.tReal]);
   rows.push(['ราคา (บาท/กก.)',     ...days.map(x => work(x) ? (x.dd.price || '') : ''), '', P.avgPrice || '']);
   rows.push(['เงินรวม (บาท)',      ...days.map(x => work(x) && x.dd.price ? x.dd.money : ''), '', P.tMoney]);
   rows.push([`เจ้าของสวน ${fmtP(ownerPct())}%`, ...days.map(x => work(x) && x.dd.price ? x.dd.owner : ''), '', P.tOwner]);
-  rows.push([`ทีมตัด ${fmtP(tapperPct())}%`,     ...days.map(x => work(x) && x.dd.price ? x.dd.tapperTotal : ''), '', P.tTapperTotal]);
+  rows.push([`ทีมตัด ${fmtP(tapperPct())}%`,     ...days.map(x => work(x) && x.dd.price ? x.dd.tapperTotal : ''), '', P.tTapperLatex]);
+  if (P.totalExtra) rows.push(['ทีมตัดรวมรายได้เพิ่ม', ...days.map(() => ''), '', P.tTapperTotal]);
 
   const csv = '\uFEFF' + rows.map(r => r.map(cell).join(',')).join('\r\n');
   download(`น้ำยาง_${toKey(p.start)}_ถึง_${toKey(p.end)}.csv`, csv, 'text/csv;charset=utf-8');
