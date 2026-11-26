@@ -559,7 +559,7 @@ document.querySelectorAll('[data-icon]').forEach(el => { el.insertAdjacentHTML('
 
 /* ================= ค่าคงที่ ================= */
 const STORE_KEY = '*************_**';   // <-- ใส่ค่าเดิมจากไฟล์จริงของคุณ
-const FIREBASE_DB_URL = 'https://adisak47-d0714-default-rtdb.asia-southeast1.firebasedatabase.app'; // <-- ใส่ลิงก์ Realtime Database
+const FIREBASE_DB_URL = 'https://adisak47-d0714-default-rtdb.asia-southeast1.firebasedatabase.app';
 
 const THEME_KEY = 'rubber_theme_v1';
 const SYNC_KEY_STORE = 'rubber_sync_key_v1';
@@ -1454,8 +1454,162 @@ function addTeamMember(){
 $('#addTeamMember').onclick = addTeamMember;
 $('#newTeamName').addEventListener('keydown', ev => { if (ev.key === 'Enter') addTeamMember(); });
 
-addTeamMember(); });
+/* ================= ระบบซิงค์อัตโนมัติ (Polling แบบเสถียร) ================= */
+let pollTimer = null;
+const thTime = ts => new Date(ts).toLocaleString('th-TH', { dateStyle:'medium', timeStyle:'short' });
 
+function cleanSyncKey(raw){
+  return String(raw || '').trim().toLowerCase().replace(/[.#$\[\]\/\s]+/g, '-');
+}
+function syncUrl(key){
+  return `${FIREBASE_DB_URL.replace(/\/+$/, '')}/sync/${encodeURIComponent(key)}.json`;
+}
+function showSyncStatus(msg, isErr){
+  const el = $('#syncStatus'); if (!el) return;
+  el.classList.toggle('err', !!isErr);
+  if (msg){ el.textContent = msg; return; }
+  const last = Number(localStorage.getItem(SYNC_LAST_STORE));
+  el.innerHTML = last ? `ซิงค์อัตโนมัติเปิดอยู่ (ล่าสุด: <b>${thTime(last)}</b>)` : 'พร้อมซิงค์อัตโนมัติ';
+}
+
+async function checkRemoteUpdate(){
+  const key = localStorage.getItem(SYNC_KEY_STORE);
+  if (!key || !FIREBASE_DB_URL || !navigator.onLine || document.hidden) return;
+  
+  try {
+    const res = await fetch(syncUrl(key), { cache:'no-store' });
+    if (!res.ok) return;
+    const remote = await res.json();
+    if (remote && remote.updatedAt && remote.data) {
+      const remoteTime = remote.updatedAt;
+      const localTime = Number(localStorage.getItem(SYNC_LAST_STORE)) || 0;
+      
+      if (remoteTime > localTime + 300) {
+        isRemoteUpdating = true;
+        state = fixSettings(JSON.parse(remote.data));
+        saveState();
+        localStorage.setItem(SYNC_LAST_STORE, String(remoteTime));
+        isRemoteUpdating = false;
+
+        openKeys.clear();
+        if ($('#tab-daily').classList.contains('active')) renderDaily();
+        if ($('#tab-period').classList.contains('active')) renderPeriod();
+        if ($('#tab-settings').classList.contains('active')) renderSettings();
+        toast('อัปเดตข้อมูลอัตโนมัติจากเครื่องอื่นแล้ว!');
+      }
+    }
+  } catch(err){}
+}
+
+function startLiveSync(key){
+  if (pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(checkRemoteUpdate, 5000);
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) checkRemoteUpdate();
+});
+
+$('#connectSyncBtn').onclick = async () => {
+  const key = cleanSyncKey($('#syncKeyInput').value);
+  if (key.length < 6){ toast('รหัสคีย์ต้องยาวอย่างน้อย 6 ตัวอักษร'); return; }
+  if (!navigator.onLine){ toast('ไม่มีอินเทอร์เน็ต'); return; }
+  $('#syncKeyInput').value = key;
+
+  showSyncStatus('กำลังเชื่อมต่อ...');
+  try {
+    const res = await fetch(syncUrl(key), { cache:'no-store' });
+    if (!res.ok) throw new Error();
+    const remote = await res.json();
+    
+    if (remote && remote.data){
+      const s = JSON.parse(remote.data);
+      if (s && typeof s.entries === 'object'){
+        isRemoteUpdating = true;
+        state = fixSettings(s);
+        saveState();
+        isRemoteUpdating = false;
+        localStorage.setItem(SYNC_KEY_STORE, key);
+        localStorage.setItem(SYNC_LAST_STORE, String(remote.updatedAt || Date.now()));
+        startLiveSync(key);
+        renderDaily();
+        renderSettings();
+        toast('เชื่อมต่อและดึงข้อมูลสำเร็จ!');
+        return;
+      }
+    }
+    
+    const now = Date.now();
+    await fetch(syncUrl(key), {
+      method:'PUT',
+      headers:{ 'Content-Type':'application/json' },
+      body: JSON.stringify({ updatedAt: now, data: JSON.stringify(state) })
+    });
+    localStorage.setItem(SYNC_KEY_STORE, key);
+    localStorage.setItem(SYNC_LAST_STORE, String(now));
+    startLiveSync(key);
+    showSyncStatus();
+    toast('เชื่อมต่อและสร้างข้อมูลบนคลาวด์สำเร็จ!');
+  } catch(e) {
+    showSyncStatus('เชื่อมต่อไม่สำเร็จ ตรวจสอบอินเทอร์เน็ตหรือ Rules', true);
+    toast('เชื่อมต่อไม่สำเร็จ');
+  }
+};
+
+window.addEventListener('DOMContentLoaded', () => {
+  const savedKey = localStorage.getItem(SYNC_KEY_STORE);
+  if (savedKey && FIREBASE_DB_URL){
+    const inp = $('#syncKeyInput'); if (inp) inp.value = savedKey;
+    startLiveSync(savedKey);
+    showSyncStatus();
+  }
+});
+
+$('#ownerPctInput').addEventListener('input', ev => {
+  const v = parseFloat(ev.target.value);
+  $('#tapperPctLabel').textContent = isFinite(v) && v >= 0 && v <= 100 ? fmtP(r2(100 - v)) : '?';
+});
+$('#saveSplit').onclick = () => {
+  const v = parseFloat($('#ownerPctInput').value);
+  if (!isFinite(v) || v < 0 || v > 100) return toast('กรุณาใส่ตัวเลข 0–100');
+  state.settings.ownerPct = r2(v); saveState(); renderSettings();
+  toast(`บันทึกสัดส่วนแล้ว: เจ้าของสวน ${v}% / ทีมตัด ${r2(100-v)}%`);
+};
+$('#saveCutoff').onclick = () => {
+  const nums = [...new Set(($('#cutoffInput').value.match(/\d+/g) || []).map(Number).filter(n => n >= 1 && n <= 31))].sort((a,b) => a-b);
+  if (!nums.length) return toast('กรุณาใส่วันที่ 1–31 เช่น 8, 25');
+  state.settings.cutoffs = nums; saveState(); renderSettings();
+  toast('ตั้งวันตัดวีคเรียบร้อย');
+};
+$('#backupBtn').onclick = () => {
+  download(`สำรองน้ำยาง_${todayKey()}.json`, JSON.stringify(state, null, 2), 'application/json');
+};
+$('#restoreBtn').onclick = () => $('#restoreFile').click();
+$('#restoreFile').addEventListener('change', ev => {
+  const f = ev.target.files[0]; if (!f) return;
+  const rd = new FileReader();
+  rd.onload = () => {
+    try{
+      const s = JSON.parse(rd.result);
+      if (!s || typeof s.entries !== 'object') throw 0;
+      if (!confirm('กู้คืนข้อมูลจากไฟล์นี้?')) return;
+      state = fixSettings(s); saveState(); renderSettings(); toast('กู้คืนข้อมูลเรียบร้อย');
+    }catch(e){ toast('ไฟล์ไม่ถูกต้อง'); }
+    ev.target.value = '';
+  };
+  rd.readAsText(f);
+});
+$('#sampleBtn').onclick = () => {
+  if (state.entries[SAMPLE_DATE] && !confirm('วันที่ 14-11-69 มีข้อมูลอยู่แล้ว เขียนทับ?')) return;
+  applySample(state); saveState();
+  dPeriodDate = fromKey(SAMPLE_DATE); curPeriodDate = dPeriodDate; scrollToKey = SAMPLE_DATE;
+  showTab('daily'); toast('ใส่ข้อมูลตัวอย่างแล้ว');
+};
+$('#resetBtn').onclick = () => {
+  if (!confirm('ล้างข้อมูลทั้งหมด?')) return;
+  state = defaultState(); saveState(); dPeriodDate = today(); curPeriodDate = dPeriodDate; openKeys.clear();
+  renderSettings(); toast('ล้างข้อมูลแล้ว');
+};
 
 /* ================= สลับแท็บ ================= */
 function showTab(name){
