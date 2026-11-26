@@ -243,10 +243,9 @@
   .extra-form #extraAmount{text-align:right;color:var(--money);font-weight:600}
   .extra-form .btn{min-height:46px;padding:0 14px}
 
-  /* รายการวัน */
+  /* รายการวัน (ใช้ในหน้ากรอกรายวัน) */
   .daylist{display:flex;flex-direction:column;gap:10px}
   .day{background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden}
-  .day-main{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:12px;align-items:center;width:100%;padding:14px 14px 12px;text-align:left}
   .day-date{display:flex;flex-direction:column;align-items:center;line-height:1.1}
   .day-date b{font:700 24px/1 var(--f-disp)}
   .day-date small{font-size:12.5px;color:var(--ink-3);margin-top:4px;white-space:nowrap}
@@ -273,6 +272,59 @@
   .day.thin b{font:600 16px var(--f-disp);min-width:24px;text-align:right}
   .day.thin .day-state{margin-left:auto;font-size:13.5px}
   .stack{display:grid;gap:10px}
+
+  /* ============ ตารางรายวัน (สรุปงวด) ============ */
+  .dfilter{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;touch-action:pan-x pan-y}
+  .dfilter::-webkit-scrollbar{display:none}
+  .dfilter button{flex:none;height:40px;padding:0 16px;border-radius:999px;border:1.5px solid var(--line-2);background:var(--surface);color:var(--ink-2);font-weight:600;font-size:14.5px;touch-action:pan-x pan-y}
+  .dfilter button.active{background:var(--green);border-color:var(--green);color:var(--on-green)}
+  .dfilter button:active{transform:scale(.97)}
+
+  .tcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card);overflow:hidden}
+  .tcard-h{display:flex;align-items:center;flex-wrap:wrap;gap:4px 12px;padding:14px 16px}
+  .tcard-h h3{display:flex;align-items:center;gap:8px;font:600 16px/1.35 var(--f-disp)}
+  .tcard-h h3 svg{color:var(--green)}
+  .tcard-h .hint{margin-left:auto;font-size:12.5px}
+
+  /* ทั้งหน้าตั้ง touch-action:pan-y ไว้ ต้องเปิดให้เลื่อนแนวนอนในตารางได้ */
+  .tscroll,.tscroll *{touch-action:pan-x pan-y}
+  .tscroll{overflow-x:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
+
+  .dtable{width:100%;min-width:max-content;border-collapse:separate;border-spacing:0;font-size:15px;font-variant-numeric:tabular-nums}
+  .dtable th,.dtable td{padding:12px 10px;border-bottom:1px solid var(--line);white-space:nowrap;text-align:left;vertical-align:middle;font-weight:400}
+  .dtable thead th{background:var(--green-tint);color:var(--ink-2);font-size:13px;font-weight:600;line-height:1.3;padding-top:10px;padding-bottom:10px}
+  .dtable thead th small{display:block;font-weight:400;color:var(--ink-3)}
+  .dtable .num{text-align:right}
+  .dtable .c-day{position:sticky;left:0;z-index:2;background:var(--surface);padding-left:16px;min-width:66px;box-shadow:1px 0 0 var(--line)}
+  .dtable thead .c-day,.dtable tfoot .c-day{background:var(--green-tint)}
+  .dtable tbody .c-day b{display:block;font:600 19px/1.15 var(--f-disp)}
+  .dtable tbody .c-day small{display:block;font-size:12px;color:var(--ink-3);margin-top:2px}
+  .dtable .kg{color:var(--green);font-weight:600}
+  .dtable .money{color:var(--money);font-weight:600}
+  .dtable .nop{color:var(--danger);font-size:13px;font-weight:600}
+  .dtable .c-mem{text-align:right;padding-left:6px;padding-right:6px}
+  .dtable .c-note{min-width:160px;white-space:normal;font-size:13px;color:var(--ink-3);line-height:1.4;padding-right:16px}
+  .dtable .c-note .tnote{display:block;color:var(--ink-2)}
+
+  .r-work{cursor:pointer}
+  .r-work:active > *{background:var(--green-tint)}
+
+  .tchip{display:inline-flex;align-items:center;justify-content:flex-end;min-width:72px;height:34px;padding:0 10px;border-radius:999px;
+         border:1.5px solid transparent;font-variant-numeric:tabular-nums;font-size:15px;color:var(--ink)}
+  .tchip:active{transform:scale(.95);background:var(--green-tint)}
+  .tchip.off{justify-content:center;background:var(--danger-tint);border-color:var(--warn-line);color:var(--danger);font-weight:600;font-size:13.5px}
+
+  .r-gap{cursor:pointer}
+  .r-gap td{padding:10px 16px;background:var(--ground);border-bottom:1.5px dashed var(--line-2)}
+  .gap-in{position:sticky;left:16px;display:inline-flex;align-items:baseline;gap:8px;font-size:14.5px;color:var(--ink-3)}
+  .gap-in b{font:600 16px var(--f-disp)}
+  .r-gap.off .gap-in b{color:var(--money)}
+  .r-empty td{text-align:center;color:var(--ink-3);padding:20px 16px}
+
+  .dtable tfoot th,.dtable tfoot td{background:var(--green-tint);border-bottom:0;border-top:2px solid var(--line-2);font:600 16px var(--f-disp);color:var(--ink)}
+  .dtable tfoot .kg{color:var(--green)}
+  .dtable tfoot .money{color:var(--money)}
+  .dtable tfoot .c-note{font:600 14px var(--f-body);color:var(--ink-2)}
 
   /* ============ หน้าตั้งค่า ============ */
   .group{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card);padding:16px}
@@ -314,8 +366,12 @@
     #tab-period{display:block!important}
     body{background:#fff}
     .shell{padding:0;max-width:none}
-    .slip,.day,.stats,.extra-box{box-shadow:none;border:1px solid #bbb}
+    .slip,.day,.stats,.extra-box,.tcard{box-shadow:none;border:1px solid #bbb}
     .slip::before,.slip::after{display:none}
+    .tscroll{overflow:visible}
+    .dtable{font-size:11px;min-width:0}
+    .dtable .c-day{position:static;box-shadow:none}
+    .gap-in{position:static}
     *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
   }
 </style>
@@ -362,11 +418,20 @@
     <div id="payoutSlip"></div>
     <div id="extraIncomeSection"></div>
     <div id="periodStats" class="stack"></div>
-    <div>
-      <div class="bh"><h3>รายวัน</h3></div>
-      <p class="help no-print">แตะวันที่เพื่อแก้ข้อมูลวันนั้น และแตะชื่อคนเพื่อตั้งหยุดรายคน (สีแดง = หยุด)</p>
-      <div id="dayList" class="daylist"></div>
+
+    <div class="dfilter no-print" id="dayFilter" role="group" aria-label="กรองรายการ">
+      <button type="button" data-filter="all" class="active" aria-pressed="true">ทั้งหมด</button>
+      <button type="button" data-filter="work" aria-pressed="false">วันทำงาน</button>
+      <button type="button" data-filter="rest" aria-pressed="false">วันหยุด / รอข้อมูล</button>
     </div>
+    <div class="tcard">
+      <div class="tcard-h">
+        <h3><span data-icon="table"></span>ตารางรายวัน</h3>
+        <span class="hint no-print">แตะแถวเพื่อแก้ · แตะยอดเงินเพื่อตั้งหยุด · เลื่อนซ้าย-ขวา</span>
+      </div>
+      <div class="tscroll"><table class="dtable" id="dayList"></table></div>
+    </div>
+
     <div class="stack no-print">
       <button type="button" class="btn soft wide" id="csvBtn"><span data-icon="download"></span>ดาวน์โหลด CSV (เปิดใน Excel)</button>
       <button type="button" class="btn wide" id="printBtn"><span data-icon="print"></span>พิมพ์ / บันทึก PDF</button>
@@ -478,7 +543,8 @@ const PATHS = {
   drop:'<path d="M12 3c3.6 4.3 6 7.4 6 10.4A6 6 0 0 1 6 13.4C6 10.4 8.4 7.3 12 3z" fill="currentColor" stroke="none"/>',
   sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6l1.4 1.4M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4L6 18M18 6l1.4-1.4"/>',
   moon:'<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>',
-  phone:'<rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18h2"/>'
+  phone:'<rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18h2"/>',
+  table:'<rect x="3.5" y="5" width="17" height="14" rx="2"/><path d="M3.5 10h17M3.5 14.5h17M9 10v9"/>'
 };
 const ic = (name, size = 22) => `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${PATHS[name]}</svg>`;
 document.querySelectorAll('[data-icon]').forEach(el => { el.insertAdjacentHTML('afterbegin', ic(el.dataset.icon, el.classList.contains('mark') ? 20 : 22)); });
@@ -1001,13 +1067,12 @@ function renderPeriod(){
   const P = collectPeriod(); const { p, days, teamPer, teamList, extras } = P;
   $('#periodLabel').innerHTML = `<b>${thShort(p.start)} – ${thShort(p.end)}</b><small>ตัดวีควันที่ ${p.end.getDate()} ${TH_M_FULL[p.end.getMonth()]} ${p.end.getFullYear()+543} (${days.length} วัน)</small>`;
   $('#periodWarn').innerHTML = P.noPrice
-    ? `<div class="notice warn">มี ${P.noPrice} วันทำงานที่ยังไม่ได้ใส่ราคา แตะวันนั้นในรายการเพื่อใส่ราคา</div>` : '';
+    ? `<div class="notice warn">มี ${P.noPrice} วันทำงานที่ยังไม่ได้ใส่ราคา แตะวันนั้นในตารางเพื่อใส่ราคา</div>` : '';
 
   /* ---- ใบแบ่งเงินทีม ---- */
   if (!P.work && !P.totalExtra){
     $('#payoutSlip').innerHTML = `<div class="notice">งวดนี้ยังไม่มีวันทำงาน กรอกน้ำหนักน้ำยางที่แท็บกรอกรายวัน</div>`;
   } else {
-    /* รายได้เพิ่มที่ชื่อเดียวกันรวมเป็นบรรทัดเดียว */
     const groups = new Map();
     extras.forEach(x => groups.set(x.name, r2((groups.get(x.name) || 0) + (parseFloat(x.amount) || 0))));
     const shortName = n => String(n).replace(/^ค่า(?=.)/, '');
@@ -1139,34 +1204,91 @@ function renderPeriod(){
       </dl>
     </section>`;
 
-  /* ---- รายวัน ---- */
-  $('#dayList').innerHTML = days.map(x => {
-    const dn = x.d.getDate(), wd = TH_D[x.d.getDay()], mo = TH_M[x.d.getMonth()];
-    if (x.st !== 'work'){
-      return `<button type="button" class="day thin" data-key="${x.k}"><b>${dn}</b><span>${wd} ${mo}</span><span class="day-state">${x.st === 'off' ? 'วันหยุด' : 'ยังไม่ถึง'}</span></button>`;
-    }
-    const e = state.entries[x.k];
-    const note = e && e.note ? `<span class="day-note">${esc(e.note)}</span>` : '';
-    const priced = !!x.dd.price;
-    const money = priced
-      ? `<b>${fmt2(x.dd.money)}</b><small>ทีม ${fmt2(x.dd.tapperTotal)}</small><small>เจ้าของ ${fmt2(x.dd.owner)}</small>`
-      : `<span class="nop">ยังไม่ใส่ราคา</span>`;
-    const chips = teamList.map(m => {
-      const isOff = x.dd.teamOff.includes(m.id);
-      const val = x.dd.teamPer[m.id] || 0;
-      const attrs = m.active ? `data-key="${x.k}" data-mid="${m.id}" title="${isOff ? 'แตะเพื่อยกเลิกวันหยุด' : 'แตะเพื่อตั้งเป็นวันหยุด'}"` : 'disabled';
-      return `<button type="button" class="pchip${isOff ? ' off' : ''}" ${attrs}><span class="pn">${esc(m.name)}</span><span class="pv">${isOff ? 'หยุด' : (val ? fmt2(val) : '–')}</span></button>`;
-    }).join('');
-    return `<article class="day">
-      <button type="button" class="day-main" data-key="${x.k}">
-        <span class="day-date"><b>${dn}</b><small>${wd} ${mo}</small></span>
-        <span>${realLineHTML(x.dd)}${note}</span>
-        <span class="day-money">${money}</span>
-      </button>
-      <div class="day-people">${chips}</div>
-    </article>`;
-  }).join('');
+  /* ---- รายวัน (ตาราง) ---- */
+  renderDayTable(P);
 }
+
+/* ================= ตารางรายวัน ================= */
+let dayFilter = 'all';
+
+function rangeLabel(a, b){
+  if (a.getTime() === b.getTime()) return `${a.getDate()} ${TH_M[a.getMonth()]}`;
+  if (a.getMonth() === b.getMonth()) return `${a.getDate()} – ${b.getDate()} ${TH_M[a.getMonth()]}`;
+  return `${a.getDate()} ${TH_M[a.getMonth()]} – ${b.getDate()} ${TH_M[b.getMonth()]}`;
+}
+
+function renderDayTable(P){
+  const { days, teamList, teamPer } = P;
+  const cols = 5 + teamList.length;
+  const show = st => dayFilter === 'all' || (dayFilter === 'work' ? st === 'work' : st !== 'work');
+
+  /* รวมวันหยุด / วันที่ยังไม่ถึง ที่ติดกันเป็นแถวเดียว */
+  const groups = [];
+  days.forEach((x, i) => {
+    if (!show(x.st)) return;
+    const last = groups[groups.length - 1];
+    if (x.st !== 'work' && last && last.st === x.st && last.end === i - 1){
+      last.items.push(x); last.end = i;
+    } else groups.push({ st:x.st, items:[x], end:i });
+  });
+
+  const head = `<thead><tr>
+    <th class="c-day" scope="col">วัน</th>
+    <th class="num" scope="col">น้ำยาง<small>กก.</small></th>
+    <th class="num" scope="col">ราคา<small>บาท/กก.</small></th>
+    <th class="num" scope="col">รวมเงิน<small>บาท</small></th>
+    ${teamList.map(m => `<th class="c-mem" scope="col">${esc(m.name)}</th>`).join('')}
+    <th class="c-note" scope="col">หมายเหตุ</th>
+  </tr></thead>`;
+
+  const body = groups.map(g => {
+    if (g.st !== 'work'){
+      const a = g.items[0], b = g.items[g.items.length - 1];
+      const label = g.st === 'off' ? 'วันหยุด' : 'รอเพิ่มข้อมูล';
+      return `<tr class="r-gap ${g.st}" data-key="${a.k}" title="แตะเพื่อกรอกข้อมูล">
+        <td colspan="${cols}"><span class="gap-in"><b>${rangeLabel(a.d, b.d)}</b><span>· ${label}</span></span></td>
+      </tr>`;
+    }
+    const x = g.items[0], dd = x.dd, e = state.entries[x.k] || {};
+    const priced = !!dd.price;
+    const mem = teamList.map(m => {
+      const isOff = dd.teamOff.includes(m.id);
+      const val = dd.teamPer[m.id] || 0;
+      const txt = isOff ? 'หยุด' : (priced && val ? fmt2(val) : '–');
+      if (!m.active) return `<td class="c-mem">${txt}</td>`;
+      return `<td class="c-mem"><button type="button" class="tchip${isOff ? ' off' : ''}" data-key="${x.k}" data-mid="${m.id}"
+        aria-pressed="${isOff}" aria-label="${esc(m.name)} ${isOff ? 'หยุด แตะเพื่อยกเลิก' : 'แตะเพื่อตั้งหยุด'}">${txt}</button></td>`;
+    }).join('');
+    return `<tr class="r-work" data-key="${x.k}">
+      <th class="c-day" scope="row"><b>${x.d.getDate()}</b><small>${TH_D[x.d.getDay()]} ${TH_M[x.d.getMonth()]}</small></th>
+      <td class="num kg">${fmt1(dd.real)}</td>
+      <td class="num">${priced ? fmtP(dd.price) : '<span class="nop">ไม่มีราคา</span>'}</td>
+      <td class="num money">${priced ? fmt2(dd.money) : '–'}</td>
+      ${mem}
+      <td class="c-note">รวม ${fmt1(dd.gross)} − ถัง ${fmt1(dd.bucket)}${e.note ? `<span class="tnote">${esc(e.note)}</span>` : ''}</td>
+    </tr>`;
+  }).join('') || `<tr class="r-empty"><td colspan="${cols}">ไม่มีรายการในตัวกรองนี้</td></tr>`;
+
+  const foot = `<tfoot><tr>
+    <th class="c-day" scope="row">รวม</th>
+    <td class="num kg">${fmt1(P.tReal)}</td>
+    <td class="num">${P.avgPrice ? fmtP(P.avgPrice) : '—'}</td>
+    <td class="num money">${fmt2(P.tMoney)}</td>
+    ${teamList.map(m => `<td class="c-mem num">${fmt2(teamPer[m.id].latex)}</td>`).join('')}
+    <td class="c-note">${P.work} วันทำงาน</td>
+  </tr></tfoot>`;
+
+  $('#dayList').innerHTML = head + `<tbody>${body}</tbody>` + foot;
+}
+
+$('#dayFilter').addEventListener('click', ev => {
+  const b = ev.target.closest('[data-filter]'); if (!b) return;
+  dayFilter = b.dataset.filter;
+  document.querySelectorAll('#dayFilter [data-filter]').forEach(x => {
+    const on = x === b; x.classList.toggle('active', on); x.setAttribute('aria-pressed', on);
+  });
+  renderDayTable(collectPeriod());
+});
 
 /* เพิ่ม / ลบ รายได้เพิ่มเติม */
 $('#extraIncomeSection').addEventListener('submit', ev => {
@@ -1194,12 +1316,12 @@ $('#extraIncomeSection').addEventListener('click', ev => {
 });
 
 $('#dayList').addEventListener('click', ev => {
-  const chip = ev.target.closest('.pchip');
+  const chip = ev.target.closest('.tchip');
   if (chip){
     if (chip.dataset.mid && toggleTeamOff(chip.dataset.key, chip.dataset.mid)) renderPeriod();
     return;
   }
-  const row = ev.target.closest('.day-main, .day.thin');
+  const row = ev.target.closest('tr[data-key]');
   if (row){
     const k = row.dataset.key;
     dPeriodDate = fromKey(k); openKeys.add(k); scrollToKey = k;
